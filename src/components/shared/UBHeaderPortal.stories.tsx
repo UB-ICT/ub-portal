@@ -7,11 +7,18 @@ const meta = {
   component: UBHeaderPortal,
   args: {
     userName: "Luis Herrera",
+    userEmail: "luis.herrera@ub.edu.bz",
     notificationCount: 6,
     onThemeToggle: () => undefined,
     onNotificationsClick: () => undefined,
     onAppsClick: () => undefined,
     onProfileClick: () => undefined,
+    onViewProfile: () => undefined,
+    onSettingsClick: () => undefined,
+    onConnectUsersClick: () => undefined,
+    onAdminToolsClick: () => undefined,
+    onGoogleSettingsClick: () => undefined,
+    onSignOutClick: () => undefined,
   },
   parameters: {
     layout: "fullscreen",
@@ -48,5 +55,14 @@ export const WithProfileImage: Story = {
 export const ZeroNotifications: Story = {
   args: {
     notificationCount: 0,
+  },
+}
+
+export const AdminUser: Story = {
+  args: {
+    showAdminActions: true,
+    userName: "Maria Castillo",
+    userEmail: "maria.castillo@ub.edu.bz",
+    notificationCount: 9,
   },
 }
