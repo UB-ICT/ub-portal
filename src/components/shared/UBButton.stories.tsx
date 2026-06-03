@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { ArrowRight, ShieldCheck } from "lucide-react"
+import { ArrowRight, Briefcase, GraduationCap, ShieldCheck } from "lucide-react"
 
-import { UBButton } from "./UBButton"
+import { UBButton, UBIconTileButton } from "./UBButton"
 
 const meta = {
   title: "Components/UBButton",
@@ -52,5 +52,37 @@ export const IconOnly: Story = {
     <UBButton {...args}>
       <ArrowRight />
     </UBButton>
+  ),
+}
+
+export const IconTile: Story = {
+  render: () => (
+    <UBIconTileButton
+      label="Education"
+      icon={<GraduationCap />}
+      aria-label="Education"
+    />
+  ),
+}
+
+export const IconTileGroup: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-3">
+      <UBIconTileButton
+        label="Education"
+        icon={<GraduationCap />}
+        aria-label="Education"
+      />
+      <UBIconTileButton
+        label="Security"
+        icon={<ShieldCheck />}
+        aria-label="Security"
+      />
+      <UBIconTileButton
+        label="Careers"
+        icon={<Briefcase />}
+        aria-label="Careers"
+      />
+    </div>
   ),
 }
