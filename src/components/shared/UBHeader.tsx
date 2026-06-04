@@ -1,4 +1,4 @@
-import { LayoutGrid, LogOut, Moon, Sun } from "lucide-react"
+import { Bell, LayoutGrid, LogOut, Moon, Plus, Search, Sun } from "lucide-react"
 
 import { useTheme } from "@/components/theme-provider"
 import { UBButton } from "./UBButton"
@@ -6,7 +6,14 @@ import { UBButton } from "./UBButton"
 type UBHeaderProps = {
   userName: string
   userEmail: string
+  layout?: "default" | "daily"
   isLoggingOut?: boolean
+  submitLabel?: string
+  searchPlaceholder?: string
+  onSubmit?: () => void
+  onNotificationsClick?: () => void
+  onAppsClick?: () => void
+  onSearchChange?: (value: string) => void
   onLogout: () => void
 }
 
@@ -24,11 +31,86 @@ function getUserInitials(name: string) {
 export function UBHeader({
   userName,
   userEmail,
+  layout = "default",
   isLoggingOut = false,
+  submitLabel = "Submit",
+  searchPlaceholder = "Search articles, tags, sources...",
+  onSubmit,
+  onNotificationsClick,
+  onAppsClick,
+  onSearchChange,
   onLogout,
 }: UBHeaderProps) {
   const { theme, setTheme } = useTheme()
   const isDarkMode = theme === "dark"
+
+  if (layout === "daily") {
+    return (
+      <header className="border-b bg-card/90 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[120rem] items-center gap-4 px-4 py-3 lg:px-6">
+          <div className="flex min-w-fit items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <LayoutGrid className="size-4" />
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold tracking-tight">UB Daily</p>
+              <p className="text-[10px] font-semibold tracking-[0.06em] text-secondary">
+                UNIVERSITY OF BELIZE
+              </p>
+            </div>
+          </div>
+
+          <label className="relative flex flex-1 items-center">
+            <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
+            <input
+              type="search"
+              placeholder={searchPlaceholder}
+              className="h-10 w-full rounded-xl border border-border bg-muted/70 px-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              onChange={(event) => onSearchChange?.(event.target.value)}
+            />
+          </label>
+
+          <div className="flex min-w-fit items-center gap-2">
+            <UBButton
+              aria-label={isDarkMode ? "Light mode" : "Dark mode"}
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(isDarkMode ? "light" : "dark")}
+            >
+              {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </UBButton>
+
+            <UBButton
+              aria-label="Notifications"
+              variant="ghost"
+              size="icon"
+              onClick={onNotificationsClick}
+            >
+              <Bell className="size-4" />
+            </UBButton>
+
+            <UBButton size="default" onClick={onSubmit}>
+              <Plus className="size-4" />
+              {submitLabel}
+            </UBButton>
+
+            <UBButton
+              aria-label="Open apps"
+              variant="ghost"
+              size="icon"
+              onClick={onAppsClick}
+            >
+              <LayoutGrid className="size-4" />
+            </UBButton>
+
+            <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/85 to-secondary/90 text-sm font-semibold text-primary-foreground">
+              {getUserInitials(userName)}
+            </div>
+          </div>
+        </div>
+      </header>
+    )
+  }
 
   return (
     <header className="border-b bg-background/90 backdrop-blur">

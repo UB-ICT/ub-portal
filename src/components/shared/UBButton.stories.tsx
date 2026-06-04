@@ -1,7 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { ArrowRight, ShieldCheck } from "lucide-react"
+import { ArrowRight, FilePlus2, ShieldCheck } from "lucide-react"
 
 import { UBButton } from "./UBButton"
+
+const buttonIcons = {
+  ArrowRight,
+  FilePlus2,
+  ShieldCheck,
+} as const
+
+type ButtonIconName = keyof typeof buttonIcons
+type ButtonStoryArgs = React.ComponentProps<typeof UBButton> & {
+  leadingIcon?: ButtonIconName
+  trailingIcon?: ButtonIconName
+}
 
 const meta = {
   title: "Components/UBButton",
@@ -19,11 +31,11 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof UBButton>
+} satisfies Meta<ButtonStoryArgs>
 
 export default meta
 
-type Story = StoryObj<typeof meta>
+type Story = StoryObj<ButtonStoryArgs>
 
 export const Default: Story = {}
 
@@ -35,6 +47,10 @@ export const Outline: Story = {
 }
 
 export const WithIcon: Story = {
+  args: {
+    children: "Continue",
+  },
+
   render: (args) => (
     <UBButton {...args}>
       <ShieldCheck />
@@ -51,6 +67,38 @@ export const IconOnly: Story = {
   render: (args) => (
     <UBButton {...args}>
       <ArrowRight />
+    </UBButton>
+  ),
+}
+
+export const iconTextArrow: Story = {
+  args: {
+    className: "w-full",
+    children: "New requisition",
+    leadingIcon: "FilePlus2",
+    trailingIcon: "ArrowRight",
+    size: "xl",
+    variant: "callout",
+  },
+  render: (args) => (
+    <UBButton {...args}>
+      {args.leadingIcon
+        ? (() => {
+            const LeadingIcon = buttonIcons[args.leadingIcon]
+
+            return <LeadingIcon className="size-4" />
+          })()
+        : null}
+      <span>{args.children}</span>
+      {args.trailingIcon
+        ? (() => {
+            const TrailingIcon = buttonIcons[args.trailingIcon]
+
+            return (
+              <TrailingIcon className="size-4 transition-transform group-hover/button:translate-x-0.5" />
+            )
+          })()
+        : null}
     </UBButton>
   ),
 }

@@ -47,3 +47,16 @@ export const LongIdentity: Story = {
     userEmail: "luis.herrera@ub.edu.bz",
   },
 }
+
+export const DailyNavigation: Story = {
+  args: {
+    layout: "daily",
+    submitLabel: "Submit",
+    searchPlaceholder: "Search articles, tags, sources...",
+    userName: "LU",
+    userEmail: "luis.herrera@ub.edu.bz",
+    onSubmit: () => undefined,
+    onNotificationsClick: () => undefined,
+    onAppsClick: () => undefined,
+  },
+}
