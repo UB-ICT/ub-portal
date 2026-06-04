@@ -12,6 +12,7 @@ const tagVariants = cva(
         primary: "border-primary/25 bg-primary/10 text-primary",
         secondary: "border-secondary/35 bg-secondary/60 text-secondary-foreground",
         destructive: "border-destructive/25 bg-destructive/10 text-destructive",
+        category: "border-transparent bg-[#2d1b4e] text-white dark:bg-[#1a0f2e] dark:text-white/90",
       },
       size: {
         sm: "h-6",
