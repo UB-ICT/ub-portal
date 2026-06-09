@@ -30,10 +30,13 @@ function parseDate(value: Date | string) {
     return value
   }
 
-  const parsed = new Date(value)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  const parsed = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(value)
 
   if (Number.isNaN(parsed.getTime())) {
-    return new Date()
+    return new Date(NaN)
   }
 
   return parsed
