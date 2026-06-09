@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom"
 
+import { CreatePostPage } from "@/pages/CreatePostPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { NotFoundPage } from "@/pages/NotFoundPage"
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <DashboardPage />,
+          },
+          {
+            path: "posts/create",
+            element: <CreatePostPage />,
           },
         ],
       },

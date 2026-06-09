@@ -1,7 +1,9 @@
+import { FilePlus2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { AppLayout } from "@/components/layout/AppLayout"
 import { StatusScreen } from "@/components/layout/StatusScreen"
+import { UBButton } from "@/components/shared"
 import { useLogoutMutation, usePortalSessionQuery } from "@/lib/api/auth"
 
 export function DashboardPage() {
@@ -33,6 +35,16 @@ export function DashboardPage() {
       onLogout={handleLogout}
     >
       <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <UBButton
+            size="default"
+            onClick={() => navigate("/posts/create")}
+          >
+            <FilePlus2 className="size-4" />
+            Create Post
+          </UBButton>
+        </div>
       </div>
     </AppLayout>
   )
