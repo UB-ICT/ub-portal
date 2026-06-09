@@ -1,7 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { ArrowRight, Briefcase, GraduationCap, ShieldCheck } from "lucide-react"
-
+import { ArrowRight, Briefcase, GraduationCap, FilePlus2, ShieldCheck } from "lucide-react"
 import { UBButton, UBIconTileButton } from "./UBButton"
+
+const buttonIcons = {
+  ArrowRight,
+  FilePlus2,
+  ShieldCheck,
+} as const
+
+type ButtonIconName = keyof typeof buttonIcons
+type ButtonStoryArgs = React.ComponentProps<typeof UBButton> & {
+  leadingIcon?: ButtonIconName
+  trailingIcon?: ButtonIconName
+}
 
 const meta = {
   title: "Components/UBButton",
@@ -19,11 +30,11 @@ const meta = {
       },
     },
   },
-} satisfies Meta<typeof UBButton>
+} satisfies Meta<ButtonStoryArgs>
 
 export default meta
 
-type Story = StoryObj<typeof meta>
+type Story = StoryObj<ButtonStoryArgs>
 
 export const Default: Story = {}
 
@@ -35,6 +46,10 @@ export const Outline: Story = {
 }
 
 export const WithIcon: Story = {
+  args: {
+    children: "Continue",
+  },
+
   render: (args) => (
     <UBButton {...args}>
       <ShieldCheck />
