@@ -1,4 +1,4 @@
-import * as React from "react"
+import React from "react"
 import {
   ArrowLeft,
   AtSign,
@@ -9,6 +9,7 @@ import {
   Link2,
   List,
   ListOrdered,
+  AlertCircle,
   Redo2,
   Sparkles,
   Undo2,
@@ -19,6 +20,9 @@ import {
 import { cn } from "@/lib/utils"
 import { UBButton } from "./UBButton"
 
+// ---------------------------------------------------------------------------
+// TYPE DEFINITIONS & SCHEMAS
+// ---------------------------------------------------------------------------
 export type UBCreatePostCategory = {
   id: string
   label: string
@@ -45,6 +49,7 @@ export type UBCreatePostProps = {
   isSubmitting?: boolean
   submitLabel?: string
   className?: string
+  error?: string | null // Support rendering bubble down remote exceptions
   onBack?: () => void
   onSubmit?: (values: UBCreatePostValues) => void
 }
@@ -68,6 +73,72 @@ const DEFAULT_CATEGORIES: UBCreatePostCategory[] = [
   { id: "career", label: "Career" },
 ]
 
+// ---------------------------------------------------------------------------
+// APP CONTAINER WRAPPER (Wire to API / App Router layer)
+// ---------------------------------------------------------------------------
+type ContainerProps = {
+  routerNavigateHome: () => void
+  remoteMutationEndpoint: (
+    formData: FormData
+  ) => Promise<{ success: boolean; error?: string }>
+}
+
+export function UBCreatePostPageContainer({
+  routerNavigateHome,
+  remoteMutationEndpoint,
+}: ContainerProps) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [apiError, setApiError] = React.useState<string | null>(null)
+
+  const handlePostPublish = async (formValues: UBCreatePostValues) => {
+    setIsSubmitting(true)
+    setApiError(null)
+
+    try {
+      // Assemble multipart format stream block to safely transport File blobs over HTTP network sockets
+      const payload = new FormData()
+      payload.append("title", formValues.title.trim())
+      payload.append("body", formValues.body.trim())
+      payload.append("audienceId", formValues.audienceId)
+      payload.append("categoryId", formValues.categoryId)
+
+      if (formValues.thumbnail) {
+        payload.append("thumbnail", formValues.thumbnail)
+      }
+
+      const response = await remoteMutationEndpoint(payload)
+
+      if (response.success) {
+        routerNavigateHome()
+      } else {
+        setApiError(
+          response.error ?? "An unexpected server validation error occurred."
+        )
+      }
+    } catch (err) {
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : "Failed to establish a gateway link to api infrastructure."
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <UBCreatePost
+      isSubmitting={isSubmitting}
+      error={apiError}
+      onSubmit={handlePostPublish}
+      onBack={routerNavigateHome}
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// VIEW PRESENTATION UTILS
+// ---------------------------------------------------------------------------
 function ToolbarButton({
   onClick,
   label,
@@ -98,6 +169,7 @@ export function UBCreatePost({
   isSubmitting = false,
   submitLabel = "Publish Post",
   className,
+  error = null,
   onBack,
   onSubmit,
 }: UBCreatePostProps) {
@@ -106,7 +178,9 @@ export function UBCreatePost({
   const [audienceId, setAudienceId] = React.useState(defaultAudienceId)
   const [categoryId, setCategoryId] = React.useState(defaultCategoryId)
   const [thumbnail, setThumbnail] = React.useState<File | null>(null)
-  const [thumbnailPreview, setThumbnailPreview] = React.useState<string | null>(null)
+  const [thumbnailPreview, setThumbnailPreview] = React.useState<string | null>(
+    null
+  )
   const [audienceOpen, setAudienceOpen] = React.useState(false)
   const [categoryOpen, setCategoryOpen] = React.useState(false)
 
@@ -117,28 +191,23 @@ export function UBCreatePost({
     audiences.find((a) => a.id === audienceId) ?? audiences[0]
   const selectedCategory = categories.find((c) => c.id === categoryId)
 
-  const handleThumbnailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0] ?? null
-
-    if (!file) {
-      return
-    }
+    if (!file) return
 
     setThumbnail(file)
     const url = URL.createObjectURL(file)
-
     setThumbnailPreview(url)
   }
 
   const clearThumbnail = () => {
     setThumbnail(null)
-
     if (thumbnailPreview) {
       URL.revokeObjectURL(thumbnailPreview)
     }
-
     setThumbnailPreview(null)
-
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -146,24 +215,17 @@ export function UBCreatePost({
 
   const execFormat = (command: string) => {
     const textarea = bodyRef.current
-
-    if (!textarea) {
-      return
-    }
+    if (!textarea) return
 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const selected = body.slice(start, end)
-
     let wrapped = selected
 
-    if (command === "bold") {
-      wrapped = `**${selected}**`
-    } else if (command === "italic") {
-      wrapped = `_${selected}_`
-    } else if (command === "link") {
-      wrapped = `[${selected || "link text"}](url)`
-    } else if (command === "ul") {
+    if (command === "bold") wrapped = `**${selected}**`
+    else if (command === "italic") wrapped = `_${selected}_`
+    else if (command === "link") wrapped = `[${selected || "link text"}](url)`
+    else if (command === "ul") {
       wrapped = selected
         .split("\n")
         .map((line) => `- ${line}`)
@@ -176,7 +238,6 @@ export function UBCreatePost({
     }
 
     const next = body.slice(0, start) + wrapped + body.slice(end)
-
     setBody(next)
     setTimeout(() => {
       textarea.focus()
@@ -192,7 +253,7 @@ export function UBCreatePost({
 
   return (
     <div className={cn("mx-auto w-full max-w-2xl space-y-4", className)}>
-      {/* Back */}
+      {/* Back Button Tracking Action */}
       {onBack ? (
         <button
           type="button"
@@ -202,6 +263,22 @@ export function UBCreatePost({
           <ArrowLeft className="size-4" />
           Back
         </button>
+      ) : null}
+
+      {/* API Exception Visual Callouts */}
+      {error ? (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="leading-tight font-semibold">
+              Failed to publish post
+            </p>
+            <p className="mt-1 opacity-90">{error}</p>
+          </div>
+        </div>
       ) : null}
 
       {/* Audience selector */}
@@ -220,7 +297,7 @@ export function UBCreatePost({
         {audienceOpen ? (
           <ul
             role="listbox"
-            className="absolute left-0 top-full z-10 mt-1 min-w-[10rem] overflow-hidden rounded-2xl border border-border bg-popover py-1 shadow-lg"
+            className="absolute top-full left-0 z-10 mt-1 min-w-[10rem] overflow-hidden rounded-2xl border border-border bg-popover py-1 shadow-lg"
           >
             {audiences.map((audience) => (
               <li key={audience.id}>
@@ -266,7 +343,7 @@ export function UBCreatePost({
             <button
               type="button"
               aria-label="Remove thumbnail"
-              className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur hover:bg-background"
+              className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur hover:bg-background"
               onClick={clearThumbnail}
             >
               <X className="size-4" />
@@ -290,13 +367,16 @@ export function UBCreatePost({
           placeholder="Post Title*"
           maxLength={TITLE_MAX}
           value={title}
-          className="w-full rounded-2xl bg-transparent px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          disabled={isSubmitting}
+          className="w-full rounded-2xl bg-transparent px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
           onChange={(e) => setTitle(e.target.value)}
         />
         <span
           className={cn(
-            "pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs tabular-nums",
-            title.length >= TITLE_MAX ? "text-destructive" : "text-muted-foreground"
+            "pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-xs tabular-nums",
+            title.length >= TITLE_MAX
+              ? "text-destructive"
+              : "text-muted-foreground"
           )}
         >
           {TITLE_MAX - title.length}
@@ -307,7 +387,8 @@ export function UBCreatePost({
       <div className="relative">
         <button
           type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-2xl border border-border bg-card px-3.5 text-sm text-muted-foreground hover:bg-muted"
+          disabled={isSubmitting}
+          className="inline-flex h-10 items-center gap-2 rounded-2xl border border-border bg-card px-3.5 text-sm text-muted-foreground hover:bg-muted disabled:opacity-60"
           onClick={() => setCategoryOpen((v) => !v)}
           aria-haspopup="listbox"
           aria-expanded={categoryOpen}
@@ -320,7 +401,7 @@ export function UBCreatePost({
         {categoryOpen ? (
           <ul
             role="listbox"
-            className="absolute left-0 top-full z-10 mt-1 min-w-[12rem] overflow-hidden rounded-2xl border border-border bg-popover py-1 shadow-lg"
+            className="absolute top-full left-0 z-10 mt-1 min-w-[12rem] overflow-hidden rounded-2xl border border-border bg-popover py-1 shadow-lg"
           >
             {categories.map((category) => (
               <li key={category.id}>
@@ -349,36 +430,36 @@ export function UBCreatePost({
       <div className="overflow-hidden rounded-2xl border border-border bg-card focus-within:ring-2 focus-within:ring-ring/40">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1.5">
-          <ToolbarButton label="Insert image" onClick={() => fileInputRef.current?.click()}>
+          <ToolbarButton
+            label="Insert image"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Image className="size-4" />
           </ToolbarButton>
           <ToolbarButton label="Insert link" onClick={() => execFormat("link")}>
             <Link2 className="size-4" />
           </ToolbarButton>
-          <ToolbarButton label="Mention someone" onClick={() => setBody((b) => b + "@")}>
+          <ToolbarButton
+            label="Mention someone"
+            onClick={() => setBody((b) => b + "@")}
+          >
             <AtSign className="size-4" />
           </ToolbarButton>
-
           <div className="mx-1 h-5 w-px bg-border" />
-
           <ToolbarButton label="Bold" onClick={() => execFormat("bold")}>
             <Bold className="size-4" />
           </ToolbarButton>
           <ToolbarButton label="Italic" onClick={() => execFormat("italic")}>
             <Italic className="size-4" />
           </ToolbarButton>
-
           <div className="mx-1 h-5 w-px bg-border" />
-
           <ToolbarButton label="Bullet list" onClick={() => execFormat("ul")}>
             <List className="size-4" />
           </ToolbarButton>
           <ToolbarButton label="Numbered list" onClick={() => execFormat("ol")}>
             <ListOrdered className="size-4" />
           </ToolbarButton>
-
           <div className="mx-1 h-5 w-px bg-border" />
-
           <ToolbarButton label="Undo">
             <Undo2 className="size-4" />
           </ToolbarButton>
@@ -387,14 +468,15 @@ export function UBCreatePost({
           </ToolbarButton>
         </div>
 
-        {/* Body */}
+        {/* Body TextArea */}
         <textarea
           ref={bodyRef}
           placeholder="Share your thoughts…"
           maxLength={BODY_MAX}
           value={body}
           rows={8}
-          className="w-full resize-none bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          disabled={isSubmitting}
+          className="w-full resize-none bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
           onChange={(e) => setBody(e.target.value)}
         />
 
@@ -402,7 +484,9 @@ export function UBCreatePost({
           <span
             className={cn(
               "text-xs tabular-nums",
-              body.length >= BODY_MAX ? "text-destructive" : "text-muted-foreground"
+              body.length >= BODY_MAX
+                ? "text-destructive"
+                : "text-muted-foreground"
             )}
           >
             {BODY_MAX - body.length}
@@ -410,7 +494,7 @@ export function UBCreatePost({
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Submission Panel Controller */}
       <div className="flex items-center justify-end pt-1">
         <UBButton
           type="button"

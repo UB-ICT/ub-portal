@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { ArrowRight, FilePlus2, ShieldCheck } from "lucide-react"
-
 import { UBButton } from "./UBButton"
 
 const buttonIcons = {
