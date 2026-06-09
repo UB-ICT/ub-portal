@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-
 import { UBHeader } from "./UBHeader"
 
 const meta = {
@@ -45,5 +44,18 @@ export const LongIdentity: Story = {
   args: {
     userName: "Luis Mauricio Herrera",
     userEmail: "luis.herrera@ub.edu.bz",
+  },
+}
+
+export const DailyNavigation: Story = {
+  args: {
+    layout: "daily",
+    submitLabel: "Submit",
+    searchPlaceholder: "Search articles, tags, sources...",
+    userName: "LU",
+    userEmail: "luis.herrera@ub.edu.bz",
+    onSubmit: () => undefined,
+    onNotificationsClick: () => undefined,
+    onAppsClick: () => undefined,
   },
 }
