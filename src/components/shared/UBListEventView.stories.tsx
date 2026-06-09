@@ -1,10 +1,8 @@
+import React from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { CalendarDays, LayoutList } from "lucide-react"
-import * as React from "react"
 
-import {
-  UBFullCalendarView,
-} from "./UBFullCalendarView"
+import { UBFullCalendarView } from "./UBFullCalendarView"
 import {
   sharedCalendarCategories,
   sharedCalendarEvents,

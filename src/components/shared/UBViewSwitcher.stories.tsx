@@ -1,5 +1,5 @@
+import React from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import * as React from "react"
 import { CalendarDays, LayoutList, Rows4 } from "lucide-react"
 
 import { UBViewSwitcher, type UBViewSwitcherProps } from "./UBViewSwitcher"

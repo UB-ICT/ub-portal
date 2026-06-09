@@ -1,4 +1,4 @@
-import * as React from "react"
+import React from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -46,8 +46,17 @@ export function UBViewSwitcher({
   }
 
   return (
-    <div className={cn("inline-flex rounded-xl border border-border bg-muted/40 p-1", className)}>
-      <div role="tablist" aria-label="View switcher" className="flex items-center gap-1">
+    <div
+      className={cn(
+        "inline-flex rounded-xl border border-border bg-muted/40 p-1",
+        className
+      )}
+    >
+      <div
+        role="radiogroup" // Changed from tablist
+        aria-label="View switcher"
+        className="flex items-center gap-1"
+      >
         {options.map((option) => {
           const isActive = option.value === selectedValue
           const Icon = option.icon
@@ -56,8 +65,8 @@ export function UBViewSwitcher({
             <button
               key={option.value}
               type="button"
-              role="tab"
-              aria-selected={isActive}
+              role="radio" // Changed from tab
+              aria-checked={isActive} // Changed from aria-selected
               className={cn(
                 "inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm leading-none font-medium transition-colors",
                 isActive

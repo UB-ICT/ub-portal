@@ -1,4 +1,4 @@
-import { CalendarPlus2, Clock3, MapPin } from "lucide-react"
+import { CalendarPlus2, MapPin } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { UBButton } from "./UBButton"
@@ -61,7 +61,12 @@ export function UBDayEventsPanel({
   onSecondaryAction,
 }: UBDayEventsPanelProps) {
   return (
-    <aside className={cn("w-full rounded-4xl border border-border bg-muted/20 p-5", className)}>
+    <aside
+      className={cn(
+        "w-full rounded-4xl border border-border bg-muted/20 p-5",
+        className
+      )}
+    >
       <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
         {headingLabel}
       </p>
@@ -84,18 +89,27 @@ export function UBDayEventsPanel({
               >
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase">
                   {event.category ? (
-                    <span className="inline-flex items-center gap-1" style={{ color: event.categoryColor ?? "#7d2d90" }}>
+                    <span
+                      className="inline-flex items-center gap-1"
+                      style={{ color: event.categoryColor ?? "#7d2d90" }}
+                    >
                       <span
                         className="inline-block size-1.5 rounded-full"
-                        style={{ backgroundColor: event.categoryColor ?? "#7d2d90" }}
+                        style={{
+                          backgroundColor: event.categoryColor ?? "#7d2d90",
+                        }}
                       />
                       {event.category}
                     </span>
                   ) : null}
-                  {event.time ? <span className="text-muted-foreground">{event.time}</span> : null}
+                  {event.time ? (
+                    <span className="text-muted-foreground">{event.time}</span>
+                  ) : null}
                 </div>
 
-                <p className="mt-2 text-sm font-semibold text-foreground">{event.title}</p>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {event.title}
+                </p>
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   {event.location ? (

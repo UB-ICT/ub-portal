@@ -21,7 +21,10 @@ export function UBListEventView({
     return (
       <section
         aria-live="polite"
-        className={className ?? "rounded-2xl border border-dashed border-border p-8 text-center"}
+        className={
+          className ??
+          "rounded-2xl border border-dashed border-border p-8 text-center"
+        }
       >
         <p className="text-sm text-muted-foreground">{emptyStateText}</p>
       </section>

@@ -1,10 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import * as React from "react"
+import React from "react"
 
-import {
-  UBCalendarView,
-  type UBCalendarViewProps,
-} from "./UBCalendarView"
+import { UBCalendarView, type UBCalendarViewProps } from "./UBCalendarView"
 import {
   sharedCalendarCategories,
   sharedCalendarEvents,
@@ -13,7 +10,9 @@ import {
 } from "./calendarStoryData"
 
 function InteractiveCalendar(args: UBCalendarViewProps) {
-  const [month, setMonth] = React.useState(args.defaultMonth ?? new Date(2026, 4, 1))
+  const [month, setMonth] = React.useState(
+    args.defaultMonth ?? new Date(2026, 4, 1)
+  )
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
     args.defaultSelectedDate
   )

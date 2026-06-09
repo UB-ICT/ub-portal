@@ -61,11 +61,14 @@ export function UBHeader({
           </div>
 
           <label className="relative flex flex-1 items-center">
+            {/* Visually hidden label text for assistive screen reader technologies */}
+            <span className="sr-only">{searchPlaceholder}</span>
+
             <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
             <input
               type="search"
               placeholder={searchPlaceholder}
-              className="h-10 w-full rounded-xl border border-border bg-muted/70 px-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="h-10 w-full rounded-xl border border-border bg-muted/70 px-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
               onChange={(event) => onSearchChange?.(event.target.value)}
             />
           </label>
@@ -77,7 +80,11 @@ export function UBHeader({
               size="icon"
               onClick={() => setTheme(isDarkMode ? "light" : "dark")}
             >
-              {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              {isDarkMode ? (
+                <Sun className="size-4" />
+              ) : (
+                <Moon className="size-4" />
+              )}
             </UBButton>
 
             <UBButton
@@ -143,7 +150,11 @@ export function UBHeader({
             size="sm"
             onClick={() => setTheme(isDarkMode ? "light" : "dark")}
           >
-            {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {isDarkMode ? (
+              <Sun className="size-4" />
+            ) : (
+              <Moon className="size-4" />
+            )}
             {isDarkMode ? "Light mode" : "Dark mode"}
           </UBButton>
 

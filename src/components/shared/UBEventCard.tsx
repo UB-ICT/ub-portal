@@ -50,7 +50,9 @@ export function UBEventCard({
             {category}
           </span>
           {secondaryCategory ? (
-            <span className="text-sm text-muted-foreground">{secondaryCategory}</span>
+            <span className="text-sm text-muted-foreground">
+              {secondaryCategory}
+            </span>
           ) : null}
         </div>
 

@@ -1,4 +1,4 @@
-import * as React from "react"
+import React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -110,12 +110,14 @@ export function UBCalendarView({
   const [internalMonth, setInternalMonth] = React.useState(
     startOfDay(defaultMonth ?? new Date())
   )
-  const [internalSelectedDate, setInternalSelectedDate] = React.useState<Date | undefined>(
-    defaultSelectedDate ? startOfDay(defaultSelectedDate) : undefined
-  )
+  const [internalSelectedDate, setInternalSelectedDate] = React.useState<
+    Date | undefined
+  >(defaultSelectedDate ? startOfDay(defaultSelectedDate) : undefined)
 
   const viewMonth = startOfDay(month ?? internalMonth)
-  const activeDate = selectedDate ? startOfDay(selectedDate) : internalSelectedDate
+  const activeDate = selectedDate
+    ? startOfDay(selectedDate)
+    : internalSelectedDate
   const today = startOfDay(new Date())
 
   const categoryById = React.useMemo(
@@ -167,7 +169,12 @@ export function UBCalendarView({
   }
 
   return (
-    <section className={cn("w-full rounded-4xl border border-border bg-muted/20 p-6", className)}>
+    <section
+      className={cn(
+        "w-full rounded-4xl border border-border bg-muted/20 p-6",
+        className
+      )}
+    >
       <header className="mb-5 flex items-center justify-between gap-3">
         <h2 className="text-4xl leading-none font-semibold tracking-tight text-foreground">
           {getMonthLabel(viewMonth)}
@@ -180,7 +187,11 @@ export function UBCalendarView({
             variant="outline"
             size="icon-sm"
             className="rounded-xl"
-            onClick={() => updateMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}
+            onClick={() =>
+              updateMonth(
+                new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1)
+              )
+            }
           >
             <ChevronLeft className="size-4" />
           </UBButton>
@@ -201,7 +212,11 @@ export function UBCalendarView({
             variant="outline"
             size="icon-sm"
             className="rounded-xl"
-            onClick={() => updateMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}
+            onClick={() =>
+              updateMonth(
+                new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)
+              )
+            }
           >
             <ChevronRight className="size-4" />
           </UBButton>
@@ -220,12 +235,21 @@ export function UBCalendarView({
 
         {monthDays.map((dateValue, index) => {
           if (!dateValue) {
-            return <div key={`empty-${index}`} className="min-h-[7rem] sm:min-h-[8.5rem]" />
+            return (
+              <div
+                key={`empty-${index}`}
+                className="min-h-[7rem] sm:min-h-[8.5rem]"
+              />
+            )
           }
 
           const dateEvents = eventsByDate.get(toDateKey(dateValue)) ?? []
-          const uniqueCategoryIds = [...new Set(dateEvents.map((event) => event.categoryId))]
-          const isSelected = activeDate ? isSameDay(activeDate, dateValue) : false
+          const uniqueCategoryIds = [
+            ...new Set(dateEvents.map((event) => event.categoryId)),
+          ]
+          const isSelected = activeDate
+            ? isSameDay(activeDate, dateValue)
+            : false
           const isToday = isSameDay(today, dateValue)
 
           return (
@@ -258,7 +282,14 @@ export function UBCalendarView({
                       <div
                         key={event.id}
                         className="rounded-md border border-border/70 bg-muted/35 px-1.5 py-1"
-                        style={category ? { borderLeftColor: category.color, borderLeftWidth: 3 } : undefined}
+                        style={
+                          category
+                            ? {
+                                borderLeftColor: category.color,
+                                borderLeftWidth: 3,
+                              }
+                            : undefined
+                        }
                       >
                         {event.time ? (
                           <p className="truncate text-[10px] leading-none font-medium text-muted-foreground">
@@ -272,7 +303,9 @@ export function UBCalendarView({
                     )
                   })}
                   {dateEvents.length > 2 ? (
-                    <p className="text-[10px] text-muted-foreground">+{dateEvents.length - 2} more</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      +{dateEvents.length - 2} more
+                    </p>
                   ) : null}
                 </div>
               ) : null}
@@ -302,7 +335,10 @@ export function UBCalendarView({
       {categories.length ? (
         <footer className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
           {categories.map((category) => (
-            <p key={category.id} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <p
+              key={category.id}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
               <span
                 className="inline-block size-2 rounded-full"
                 style={{ backgroundColor: category.color }}
@@ -312,7 +348,6 @@ export function UBCalendarView({
           ))}
         </footer>
       ) : null}
-
     </section>
   )
 }

@@ -44,4 +44,9 @@ export default meta
 
 type Story = StoryObj<UBFullCalendarViewProps>
 
-export const Default: Story = {}
+export const Default: Story = {
+  args: {
+    // Pass it as an instantiated Date object or an ISO string format
+    defaultSelectedDate: new Date(1779948000000),
+  },
+}
