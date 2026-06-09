@@ -65,8 +65,6 @@ const meta = {
         <Story />
       </div>
     ),
-      </div>
-    ),
   ],
 } satisfies Meta<typeof UBMenu>
 
