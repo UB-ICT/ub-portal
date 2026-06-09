@@ -79,11 +79,31 @@ export const iconTextArrow: Story = {
     size: "xl",
     variant: "callout",
   },
-  render: (args) => (
-    <UBButton {...args}>
-      {args.leadingIcon
-        ? (() => {
-            const LeadingIcon = buttonIcons[args.leadingIcon]
+  render: (args) => {
+    const { leadingIcon, trailingIcon, ...buttonProps } = args
+
+    return (
+      <UBButton {...buttonProps}>
+        {leadingIcon
+          ? (() => {
+              const LeadingIcon = buttonIcons[leadingIcon]
+
+              return <LeadingIcon className="size-4" />
+            })()
+          : null}
+        <span>{buttonProps.children}</span>
+        {trailingIcon
+          ? (() => {
+              const TrailingIcon = buttonIcons[trailingIcon]
+
+              return (
+                <TrailingIcon className="size-4 transition-transform group-hover/button:translate-x-0.5" />
+              )
+            })()
+          : null}
+      </UBButton>
+    )
+  }
 
             return <LeadingIcon className="size-4" />
           })()
