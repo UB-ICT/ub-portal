@@ -197,6 +197,7 @@ export function UBCreatePost({
     const file = event.target.files?.[0] ?? null
     if (!file) return
 
+    if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview)
     setThumbnail(file)
     const url = URL.createObjectURL(file)
     setThumbnailPreview(url)
