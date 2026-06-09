@@ -61,8 +61,10 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="min-h-160 w-80 p-6">
+      <div className="min-h-[40rem] w-80 p-6">
         <Story />
+      </div>
+    ),
       </div>
     ),
   ],
