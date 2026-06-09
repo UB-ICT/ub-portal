@@ -70,7 +70,7 @@ export const IconOnly: Story = {
   ),
 }
 
-export const iconTextArrow: Story = {
+export const IconTextArrow: Story = {
   args: {
     className: "w-full",
     children: "New requisition",
