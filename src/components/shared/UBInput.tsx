@@ -8,14 +8,24 @@ export type UBInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
 }
 
 export const UBInput = React.forwardRef<HTMLInputElement, UBInputProps>(
-  ({ label, error, className, ...props }, ref) => {
+  ({ label, error, className, id, ...props }, ref) => {
+    const generatedId = React.useId()
+    const inputId = id ?? generatedId
+    const errorId = `${inputId}-error`
+
     return (
       <div className="w-full">
-        <label className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        <label
+          htmlFor={inputId}
+          className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground"
+        >
           {label}
         </label>
         <input
           ref={ref}
+          id={inputId}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
           className={cn(
             "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50",
             error && "border-destructive focus:border-destructive focus:ring-destructive/20",
@@ -24,7 +34,9 @@ export const UBInput = React.forwardRef<HTMLInputElement, UBInputProps>(
           {...props}
         />
         {error && (
-          <p className="mt-1 text-xs text-destructive">{error}</p>
+          <p id={errorId} className="mt-1 text-xs text-destructive">
+            {error}
+          </p>
         )}
       </div>
     )
