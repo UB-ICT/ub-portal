@@ -71,8 +71,7 @@ export function UBMenu({
       </nav>
 
       <div className="mt-4 border-t border-primary-foreground/15 pt-4">
-        <div className="rounded-xl bg-linear-to-tr from-amber-500 via-yellow-400 to-amber-300 p-4 text-amber-950">
-          <p className="text-sm font-semibold tracking-tight">{brandTitle}</p>
+        <div className="rounded-xl bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-300 p-4 text-amber-950">
           <p className="mt-1 text-xs text-amber-950/80">{brandDescription}</p>
         </div>
 
