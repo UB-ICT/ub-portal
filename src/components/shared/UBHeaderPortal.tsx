@@ -109,9 +109,11 @@ export function UBHeaderPortal({
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="search"
+                aria-label="Search"
                 placeholder="Search news, apps, topics..."
                 className="h-10 w-full rounded-full border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
               />
+            </label>
             </label>
           </div>
         </div>
