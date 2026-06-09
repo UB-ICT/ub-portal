@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { ArrowRight, FilePlus2, ShieldCheck } from "lucide-react"
-import { UBButton } from "./UBButton"
+import { ArrowRight, Briefcase, GraduationCap, FilePlus2, ShieldCheck } from "lucide-react"
+import { UBButton, UBIconTileButton } from "./UBButton"
 
 const buttonIcons = {
   ArrowRight,
@@ -70,54 +70,34 @@ export const IconOnly: Story = {
   ),
 }
 
-export const IconTextArrow: Story = {
-  args: {
-    className: "w-full",
-    children: "New requisition",
-    leadingIcon: "FilePlus2",
-    trailingIcon: "ArrowRight",
-    size: "xl",
-    variant: "callout",
-  },
-  render: (args) => {
-    const { leadingIcon, trailingIcon, ...buttonProps } = args
+export const IconTile: Story = {
+  render: () => (
+    <UBIconTileButton
+      label="Education"
+      icon={<GraduationCap />}
+      aria-label="Education"
+    />
+  ),
+}
 
-    return (
-      <UBButton {...buttonProps}>
-        {leadingIcon
-          ? (() => {
-              const LeadingIcon = buttonIcons[leadingIcon]
-
-              return <LeadingIcon className="size-4" />
-            })()
-          : null}
-        <span>{buttonProps.children}</span>
-        {trailingIcon
-          ? (() => {
-              const TrailingIcon = buttonIcons[trailingIcon]
-
-              return (
-                <TrailingIcon className="size-4 transition-transform group-hover/button:translate-x-0.5" />
-              )
-            })()
-          : null}
-      </UBButton>
-    )
-  }
-
-            return <LeadingIcon className="size-4" />
-          })()
-        : null}
-      <span>{args.children}</span>
-      {args.trailingIcon
-        ? (() => {
-            const TrailingIcon = buttonIcons[args.trailingIcon]
-
-            return (
-              <TrailingIcon className="size-4 transition-transform group-hover/button:translate-x-0.5" />
-            )
-          })()
-        : null}
-    </UBButton>
+export const IconTileGroup: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-3">
+      <UBIconTileButton
+        label="Education"
+        icon={<GraduationCap />}
+        aria-label="Education"
+      />
+      <UBIconTileButton
+        label="Security"
+        icon={<ShieldCheck />}
+        aria-label="Security"
+      />
+      <UBIconTileButton
+        label="Careers"
+        icon={<Briefcase />}
+        aria-label="Careers"
+      />
+    </div>
   ),
 }
