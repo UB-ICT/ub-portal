@@ -78,10 +78,12 @@ export function UBHeader({
             <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
             <input
               type="search"
+              aria-label={searchPlaceholder}
               placeholder={searchPlaceholder}
               className="h-10 w-full rounded-xl border border-border bg-muted/70 px-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
               onChange={(event) => onSearchChange?.(event.target.value)}
             />
+          </label>
           </label>
 
           {/* Action Systems & User Meta Controllers */}
