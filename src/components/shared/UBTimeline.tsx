@@ -46,10 +46,8 @@ export function UBTimeline({
                 <div
                   key={`${step.title}-${stepNumber}`}
                   className={cn(
-                  className={cn(
                     "relative flex min-w-[8.75rem] flex-col items-center",
                     !isLast && "pr-8"
-                  )}
                   )}
                 >
                   {!isLast ? (

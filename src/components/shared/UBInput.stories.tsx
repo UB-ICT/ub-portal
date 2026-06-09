@@ -339,7 +339,9 @@ export const RequisitionFormWithLineItems: InputStory = {
         </div>
 
         <div className="rounded-2xl border">
+          <div className="overflow-x-auto">
             <table className="w-full min-w-[53.75rem] text-sm">
+              <thead>
                 <tr className="border-b bg-muted/40">
                   <th className="px-3 py-2 text-left font-medium text-foreground">Item #</th>
                   <th className="px-3 py-2 text-left font-medium text-foreground">Description</th>
@@ -399,6 +401,7 @@ export const RequisitionFormWithLineItems: InputStory = {
               </tbody>
             </table>
           </div>
+
 
           <div className="flex items-center justify-between gap-3 border-t px-3 py-3">
             <UBButton variant="outline" onClick={addLineItem}>

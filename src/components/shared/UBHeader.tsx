@@ -82,7 +82,6 @@ export function UBHeader({
               onChange={(event) => onSearchChange?.(event.target.value)}
             />
           </label>
-          </label>
 
           {/* Action Systems & User Meta Controllers */}
           <div className="flex min-w-fit items-center gap-2">

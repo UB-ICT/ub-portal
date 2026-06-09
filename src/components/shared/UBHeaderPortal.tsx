@@ -114,7 +114,6 @@ export function UBHeaderPortal({
                 className="h-10 w-full rounded-full border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
               />
             </label>
-            </label>
           </div>
         </div>
 
