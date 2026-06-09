@@ -70,11 +70,9 @@ export function UBHeader({
 
           {/* Search Box Form Element */}
           <label className="relative flex flex-1 items-center">
-            {/* FIX: Visually hidden descriptive text mapping back to the label container.
-              Ensures screen readers announce the input purpose despite missing visible text strings.
-            */}
+            {/* Visually hidden label text for assistive screen reader technologies */}
             <span className="sr-only">{searchPlaceholder}</span>
-            
+
             <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
             <input
               type="search"
@@ -94,7 +92,11 @@ export function UBHeader({
               size="icon"
               onClick={() => setTheme(isDarkMode ? "light" : "dark")}
             >
-              {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              {isDarkMode ? (
+                <Sun className="size-4" />
+              ) : (
+                <Moon className="size-4" />
+              )}
             </UBButton>
 
             <UBButton
