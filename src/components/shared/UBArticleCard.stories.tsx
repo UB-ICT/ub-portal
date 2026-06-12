@@ -1,10 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectTextVisible,
+  withMaxWidth,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBArticleCard } from "./UBArticleCard"
 
 const meta = {
   title: "Components/UBArticleCard",
   component: UBArticleCard,
+  tags: ["autodocs"],
   args: {
     imageSrc:
       "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&w=800&q=80",
@@ -23,21 +31,21 @@ const meta = {
     onLike: () => undefined,
     href: "#article",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Article card with full-width image, category tag, metadata, engagement and save actions.",
-      },
+  argTypes: {
+    ...actionArgTypes,
+    title: { control: "text" },
+    category: { control: "text" },
+    categoryVariant: {
+      control: "select",
+      options: ["primary", "secondary", "destructive", "neutral"],
     },
+    likes: { control: "number" },
+    comments: { control: "number" },
   },
-  decorators: [
-    (Story) => (
-      <div className="p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Article card with full-width image, category tag, metadata, engagement and save actions."
+  ),
+  decorators: [withPanel("p-6")],
 } satisfies Meta<typeof UBArticleCard>
 
 export default meta
@@ -45,23 +53,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  decorators: [
-    (Story) => (
-      <div className="max-w-sm">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withMaxWidth("max-w-sm")],
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "Fall 2026 Registration Now Open for All Students")
+  },
 }
 
 export const FinanceCategory: Story = {
-  decorators: [
-    (Story) => (
-      <div className="max-w-sm">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withMaxWidth("max-w-sm")],
   args: {
     imageSrc:
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80",
@@ -79,13 +78,7 @@ export const FinanceCategory: Story = {
 }
 
 export const AlertCategory: Story = {
-  decorators: [
-    (Story) => (
-      <div className="max-w-sm">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withMaxWidth("max-w-sm")],
   args: {
     imageSrc:
       "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80",
@@ -151,15 +144,9 @@ const articles = [
 ]
 
 export const ArticleGrid: Story = {
-  decorators: [
-    (Story) => (
-      <div className="p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withMaxWidth("max-w-7xl")],
   render: () => (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
       {articles.map((article) => (
         <UBArticleCard
           key={article.href}

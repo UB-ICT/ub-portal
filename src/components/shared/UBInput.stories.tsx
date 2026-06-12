@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { ArrowRight, Plus } from "lucide-react"
 import { useState } from "react"
+import {
+  actionArgTypes,
+  componentParameters,
+  fillInput,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBButton } from "./UBButton"
 import { UBInput, UBSelect, UBTextarea } from "./UBInput"
@@ -8,21 +14,22 @@ import { UBInput, UBSelect, UBTextarea } from "./UBInput"
 const inputMeta = {
   title: "Components/UBInput",
   component: UBInput,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Shared form input components for UB Portal forms, featuring uppercase labels, light borders, and purple focus states.",
-      },
+  tags: ["autodocs"],
+  argTypes: {
+    ...actionArgTypes,
+    label: { control: "text" },
+    type: {
+      control: "select",
+      options: ["text", "email", "date", "number", "password", "tel"],
     },
+    placeholder: { control: "text" },
+    disabled: { control: "boolean" },
+    error: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="max-w-5xl space-y-6 p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Shared form input components for UB Portal forms, featuring uppercase labels, light borders, and purple focus states."
+  ),
+  decorators: [withPanel("max-w-5xl space-y-6 p-6")],
 } satisfies Meta<typeof UBInput>
 
 export default inputMeta
@@ -34,6 +41,9 @@ export const TextInput: InputStory = {
     label: "Full name",
     type: "text",
     placeholder: "John Doe",
+  },
+  play: async ({ canvasElement }) => {
+    await fillInput(canvasElement, "Full name", "Maria Castillo")
   },
 }
 
@@ -98,21 +108,16 @@ export const Disabled: InputStory = {
 const selectMeta = {
   title: "Components/UBSelect",
   component: UBSelect,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Shared select/dropdown component for UB Portal forms with uppercase labels and purple focus states.",
-      },
-    },
+  tags: ["autodocs"],
+  argTypes: {
+    ...actionArgTypes,
+    label: { control: "text" },
+    error: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="max-w-md space-y-6 p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Shared select/dropdown component for UB Portal forms with uppercase labels and purple focus states."
+  ),
+  decorators: [withPanel("max-w-md space-y-6 p-6")],
 } satisfies Meta<typeof UBSelect>
 
 type SelectStory = StoryObj<typeof selectMeta>
@@ -146,21 +151,18 @@ export const SelectWithError: SelectStory = {
 const textareaMeta = {
   title: "Components/UBTextarea",
   component: UBTextarea,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Shared textarea component for UB Portal forms with uppercase labels and purple focus states.",
-      },
-    },
+  tags: ["autodocs"],
+  argTypes: {
+    ...actionArgTypes,
+    label: { control: "text" },
+    placeholder: { control: "text" },
+    rows: { control: "number" },
+    error: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="max-w-md space-y-6 p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Shared textarea component for UB Portal forms with uppercase labels and purple focus states."
+  ),
+  decorators: [withPanel("max-w-md space-y-6 p-6")],
 } satisfies Meta<typeof UBTextarea>
 
 type TextareaStory = StoryObj<typeof textareaMeta>

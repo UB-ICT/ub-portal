@@ -1,10 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectTextVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBTimeline } from "./UBTimeline"
 
 const meta = {
   title: "Components/UBTimeline",
   component: UBTimeline,
+  tags: ["autodocs"],
   args: {
     timelineTitle: "Approval pipeline",
     steps: [
@@ -15,28 +22,26 @@ const meta = {
     ],
     currentStep: 2,
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Horizontal approval line with step circles showing completed, current, and pending stages inside a bordered card container.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    timelineTitle: { control: "text" },
+    currentStep: { control: "number" },
   },
-  decorators: [
-    (Story) => (
-      <div className="max-w-5xl p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Horizontal approval line with step circles showing completed, current, and pending stages inside a bordered card container."
+  ),
+  decorators: [withPanel("max-w-5xl p-6")],
 } satisfies Meta<typeof UBTimeline>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const ApprovalPipeline: Story = {}
+export const ApprovalPipeline: Story = {
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "Approval pipeline")
+  },
+}
 
 export const RegistrationPipeline: Story = {
   args: {

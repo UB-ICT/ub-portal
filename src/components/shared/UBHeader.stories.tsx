@@ -1,5 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { MemoryRouter } from "react-router-dom"
+import {
+  actionArgTypes,
+  clickButton,
+  componentParameters,
+  expectTextVisible,
+  withFullscreenCanvas,
+  withRouter,
+} from "@/components/shared/storybook"
 
 import { UBHeader } from "./UBHeader"
 
@@ -37,6 +44,7 @@ const mockApplications = [
 const meta = {
   title: "Components/UBHeader",
   component: UBHeader,
+  tags: ["autodocs"],
   args: {
     userName: "Luis Herrera",
     userEmail: "luis.herrera@ub.edu.bz",
@@ -53,31 +61,30 @@ const meta = {
     onGoogleSettingsClick: () => undefined,
     onSignOutClick: () => undefined,
   },
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Portal header variant with logo/title + search on the left, and theme toggle, notifications, app launcher, and user profile on the right.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    userName: { control: "text" },
+    userEmail: { control: "text" },
+    notificationCount: { control: "number" },
+    showAdminActions: { control: "boolean" },
   },
-  decorators: [
-    (Story) => (
-      <MemoryRouter>
-        <div className="-m-6 min-h-svh bg-muted/30">
-          <Story />
-        </div>
-      </MemoryRouter>
-    ),
-  ],
+  parameters: componentParameters(
+    "Portal header variant with logo/title + search on the left, and theme toggle, notifications, app launcher, and user profile on the right.",
+    "fullscreen"
+  ),
+  decorators: [withRouter(), withFullscreenCanvas()],
 } satisfies Meta<typeof UBHeader>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "Luis Herrera")
+    await clickButton(canvasElement, /apps|application/i)
+  },
+}
 
 export const WithProfileImage: Story = {
   args: {

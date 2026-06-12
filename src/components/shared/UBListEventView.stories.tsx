@@ -1,6 +1,12 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { CalendarDays, LayoutList } from "lucide-react"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectTextVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBFullCalendarView } from "./UBFullCalendarView"
 import {
@@ -49,25 +55,19 @@ function SwitcherStory(args: UBListEventViewProps) {
 const meta = {
   title: "Components/UBListEventView",
   component: UBListEventView,
+  tags: ["autodocs"],
   args: {
     events: defaultEvents,
     emptyStateText: "You have no upcoming events.",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Dynamic event list view. Use with UBViewSwitcher to show your events when List is selected.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    emptyStateText: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="mx-auto w-full max-w-6xl bg-background p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Dynamic event list view. Use with UBViewSwitcher to show your events when List is selected."
+  ),
+  decorators: [withPanel("mx-auto w-full max-w-6xl bg-background p-6")],
 } satisfies Meta<typeof UBListEventView>
 
 export default meta
@@ -76,6 +76,9 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   render: (args) => <SwitcherStory {...args} />,
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, /List/i)
+  },
 }
 
 export const SwitchToListShowsEvents: Story = {

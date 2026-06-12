@@ -1,4 +1,10 @@
-import type { Meta } from "@storybook/react-vite"
+import type { Meta, StoryObj } from "@storybook/react-vite"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectTextVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBTable } from "./UBTable"
 
@@ -29,24 +35,19 @@ type Student = {
 const meta = {
   title: "Components/UBTable",
   component: UBTable,
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Shared data table component for displaying structured information in rows and columns with support for custom rendering and row interactions.",
-      },
-    },
+  tags: ["autodocs"],
+  argTypes: {
+    ...actionArgTypes,
   },
-  decorators: [
-    (Story) => (
-      <div className="space-y-4 p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Shared data table component for displaying structured information in rows and columns with support for custom rendering and row interactions."
+  ),
+  decorators: [withPanel("space-y-4 p-6")],
 } satisfies Meta<typeof UBTable>
 
 export default meta
+
+type Story = StoryObj<typeof meta>
 
 const requisitionFormsData: RequisitionForm[] = [
   {
@@ -116,7 +117,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-export const RequisitionFormsTable = {
+export const RequisitionFormsTable: Story = {
   render: () => {
     const handleViewForm = (form: RequisitionForm) => {
       alert(`Viewing form: ${form.formNumber}`)
@@ -180,6 +181,9 @@ export const RequisitionFormsTable = {
       </div>
     )
   },
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "Requisition Forms")
+  },
 }
 
 const productsData: Product[] = [
@@ -220,7 +224,7 @@ const productsData: Product[] = [
   },
 ]
 
-export const ProductsTable = {
+export const ProductsTable: Story = {
   render: () => (
     <div className="space-y-4">
       <div>
@@ -322,7 +326,7 @@ const getStatusColor = (status: Student["enrollmentStatus"]) => {
   }
 }
 
-export const EnrollmentTable = {
+export const EnrollmentTable: Story = {
   render: () => (
     <div className="space-y-4">
       <div>
@@ -387,7 +391,7 @@ const simpleData: SimpleData[] = [
   { id: 3, name: "Item C", description: "Third item", value: "150" },
 ]
 
-export const BasicTable = {
+export const BasicTable: Story = {
   render: () => (
     <div className="space-y-4">
       <div>
@@ -423,7 +427,7 @@ export const BasicTable = {
   ),
 }
 
-export const EmptyTable = {
+export const EmptyTable: Story = {
   render: () => (
     <div className="space-y-4">
       <div>

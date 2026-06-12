@@ -7,7 +7,10 @@ const preview: Preview = {
   decorators: [
     (Story) => (
       <ThemeProvider defaultTheme="light">
-        <div className="min-h-svh bg-background p-6 text-foreground">
+        <div
+          id="storybook-root"
+          className="min-h-svh bg-background text-foreground"
+        >
           <Story />
         </div>
       </ThemeProvider>
@@ -20,8 +23,17 @@ const preview: Preview = {
         color: /(background|color)$/i,
         date: /Date$/i,
       },
+      expanded: true,
+    },
+    a11y: {
+      disable: false,
+      element: "#storybook-root",
+    },
+    docs: {
+      toc: true,
     },
   },
+  tags: ["autodocs"],
 }
 
 export default preview

@@ -1,39 +1,46 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { FileText } from "lucide-react"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectTextVisible,
+  withMaxWidth,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBCard } from "./UBCard"
 
 const meta = {
   title: "Components/UBCard",
   component: UBCard,
+  tags: ["autodocs"],
   args: {
     subtitle: "Pending Approval",
     title: "2",
     description:
       "Needs action",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Shared card block for UB Portal content sections, featuring a muted uppercase subtitle, a prominent title, and supporting text.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    subtitle: { control: "text" },
+    title: { control: "text" },
+    description: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="max-w-md p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Shared card block for UB Portal content sections, featuring a muted uppercase subtitle, a prominent title, and supporting text."
+  ),
+  decorators: [withPanel("p-6"), withMaxWidth("max-w-md")],
 } satisfies Meta<typeof UBCard>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "Pending Approval")
+  },
+}
 
 export const Compact: Story = {
   args: {

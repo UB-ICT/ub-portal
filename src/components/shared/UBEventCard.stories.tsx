@@ -1,10 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectButtonVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBEventCard } from "./UBEventCard"
 
 const meta = {
   title: "Components/UBEventCard",
   component: UBEventCard,
+  tags: ["autodocs"],
   args: {
     month: "May",
     day: 29,
@@ -15,28 +22,27 @@ const meta = {
     location: "Faculty of Education Hall",
     addToCalendarLabel: "Add to Google Calendar",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Event summary card with dynamic date, tags, metadata, and customizable calendar button label.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    title: { control: "text" },
+    category: { control: "text" },
+    addToCalendarLabel: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="mx-auto w-full max-w-3xl bg-background p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Event summary card with dynamic date, tags, metadata, and customizable calendar button label."
+  ),
+  decorators: [withPanel("mx-auto w-full max-w-3xl bg-background p-6")],
 } satisfies Meta<typeof UBEventCard>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expectButtonVisible(canvasElement, "Add to Google Calendar")
+  },
+}
 
 export const DifferentEvent: Story = {
   args: {
