@@ -1,25 +1,48 @@
-import { Bell, LayoutGrid, LogOut, Moon, Plus, Search, Sun } from "lucide-react"
+import {
+  BookOpen,
+  Globe,
+  Grid3X3,
+  LayoutGrid,
+  LogOut,
+  Moon,
+  Search,
+  Settings,
+  Sun,
+  User,
+  Users,
+  Wrench,
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 import { useTheme } from "@/components/theme-provider"
-import { UBButton } from "./UBButton"
+import type { PortalApplication } from "@/lib/api/menu"
+import { resolveMenuIcon } from "@/lib/menu-icons"
+import { cn } from "@/lib/utils"
+import { useApplicationMenuStore } from "@/store/application-menu-store"
+import { useApplicationsStore } from "@/store/applications-store"
+import { UBIconTileButton } from "./UBButton"
+import { UBNotificationBell } from "./UBNotificationBell"
 
 type UBHeaderProps = {
   userName: string
-  userEmail: string
-  layout?: "default" | "daily"
-  isLoggingOut?: boolean
-  submitLabel?: string
-  searchPlaceholder?: string
-  onSubmit?: () => void
+  userEmail?: string
+  userImageSrc?: string
+  notificationCount?: number
+  showAdminActions?: boolean
+  applications?: PortalApplication[]
+  onThemeToggle?: () => void
   onNotificationsClick?: () => void
   onAppsClick?: () => void
-  onSearchChange?: (value: string) => void
-  onLogout: () => void
+  onProfileClick?: () => void
+  onViewProfile?: () => void
+  onSettingsClick?: () => void
+  onConnectUsersClick?: () => void
+  onAdminToolsClick?: () => void
+  onGoogleSettingsClick?: () => void
+  onSignOutClick?: () => void
 }
 
-/**
- * Parses user display names to retrieve up to two capitalized leading initials.
- */
 function getUserInitials(name: string) {
   const initials = name
     .split(" ")
@@ -31,161 +54,278 @@ function getUserInitials(name: string) {
   return initials || "UB"
 }
 
+function isExternalPath(path: string) {
+  return /^https?:\/\//i.test(path)
+}
+
 export function UBHeader({
   userName,
   userEmail,
-  layout = "default",
-  isLoggingOut = false,
-  submitLabel = "Submit",
-  searchPlaceholder = "Search articles, tags, sources...",
-  onSubmit,
+  userImageSrc,
+  notificationCount = 0,
+  showAdminActions = false,
+  applications: applicationsOverride,
+  onThemeToggle,
   onNotificationsClick,
   onAppsClick,
-  onSearchChange,
-  onLogout,
+  onProfileClick,
+  onViewProfile,
+  onSettingsClick,
+  onConnectUsersClick,
+  onAdminToolsClick,
+  onGoogleSettingsClick,
+  onSignOutClick,
 }: UBHeaderProps) {
+  const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
   const isDarkMode = theme === "dark"
+  const [isAppsOpen, setIsAppsOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const storeApplications = useApplicationsStore((state) => state.applications)
+  const isLoadingApplications = useApplicationsStore((state) => state.isLoading)
+  const fetchMyApplications = useApplicationsStore(
+    (state) => state.fetchMyApplications
+  )
+  const loadApplication = useApplicationMenuStore(
+    (state) => state.loadApplication
+  )
+  const applications = applicationsOverride ?? storeApplications
 
-  // ---------------------------------------------------------------------------
-  // LAYOUT VARIANT: DAILY PORTAL
-  // ---------------------------------------------------------------------------
-  if (layout === "daily") {
-    return (
-      <header className="border-b bg-card/90 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[120rem] items-center gap-4 px-4 py-3 lg:px-6">
-          
-          {/* Brand/Identity Segment */}
-          <div className="flex min-w-fit items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <LayoutGrid className="size-4" />
-            </div>
-            <div className="leading-tight">
-              <p className="text-sm font-semibold tracking-tight">UB Daily</p>
-              <p className="text-[10px] font-semibold tracking-[0.06em] text-secondary">
-                UNIVERSITY OF BELIZE
-              </p>
-            </div>
-          </div>
+  useEffect(() => {
+    if (!applicationsOverride) {
+      void fetchMyApplications()
+    }
+  }, [applicationsOverride, fetchMyApplications])
 
-          {/* Search Box Form Element */}
-          <label className="relative flex flex-1 items-center">
-            {/* Visually hidden label text for assistive screen reader technologies */}
-            <span className="sr-only">{searchPlaceholder}</span>
+  const handleApplicationClick = async (application: PortalApplication) => {
+    setIsAppsOpen(false)
+    await loadApplication(application)
 
-            <Search className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
-            <input
-              type="search"
-              aria-label={searchPlaceholder}
-              placeholder={searchPlaceholder}
-              className="h-10 w-full rounded-xl border border-border bg-muted/70 px-10 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
-              onChange={(event) => onSearchChange?.(event.target.value)}
-            />
-          </label>
+    if (isExternalPath(application.path)) {
+      window.location.assign(application.path)
+      return
+    }
 
-          {/* Action Systems & User Meta Controllers */}
-          <div className="flex min-w-fit items-center gap-2">
-            <UBButton
-              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(isDarkMode ? "light" : "dark")}
-            >
-              {isDarkMode ? (
-                <Sun className="size-4" />
-              ) : (
-                <Moon className="size-4" />
-              )}
-            </UBButton>
-
-            <UBButton
-              aria-label="Open notifications panel"
-              variant="ghost"
-              size="icon"
-              onClick={onNotificationsClick}
-            >
-              <Bell className="size-4" />
-            </UBButton>
-
-            <UBButton size="default" onClick={onSubmit}>
-              <Plus className="size-4" />
-              {submitLabel}
-            </UBButton>
-
-            <UBButton
-              aria-label="Open integrated apps"
-              variant="ghost"
-              size="icon"
-              onClick={onAppsClick}
-            >
-              <LayoutGrid className="size-4" />
-            </UBButton>
-
-            <div 
-              aria-hidden="true"
-              className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/85 to-secondary/90 text-sm font-semibold text-primary-foreground"
-            >
-              {getUserInitials(userName)}
-            </div>
-          </div>
-        </div>
-      </header>
-    )
+    navigate(application.path)
   }
 
-  // ---------------------------------------------------------------------------
-  // LAYOUT VARIANT: DEFAULT PORTAL
-  // ---------------------------------------------------------------------------
+  const handleThemeToggle = () => {
+    onThemeToggle?.()
+    setTheme(isDarkMode ? "light" : "dark")
+  }
+
+  const handleAppsClick = () => {
+    onAppsClick?.()
+    setIsAppsOpen((current) => !current)
+    setIsProfileOpen(false)
+  }
+
+  const handleProfileClick = () => {
+    onProfileClick?.()
+    setIsProfileOpen((current) => !current)
+    setIsAppsOpen(false)
+  }
+
+  const profileActionButtonClassName =
+    "inline-flex w-full items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-left text-sm text-foreground transition-colors hover:border-border hover:bg-muted"
+
   return (
-    <header className="border-b bg-background/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-8">
-        
-        {/* Brand/Identity Segment */}
-        <div className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-            <LayoutGrid className="size-5" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">
-              University of Belize
-            </p>
-            <h1 className="text-lg font-semibold tracking-tight">UB Portal</h1>
+    <header className="border-b bg-background/90 backdrop-blur pb-2">
+      <div className="flex items-center justify-between gap-4 px-6 py-4 lg:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="hidden max-w-xl flex-1 sm:block">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                aria-label="Search"
+                placeholder="Search news, apps, topics..."
+                className="h-10 w-full rounded-full border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+              />
+            </label>
           </div>
         </div>
 
-        {/* User Account Controls */}
-        <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-3 rounded-2xl border bg-card px-4 py-2 text-right sm:flex">
-            <div>
-              <p className="text-sm font-medium">{userName}</p>
-              <p className="text-xs text-muted-foreground">{userEmail}</p>
-            </div>
-            <div 
-              aria-hidden="true"
-              className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
-            >
-              {getUserInitials(userName)}
-            </div>
-          </div>
-
-          <UBButton
-            variant="outline"
-            size="sm"
-            onClick={() => setTheme(isDarkMode ? "light" : "dark")}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleThemeToggle}
+            className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            <span className="ml-2">{isDarkMode ? "Light mode" : "Dark mode"}</span>
-          </UBButton>
+          </button>
 
-          <UBButton
-            variant="outline"
-            size="sm"
-            onClick={onLogout}
-            disabled={isLoggingOut}
-          >
-            <LogOut className="size-4" />
-            <span className="ml-2">{isLoggingOut ? "Signing out..." : "Sign out"}</span>
-          </UBButton>
+          <UBNotificationBell
+            notificationCount={notificationCount}
+            onClick={onNotificationsClick}
+          />
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleAppsClick}
+              className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Open apps"
+              aria-expanded={isAppsOpen}
+            >
+              <Grid3X3 className="size-4" />
+            </button>
+
+            {isAppsOpen ? (
+              <div className="absolute top-11 right-0 z-20 w-64 rounded-xl border bg-popover p-3 shadow-sm">
+                {isLoadingApplications && applications.length === 0 ? (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">
+                    Loading applications...
+                  </p>
+                ) : applications.length === 0 ? (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">
+                    No applications available.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {applications.map((application) => {
+                      const Icon = resolveMenuIcon(application.icon)
+
+                      return (
+                        <UBIconTileButton
+                          key={application.id}
+                          label={application.label}
+                          icon={<Icon />}
+                          className="w-full"
+                          onClick={() => handleApplicationClick(application)}
+                        />
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleProfileClick}
+              className="inline-flex size-10 items-center justify-center overflow-hidden rounded-full border border-border bg-background text-sm font-semibold text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Open profile"
+              aria-expanded={isProfileOpen}
+            >
+              {userImageSrc ? (
+                <img
+                  src={userImageSrc}
+                  alt={`${userName} profile`}
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span className={cn("inline-flex size-full items-center justify-center bg-primary/10")}>{getUserInitials(userName)}</span>
+              )}
+            </button>
+
+            {isProfileOpen ? (
+              <div className="absolute top-11 right-0 z-20 w-72 rounded-xl border bg-popover p-3 shadow-sm">
+                <div className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2.5">
+                  <div className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-primary">
+                    {userImageSrc ? (
+                      <img
+                        src={userImageSrc}
+                        alt={`${userName} profile`}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <span>{getUserInitials(userName)}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{userName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{userEmail ?? "user@ub.edu.bz"}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-1">
+                  <button
+                    type="button"
+                    className={profileActionButtonClassName}
+                    onClick={onViewProfile}
+                  >
+                    <User className="size-4" />
+                    View profile
+                  </button>
+                  <button
+                    type="button"
+                    className={profileActionButtonClassName}
+                    onClick={onSettingsClick}
+                  >
+                    <Settings className="size-4" />
+                    Settings
+                  </button>
+                  <button
+                    type="button"
+                    className={profileActionButtonClassName}
+                    onClick={onConnectUsersClick}
+                  >
+                    <Users className="size-4" />
+                    Connect with users
+                  </button>
+
+                  {showAdminActions ? (
+                    <button
+                      type="button"
+                      className={profileActionButtonClassName}
+                      onClick={onAdminToolsClick}
+                    >
+                      <LayoutGrid className="size-4" />
+                      Admin tools
+                    </button>
+                  ) : null}
+
+                  <div className="my-1 border-t" />
+
+                  <button
+                    type="button"
+                    className={profileActionButtonClassName}
+                    onClick={onSignOutClick}
+                  >
+                    <LogOut className="size-4" />
+                    Sign out
+                  </button>
+
+                  <div className="pt-1">
+                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      External links
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={onGoogleSettingsClick}
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
+                        aria-label="Google settings"
+                        title="Google settings"
+                      >
+                        <Wrench className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
+                        aria-label="Campus platform"
+                        title="Campus platform"
+                      >
+                        <BookOpen className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
+                        aria-label="University website"
+                        title="University website"
+                      >
+                        <Globe className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </header>

@@ -7,6 +7,8 @@ import {
   readStoredAccessToken,
 } from "@/lib/auth/storage"
 import type { PortalSessionResponse } from "@/lib/auth/types"
+import { useApplicationsStore } from "@/store/applications-store"
+import { useApplicationMenuStore } from "@/store/application-menu-store"
 
 const AUTH_QUERY_KEY = ["auth", "session"] as const
 
@@ -101,6 +103,8 @@ export function useLogoutMutation() {
     mutationFn: logoutPortalSession,
     onSettled: async () => {
       clearStoredAuth()
+      useApplicationsStore.getState().reset()
+      useApplicationMenuStore.getState().reset()
       await queryClient.cancelQueries({ queryKey: ["auth"] })
       queryClient.removeQueries({ queryKey: ["auth"] })
     },
