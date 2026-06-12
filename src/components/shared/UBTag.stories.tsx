@@ -1,33 +1,38 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { BookOpen, CheckCircle2, Clock3, GraduationCap, TriangleAlert } from "lucide-react"
 import { useState } from "react"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectTextVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBTag } from "./UBTag"
 
 const meta = {
   title: "Components/UBTag",
   component: UBTag,
+  tags: ["autodocs"],
   args: {
     text: "Pending",
     icon: <Clock3 />,
     variant: "neutral",
     size: "sm",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Small oval tag with an icon and label for statuses and categories, with light background and complementary text/icon colors.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    text: { control: "text" },
+    variant: { control: "select", options: ["neutral", "primary", "secondary", "destructive"] },
+    size: { control: "select", options: ["sm", "md"] },
+    count: { control: "number" },
+    interactive: { control: "boolean" },
+    selected: { control: "boolean" },
   },
-  decorators: [
-    (Story) => (
-      <div className="p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Small oval tag with an icon and label for statuses and categories, with light background and complementary text/icon colors."
+  ),
+  decorators: [withPanel("p-6")],
 } satisfies Meta<typeof UBTag>
 
 export default meta
@@ -39,6 +44,9 @@ export const Pending: Story = {
     text: "Pending",
     icon: <Clock3 />,
     variant: "neutral",
+  },
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "Pending")
   },
 }
 

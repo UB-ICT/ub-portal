@@ -1,4 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectButtonVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import {
   UBFullCalendarView,
@@ -14,6 +20,7 @@ import {
 const meta = {
   title: "Components/UBFullCalendarView",
   component: UBFullCalendarView,
+  tags: ["autodocs"],
   args: {
     defaultMonth: sharedCalendarMonth,
     defaultSelectedDate: sharedCalendarSelectedDate,
@@ -23,21 +30,16 @@ const meta = {
     headingLabel: "EVENTS ON",
     emptyStateText: "No events scheduled.",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Full calendar layout with a month grid on the left and a selected-day events panel on the right. Clicking a date updates the day panel.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    todayLabel: { control: "text" },
+    headingLabel: { control: "text" },
+    emptyStateText: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="mx-auto w-full max-w-[112rem] bg-background p-4 sm:p-6 xl:px-8">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Full calendar layout with a month grid on the left and a selected-day events panel on the right. Clicking a date updates the day panel."
+  ),
+  decorators: [withPanel("mx-auto w-full max-w-[112rem] bg-background p-4 sm:p-6 xl:px-8")],
 } satisfies Meta<UBFullCalendarViewProps>
 
 export default meta
@@ -48,5 +50,8 @@ export const Default: Story = {
   args: {
     // Pass it as an instantiated Date object or an ISO string format
     defaultSelectedDate: new Date(1779948000000),
+  },
+  play: async ({ canvasElement }) => {
+    await expectButtonVisible(canvasElement, "Today")
   },
 }

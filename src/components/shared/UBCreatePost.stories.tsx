@@ -1,24 +1,32 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectButtonVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 import { UBCreatePost } from "./UBCreatePost"
 
 const meta = {
   title: "Components/UBCreatePost",
   component: UBCreatePost,
+  tags: ["autodocs"],
   args: {
     submitLabel: "Publish Post",
     isSubmitting: false,
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Create-post form with audience selector, thumbnail upload, category picker, title field, and a rich-text-style body editor. All fields are dynamic and driven by props.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    submitLabel: { control: "text" },
+    isSubmitting: { control: "boolean" },
   },
+  parameters: componentParameters(
+    "Create-post form with audience selector, thumbnail upload, category picker, title field, and a rich-text-style body editor. All fields are dynamic and driven by props."
+  ),
   decorators: [
+    withPanel("mx-auto w-full max-w-2xl bg-background px-4 py-8"),
     (Story) => (
-      <div className="mx-auto w-full max-w-2xl bg-background px-4 py-8">
+      <>
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Create Post
@@ -28,7 +36,7 @@ const meta = {
           </p>
         </div>
         <Story />
-      </div>
+      </>
     ),
   ],
 } satisfies Meta<typeof UBCreatePost>
@@ -41,6 +49,9 @@ export const Default: Story = {
   args: {
     onBack: () => undefined,
     onSubmit: (values) => console.info("Submitted", values),
+  },
+  play: async ({ canvasElement }) => {
+    await expectButtonVisible(canvasElement, "Publish Post")
   },
 }
 

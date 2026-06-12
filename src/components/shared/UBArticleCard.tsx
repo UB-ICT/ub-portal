@@ -52,7 +52,7 @@ export function UBArticleCard({
   return (
     <div
       className={cn(
-        "flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm",
+        "flex w-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm",
         className
       )}
       {...props}

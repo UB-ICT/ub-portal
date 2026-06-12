@@ -1,5 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import React from "react"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectButtonVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBCalendarView, type UBCalendarViewProps } from "./UBCalendarView"
 import {
@@ -45,6 +51,7 @@ function InteractiveCalendar(args: UBCalendarViewProps) {
 const meta = {
   title: "Components/UBCalendarView",
   component: UBCalendarView,
+  tags: ["autodocs"],
   args: {
     defaultMonth: sharedCalendarMonth,
     defaultSelectedDate: sharedCalendarSelectedDate,
@@ -53,21 +60,15 @@ const meta = {
     todayLabel: "Today",
     showEventPreviewInCells: false,
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Dynamic month calendar with selectable dates, event dots, and month navigation. Uses the same data and dots-only presentation as the full calendar view.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    todayLabel: { control: "text" },
+    showEventPreviewInCells: { control: "boolean" },
   },
-  decorators: [
-    (Story) => (
-      <div className="mx-auto w-full max-w-[108rem] bg-background p-4 sm:p-6 xl:px-8">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Dynamic month calendar with selectable dates, event dots, and month navigation. Uses the same data and dots-only presentation as the full calendar view."
+  ),
+  decorators: [withPanel("mx-auto w-full max-w-[108rem] bg-background p-4 sm:p-6 xl:px-8")],
 } satisfies Meta<UBCalendarViewProps>
 
 export default meta
@@ -76,6 +77,9 @@ type Story = StoryObj<UBCalendarViewProps>
 
 export const Default: Story = {
   render: InteractiveCalendar,
+  play: async ({ canvasElement }) => {
+    await expectButtonVisible(canvasElement, "Today")
+  },
 }
 
 export const EmptyMonth: Story = {

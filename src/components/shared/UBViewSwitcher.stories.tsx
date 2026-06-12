@@ -1,6 +1,13 @@
 import React from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { CalendarDays, LayoutList, Rows4 } from "lucide-react"
+import {
+  actionArgTypes,
+  clickButton,
+  componentParameters,
+  expectButtonVisible,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBViewSwitcher, type UBViewSwitcherProps } from "./UBViewSwitcher"
 
@@ -30,6 +37,7 @@ function InteractiveStory(args: StoryArgs) {
 const meta = {
   title: "Components/UBViewSwitcher",
   component: UBViewSwitcher,
+  tags: ["autodocs"],
   args: {
     options: [
       { value: "list", label: "List", icon: LayoutList },
@@ -37,21 +45,14 @@ const meta = {
     ],
     defaultValue: "list",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Segmented view switcher for list/calendar-style navigation. Edit labels in options and add more entries as needed.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    defaultValue: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="mx-auto w-full max-w-4xl bg-background pt-8">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Segmented view switcher for list/calendar-style navigation. Edit labels in options and add more entries as needed."
+  ),
+  decorators: [withPanel("mx-auto w-full max-w-4xl bg-background pt-8")],
 } satisfies Meta<StoryArgs>
 
 export default meta
@@ -60,6 +61,10 @@ type Story = StoryObj<StoryArgs>
 
 export const Default: Story = {
   render: InteractiveStory,
+  play: async ({ canvasElement }) => {
+    await expectButtonVisible(canvasElement, "List")
+    await clickButton(canvasElement, "Calendar")
+  },
 }
 
 export const WithMoreViews: Story = {

@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { ArrowRight, Briefcase, GraduationCap, FilePlus2, ShieldCheck } from "lucide-react"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectButtonVisible,
+} from "@/components/shared/storybook"
 import { UBButton, UBIconTileButton } from "./UBButton"
 
 const buttonIcons = {
@@ -17,26 +22,35 @@ type ButtonStoryArgs = React.ComponentProps<typeof UBButton> & {
 const meta = {
   title: "Components/UBButton",
   component: UBButton,
+  tags: ["autodocs"],
   args: {
     children: "Continue",
     variant: "default",
     size: "default",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Base Storybook button for UB Portal. Storybook-facing components use the `UB` prefix.",
-      },
+  argTypes: {
+    ...actionArgTypes,
+    children: { control: "text" },
+    variant: {
+      control: "select",
+      options: ["default", "destructive", "outline", "secondary", "ghost", "link"],
     },
+    size: { control: "select", options: ["default", "sm", "lg", "icon"] },
   },
+  parameters: componentParameters(
+    "Base Storybook button for UB Portal. Storybook-facing components use the `UB` prefix."
+  ),
 } satisfies Meta<ButtonStoryArgs>
 
 export default meta
 
-type Story = StoryObj<ButtonStoryArgs>
+type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expectButtonVisible(canvasElement, "Continue")
+  },
+}
 
 export const Outline: Story = {
   args: {

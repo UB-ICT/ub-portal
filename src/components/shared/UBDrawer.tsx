@@ -67,6 +67,7 @@ export function UBDrawer({
   const isOpen = open ?? internalOpen
   const isMini = mini ?? internalMini
   const drawerWidth = isMini ? UB_DRAWER_WIDTH_MINI : UB_DRAWER_WIDTH_FULL
+  const useStaticSidebar = persistent && !overlay
 
   const storeDrawerItems = useApplicationMenuStore((state) => state.drawerItems)
   const applicationMenu = useApplicationMenuStore((state) => state.applicationMenu)
@@ -78,6 +79,7 @@ export function UBDrawer({
     () => resolveActiveDrawerItemId(items, location.pathname),
     [items, location.pathname]
   )
+  const applicationLabel = applicationMenu?.label ?? "UB Portal"
 
   useEffect(() => {
     if (open === undefined) {
@@ -185,6 +187,98 @@ export function UBDrawer({
     )
   }
 
+  const brandingHeader = (
+    <div className="border-b px-3 py-4">
+      <div
+        className={cn(
+          "flex items-center gap-3",
+          isMini ? "justify-center" : "pr-1"
+        )}
+      >
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <ApplicationIcon className="size-5" />
+        </div>
+
+        {!isMini ? (
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-muted-foreground">
+              University of Belize
+            </p>
+            {useStaticSidebar ? (
+              <h2 className="truncate text-lg font-semibold tracking-tight">
+                {applicationLabel}
+              </h2>
+            ) : (
+              <DrawerTitle className="truncate text-lg font-semibold tracking-tight">
+                {applicationLabel}
+              </DrawerTitle>
+            )}
+          </div>
+        ) : useStaticSidebar ? (
+          <h2 className="sr-only">{applicationLabel}</h2>
+        ) : (
+          <DrawerTitle className="sr-only">{applicationLabel}</DrawerTitle>
+        )}
+
+        {!isMini ? (
+          <button
+            type="button"
+            onClick={handleMiniToggle}
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-foreground hover:bg-muted"
+            aria-label="Collapse navigation drawer"
+          >
+            <PanelLeftClose className="size-4" />
+          </button>
+        ) : null}
+      </div>
+
+      {isMini ? (
+        <button
+          type="button"
+          onClick={handleMiniToggle}
+          className="mx-auto mt-3 inline-flex size-8 items-center justify-center rounded-lg border border-border text-foreground hover:bg-muted"
+          aria-label="Expand navigation drawer"
+        >
+          <PanelLeftOpen className="size-4" />
+        </button>
+      ) : null}
+    </div>
+  )
+
+  const navigationItems = (
+    <nav
+      aria-label="Application navigation"
+      className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto p-3"
+    >
+      {isLoadingMenu && items.length === 0 ? (
+        <p className="px-2 py-3 text-sm text-muted-foreground">Loading menu...</p>
+      ) : menuError && items.length === 0 ? (
+        <p className="px-2 py-3 text-sm text-destructive">{menuError}</p>
+      ) : items.length === 0 ? (
+        <p className="px-2 py-3 text-sm text-muted-foreground">
+          No menu items available.
+        </p>
+      ) : (
+        items.map(renderItem)
+      )}
+    </nav>
+  )
+
+  const sidebarPanelClassName = cn(
+    "flex h-svh shrink-0 flex-col border-r bg-background shadow-sm",
+    drawerTransitionClass,
+    isMini ? "w-16" : "w-72",
+    className
+  )
+
+  const staticSidebar = (
+    <aside className={sidebarPanelClassName}>
+      <p className="sr-only">Application navigation menu</p>
+      {brandingHeader}
+      {navigationItems}
+    </aside>
+  )
+
   const drawerPanel = (
     <Drawer
       open={isOpen}
@@ -209,82 +303,29 @@ export function UBDrawer({
           <DrawerDescription className="sr-only">
             Application navigation menu
           </DrawerDescription>
-
-          <div className="border-b px-3 py-4">
-            <div
-              className={cn(
-                "flex items-center gap-3",
-                isMini ? "justify-center" : "pr-1"
-              )}
-            >
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <ApplicationIcon className="size-5" />
-              </div>
-
-              {!isMini ? (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-muted-foreground">
-                    University of Belize
-                  </p>
-                  <DrawerTitle className="truncate text-lg font-semibold tracking-tight">
-                    {applicationMenu?.label ?? "UB Portal"}
-                  </DrawerTitle>
-                </div>
-              ) : (
-                <DrawerTitle className="sr-only">
-                  {applicationMenu?.label ?? "UB Portal"}
-                </DrawerTitle>
-              )}
-
-              {!isMini ? (
-                <button
-                  type="button"
-                  onClick={handleMiniToggle}
-                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-foreground hover:bg-muted"
-                  aria-label="Collapse navigation drawer"
-                >
-                  <PanelLeftClose className="size-4" />
-                </button>
-              ) : null}
-            </div>
-
-            {isMini ? (
-              <button
-                type="button"
-                onClick={handleMiniToggle}
-                className="mx-auto mt-3 inline-flex size-8 items-center justify-center rounded-lg border border-border text-foreground hover:bg-muted"
-                aria-label="Expand navigation drawer"
-              >
-                <PanelLeftOpen className="size-4" />
-              </button>
-            ) : null}
-          </div>
-
-          <nav
-            aria-label="Application navigation"
-            className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto p-3"
-          >
-            {isLoadingMenu && items.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-muted-foreground">
-                Loading menu...
-              </p>
-            ) : menuError && items.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-destructive">{menuError}</p>
-            ) : items.length === 0 ? (
-              <p className="px-2 py-3 text-sm text-muted-foreground">
-                No menu items available.
-              </p>
-            ) : (
-              items.map(renderItem)
-            )}
-          </nav>
+          {brandingHeader}
+          {navigationItems}
         </DrawerPrimitive.Content>
       </DrawerPortal>
     </Drawer>
   )
 
+  const sidebar = useStaticSidebar ? staticSidebar : drawerPanel
+
   if (!children && !header) {
-    return drawerPanel
+    return sidebar
+  }
+
+  if (useStaticSidebar) {
+    return (
+      <div className="flex min-h-svh bg-muted/30">
+        {staticSidebar}
+        <div className={cn("flex min-w-0 flex-1 flex-col", drawerTransitionClass)}>
+          {header}
+          <div className="flex-1">{children}</div>
+        </div>
+      </div>
+    )
   }
 
   return (

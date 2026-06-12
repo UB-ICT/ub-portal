@@ -1,12 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import {
+  actionArgTypes,
+  clickButton,
+  componentParameters,
+  expectTextVisible,
+  withFullscreenCanvas,
+  withPanel,
+  withRouter,
+} from "@/components/shared/storybook"
+import {
   ClipboardList,
   FilePlus2,
   House,
   Truck,
   Wallet,
 } from "lucide-react"
-import { MemoryRouter } from "react-router-dom"
 
 import { UBDrawer } from "./UBDrawer"
 
@@ -46,6 +54,7 @@ const drawerItems = [
 const meta = {
   title: "Components/UBDrawer",
   component: UBDrawer,
+  tags: ["autodocs"],
   args: {
     items: drawerItems,
     persistent: true,
@@ -53,24 +62,18 @@ const meta = {
     defaultOpen: true,
     defaultMini: false,
   },
-  parameters: {
-    layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Left navigation drawer built on the shadcn Drawer. Supports mini icon-only mode, optional overlay, and persistent mode that stays open across route changes.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    persistent: { control: "boolean" },
+    overlay: { control: "boolean" },
+    defaultOpen: { control: "boolean" },
+    defaultMini: { control: "boolean" },
   },
-  decorators: [
-    (Story) => (
-      <MemoryRouter initialEntries={["/requisitions"]}>
-        <div className="min-h-svh bg-muted/30">
-          <Story />
-        </div>
-      </MemoryRouter>
-    ),
-  ],
+  parameters: componentParameters(
+    "Left navigation drawer built on the shadcn Drawer. Supports mini icon-only mode, optional overlay, and persistent mode that stays open across route changes.",
+    "fullscreen"
+  ),
+  decorators: [withRouter(["/requisitions"]), withFullscreenCanvas("min-h-svh bg-muted/30")],
 } satisfies Meta<typeof UBDrawer>
 
 export default meta
@@ -91,6 +94,10 @@ export const Default: Story = {
       </main>
     </UBDrawer>
   ),
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "Requisitions")
+    await clickButton(canvasElement, /toggle|sidebar|menu/i)
+  },
 }
 
 export const Mini: Story = {
@@ -133,13 +140,5 @@ export const PanelOnly: Story = {
   args: {
     items: drawerItems,
   },
-  decorators: [
-    (Story) => (
-      <MemoryRouter initialEntries={["/"]}>
-        <div className="min-h-[32rem] bg-muted/30 p-6">
-          <Story />
-        </div>
-      </MemoryRouter>
-    ),
-  ],
+  decorators: [withRouter(["/"]), withPanel("min-h-[32rem] bg-muted/30 p-6")],
 }

@@ -1,5 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import {
+  actionArgTypes,
+  clickLink,
+  componentParameters,
+  expectTextVisible,
+  withPanel,
+  withSidebarWidth,
+} from "@/components/shared/storybook"
+import {
   ClipboardList,
   FileCheck2,
   GraduationCap,
@@ -12,6 +20,7 @@ import { UBMenu } from "./UBMenu"
 const meta = {
   title: "Components/UBMenu",
   component: UBMenu,
+  tags: ["autodocs"],
   args: {
     items: [
       {
@@ -51,28 +60,29 @@ const meta = {
     privacyHref: "#privacy",
     termsHref: "#terms",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Sidebar menu with full-width icon text navigation buttons and branded footer section with policy links.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    brandTitle: { control: "text" },
+    brandDescription: { control: "text" },
+    privacyHref: { control: "text" },
+    termsHref: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="min-h-[40rem] w-80 p-6">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Sidebar menu with full-width icon text navigation buttons and branded footer section with policy links."
+  ),
+  decorators: [withPanel("min-h-[40rem] p-6"), withSidebarWidth("w-80")],
 } satisfies Meta<typeof UBMenu>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const Default: Story = {}
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "UB Portal")
+    await clickLink(canvasElement, "Dashboard")
+  },
+}
 
 export const RegistrationMenu: Story = {
   args: {

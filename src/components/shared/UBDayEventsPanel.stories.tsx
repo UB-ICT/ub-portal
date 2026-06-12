@@ -1,38 +1,45 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
+import {
+  actionArgTypes,
+  componentParameters,
+  expectTextVisible,
+  withMaxWidth,
+  withPanel,
+} from "@/components/shared/storybook"
 
 import { UBDayEventsPanel } from "./UBDayEventsPanel"
 
 const meta = {
   title: "Components/UBDayEventsPanel",
   component: UBDayEventsPanel,
+  tags: ["autodocs"],
   args: {
     date: "2026-05-01",
     events: [],
     headingLabel: "EVENTS ON",
     emptyStateText: "No events scheduled.",
   },
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Day events side panel with dynamic date and event list. Shows an empty state when no events exist for the selected day.",
-      },
-    },
+  argTypes: {
+    ...actionArgTypes,
+    date: { control: "text" },
+    headingLabel: { control: "text" },
+    emptyStateText: { control: "text" },
   },
-  decorators: [
-    (Story) => (
-      <div className="mx-auto w-full max-w-sm bg-background p-2">
-        <Story />
-      </div>
-    ),
-  ],
+  parameters: componentParameters(
+    "Day events side panel with dynamic date and event list. Shows an empty state when no events exist for the selected day."
+  ),
+  decorators: [withPanel("mx-auto w-full bg-background p-2"), withMaxWidth("max-w-sm")],
 } satisfies Meta<typeof UBDayEventsPanel>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const EmptyState: Story = {}
+export const EmptyState: Story = {
+  play: async ({ canvasElement }) => {
+    await expectTextVisible(canvasElement, "No events scheduled.")
+  },
+}
 
 export const WithEvents: Story = {
   args: {
