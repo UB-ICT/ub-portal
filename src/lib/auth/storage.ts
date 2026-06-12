@@ -33,15 +33,6 @@ function readCookie(name: string) {
   return decodeURIComponent(matchingCookie.slice(cookiePrefix.length))
 }
 
-function writeCookie(name: string, value: string) {
-  if (!isBrowser()) {
-    return
-  }
-
-  const secureAttribute = window.location.protocol === "https:" ? "; Secure" : ""
-  document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=${AUTH_COOKIE_PATH}; SameSite=Lax${secureAttribute}`
-}
-
 function deleteCookie(name: string) {
   if (!isBrowser()) {
     return
@@ -52,7 +43,20 @@ function deleteCookie(name: string) {
 }
 
 export function readStoredAccessToken() {
-  return readCookie(AUTH_TOKEN_KEY)
+  const storedToken = getStoredLocalItem(AUTH_TOKEN_KEY)
+
+  if (storedToken) {
+    return storedToken
+  }
+
+  const legacyCookieToken = readCookie(AUTH_TOKEN_KEY)
+
+  if (!legacyCookieToken) {
+    return null
+  }
+
+  writeStoredAccessToken(legacyCookieToken)
+  return legacyCookieToken
 }
 
 export function hasStoredAccessToken() {
@@ -60,7 +64,12 @@ export function hasStoredAccessToken() {
 }
 
 export function writeStoredAccessToken(token: string) {
-  writeCookie(AUTH_TOKEN_KEY, token)
+  if (!isBrowser()) {
+    return
+  }
+
+  window.localStorage.setItem(AUTH_TOKEN_KEY, token)
+  deleteCookie(AUTH_TOKEN_KEY)
 }
 
 export function readStoredAuthProfile(): StoredAuthProfile | null {
@@ -101,6 +110,7 @@ export function clearStoredAuth() {
   }
 
   deleteCookie(AUTH_TOKEN_KEY)
+  window.localStorage.removeItem(AUTH_TOKEN_KEY)
   window.localStorage.removeItem(AUTH_PROFILE_KEY)
 }
 
