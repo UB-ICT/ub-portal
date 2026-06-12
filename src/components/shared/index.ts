@@ -2,7 +2,6 @@ export { UBButton, UBIconTileButton } from "./UBButton"
 export type { UBButtonProps, UBIconTileButtonProps } from "./UBButton"
 
 export { UBHeader } from "./UBHeader"
-export { UBHeaderPortal } from "./UBHeaderPortal"
 
 export { UBCard } from "./UBCard"
 export type { UBCardProps } from "./UBCard"
@@ -24,6 +23,13 @@ export type { UBNotificationBellProps } from "./UBNotificationBell"
 
 export { UBMenu } from "./UBMenu"
 export type { UBMenuProps, UBMenuItem } from "./UBMenu"
+
+export {
+  UBDrawer,
+  UB_DRAWER_WIDTH_FULL,
+  UB_DRAWER_WIDTH_MINI,
+} from "./UBDrawer"
+export type { UBDrawerItem, UBDrawerProps } from "./UBDrawer"
 
 export { UBArticleCard } from "./UBArticleCard"
 export type { UBArticleCardProps } from "./UBArticleCard"

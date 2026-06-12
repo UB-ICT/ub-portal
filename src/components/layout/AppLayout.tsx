@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { UBHeader } from "@/components/shared"
+import { UBDrawer, UBHeader } from "@/components/shared"
 
 type AppLayoutProps = {
   userName: string
@@ -13,20 +13,23 @@ type AppLayoutProps = {
 export function AppLayout({
   userName,
   userEmail,
-  isLoggingOut = false,
   onLogout,
   children,
 }: AppLayoutProps) {
   return (
-    <div className="min-h-svh bg-muted/30">
-      <UBHeader
-        userName={userName}
-        userEmail={userEmail}
-        isLoggingOut={isLoggingOut}
-        onLogout={onLogout}
-      />
-
-      <main className="mx-auto max-w-7xl px-6 py-8 lg:px-8">{children}</main>
-    </div>
+    <UBDrawer
+      persistent
+      overlay={false}
+      defaultOpen
+      header={
+        <UBHeader
+          userName={userName}
+          userEmail={userEmail}
+          onSignOutClick={onLogout}
+        />
+      }
+    >
+      <main className="p-4 lg:p-8">{children}</main>
+    </UBDrawer>
   )
 }

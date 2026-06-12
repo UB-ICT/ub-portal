@@ -5,7 +5,15 @@ import {
   getAuthErrorMessage,
   usePortalSessionQuery,
 } from "@/lib/api/auth"
+import { ApiError } from "@/lib/api/client"
 import { clearStoredAuth, hasStoredAccessToken } from "@/lib/auth/storage"
+
+function isAuthFailure(error: unknown) {
+  return (
+    error instanceof ApiError &&
+    (error.status === 401 || error.status === 403)
+  )
+}
 
 export function ProtectedRoute() {
   const hasToken = hasStoredAccessToken()
@@ -26,12 +34,22 @@ export function ProtectedRoute() {
 
   if (sessionQuery.isError) {
     const message = getAuthErrorMessage(sessionQuery.error)
-    clearStoredAuth()
+
+    if (isAuthFailure(sessionQuery.error)) {
+      clearStoredAuth()
+
+      return (
+        <Navigate
+          to={`/login?message=${encodeURIComponent(message)}`}
+          replace
+        />
+      )
+    }
 
     return (
-      <Navigate
-        to={`/login?message=${encodeURIComponent(message)}`}
-        replace
+      <StatusScreen
+        title="Could not reach UB Portal"
+        description={message}
       />
     )
   }
