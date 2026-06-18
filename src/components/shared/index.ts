@@ -6,8 +6,16 @@ export { UBHeader } from "./UBHeader"
 export { UBCard } from "./UBCard"
 export type { UBCardProps } from "./UBCard"
 
-export { UBInput, UBSelect, UBTextarea } from "./UBInput"
-export type { UBInputProps, UBSelectProps, UBTextareaProps } from "./UBInput"
+export { UBInput, UBNativeSelect, UBTextarea } from "./UBInput"
+export type { UBInputProps, UBNativeSelectProps, UBTextareaProps } from "./UBInput"
+
+export { UBSelect, UB_SELECT_ADD_NEW_VALUE } from "./UBSelect"
+export type {
+  UBSelectAddOptionConfig,
+  UBSelectAddOptionContext,
+  UBSelectOption,
+  UBSelectProps,
+} from "./UBSelect"
 
 export { UBTable } from "./UBTable"
 export type { UBTableProps, ColumnDef } from "./UBTable"

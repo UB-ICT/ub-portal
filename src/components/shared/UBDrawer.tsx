@@ -318,25 +318,33 @@ export function UBDrawer({
 
   if (useStaticSidebar) {
     return (
-      <div className="flex min-h-svh bg-muted/30">
+      <div className="flex h-svh overflow-hidden bg-muted/30">
         {staticSidebar}
-        <div className={cn("flex min-w-0 flex-1 flex-col", drawerTransitionClass)}>
-          {header}
-          <div className="flex-1">{children}</div>
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+            drawerTransitionClass
+          )}
+        >
+          <div className="shrink-0">{header}</div>
+          <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-svh bg-muted/30">
+    <div className="flex h-svh overflow-hidden bg-muted/30">
       {drawerPanel}
       <div
-        className={cn("flex min-w-0 flex-1 flex-col", drawerTransitionClass)}
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+          drawerTransitionClass
+        )}
         style={{ marginLeft: drawerWidth }}
       >
-        {header}
-        <div className="flex-1">{children}</div>
+        <div className="shrink-0">{header}</div>
+        <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
     </div>
   )

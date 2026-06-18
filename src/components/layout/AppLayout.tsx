@@ -29,7 +29,9 @@ export function AppLayout({
         />
       }
     >
-      <main className="p-4 lg:p-8">{children}</main>
+      <main className="flex h-full min-h-0 flex-col overflow-hidden p-4 lg:p-8">
+        {children}
+      </main>
     </UBDrawer>
   )
 }
