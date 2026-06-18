@@ -9,7 +9,7 @@ import {
 } from "@/components/shared/storybook"
 
 import { UBButton } from "./UBButton"
-import { UBInput, UBSelect, UBTextarea } from "./UBInput"
+import { UBInput, UBNativeSelect, UBTextarea } from "./UBInput"
 
 const inputMeta = {
   title: "Components/UBInput",
@@ -106,8 +106,8 @@ export const Disabled: InputStory = {
 }
 
 const selectMeta = {
-  title: "Components/UBSelect",
-  component: UBSelect,
+  title: "Components/UBNativeSelect",
+  component: UBNativeSelect,
   tags: ["autodocs"],
   argTypes: {
     ...actionArgTypes,
@@ -118,7 +118,7 @@ const selectMeta = {
     "Shared select/dropdown component for UB Portal forms with uppercase labels and purple focus states."
   ),
   decorators: [withPanel("max-w-md space-y-6 p-6")],
-} satisfies Meta<typeof UBSelect>
+} satisfies Meta<typeof UBNativeSelect>
 
 type SelectStory = StoryObj<typeof selectMeta>
 
@@ -220,7 +220,7 @@ export const FormExample: InputStory = {
             setFormData({ ...formData, dateOfBirth: e.target.value })
           }
         />
-        <UBSelect
+        <UBNativeSelect
           label="Department"
           options={[
             { value: "", label: "Select a department" },
@@ -309,7 +309,7 @@ export const RequisitionFormWithLineItems: InputStory = {
               setFormData({ ...formData, requestTitle: e.target.value })
             }
           />
-          <UBSelect
+          <UBNativeSelect
             label="Department"
             options={[
               { value: "", label: "Select department" },

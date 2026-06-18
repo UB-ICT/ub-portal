@@ -45,13 +45,13 @@ export const UBInput = React.forwardRef<HTMLInputElement, UBInputProps>(
 
 UBInput.displayName = "UBInput"
 
-export type UBSelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
+export type UBNativeSelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
   label: string
   options: { value: string; label: string }[]
   error?: string
 }
 
-export const UBSelect = React.forwardRef<HTMLSelectElement, UBSelectProps>(
+export const UBNativeSelect = React.forwardRef<HTMLSelectElement, UBNativeSelectProps>(
   ({ label, options, error, className, id, ...props }, ref) => {
     const generatedId = React.useId()
     const selectId = id ?? generatedId
@@ -89,7 +89,7 @@ export const UBSelect = React.forwardRef<HTMLSelectElement, UBSelectProps>(
   }
 )
 
-UBSelect.displayName = "UBSelect"
+UBNativeSelect.displayName = "UBNativeSelect"
 
 export type UBTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string
