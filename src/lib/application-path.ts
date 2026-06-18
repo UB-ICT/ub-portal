@@ -128,12 +128,6 @@ export function resolveApplicationForPath(
     return matchedApplication
   }
 
-  if (normalizedPath === "/") {
-    return [...applications].sort(
-      (left, right) => left.sort_order - right.sort_order
-    )[0]
-  }
-
   return undefined
 }
 

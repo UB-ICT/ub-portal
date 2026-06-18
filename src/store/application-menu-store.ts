@@ -11,6 +11,7 @@ import {
 } from "@/lib/api/menu"
 import {
   matchesMenuItemPath,
+  normalizeRoutePath,
   resolveApplicationForMenuPath,
   resolveApplicationForPath,
   resolveMenuItemRoute,
@@ -164,6 +165,7 @@ export const useApplicationMenuStore = create<ApplicationMenuState>((set, get) =
         }
       }
 
+      get().reset()
       return
     }
 
@@ -180,6 +182,13 @@ export const useApplicationMenuStore = create<ApplicationMenuState>((set, get) =
     await get().loadApplication(matchedApplication)
   },
   ensureMenuForPath: async (pathname) => {
+    const normalizedPath = normalizeRoutePath(pathname)
+
+    if (normalizedPath === "/") {
+      get().reset()
+      return
+    }
+
     const applications =
       await useApplicationsStore.getState().fetchMyApplications()
 
