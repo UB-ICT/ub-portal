@@ -73,8 +73,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}) {
   return response
 }
 
-export async function fetchSuppliers() {
-  const response = await request<Supplier[]>(BASE_PATH)
+export async function fetchSuppliers(options?: { excludeDeleted?: boolean }) {
+  const query = options?.excludeDeleted ? "?exclude_deleted=1" : ""
+  const response = await request<Supplier[]>(`${BASE_PATH}${query}`)
 
   return {
     suppliers: response.data,
@@ -115,10 +116,11 @@ export async function updateSupplier(id: number, payload: UpdateSupplierPayload)
 }
 
 export async function deleteSupplier(id: number) {
-  await apiRequest<ApiResponse<null>>(`${BASE_PATH}/${id}`, {
+  const response = await request<Supplier>(`${BASE_PATH}/${id}`, {
     method: "DELETE",
-    token: getToken(),
   })
+
+  return response.data
 }
 
 export async function approveSupplier(id: number, payload?: SupplierReviewPayload) {
@@ -134,6 +136,14 @@ export async function rejectSupplier(id: number, payload?: SupplierReviewPayload
   const response = await request<Supplier>(`${BASE_PATH}/${id}/reject`, {
     method: "POST",
     body: JSON.stringify(payload ?? {}),
+  })
+
+  return response.data
+}
+
+export async function activateSupplier(id: number) {
+  const response = await request<Supplier>(`${BASE_PATH}/${id}/activate`, {
+    method: "POST",
   })
 
   return response.data

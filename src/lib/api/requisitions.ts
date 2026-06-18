@@ -32,6 +32,7 @@ export type RequisitionSupplierPivot = {
 }
 
 export type RequisitionLineItemInput = {
+  line_item_number: string
   description: string
   quantity: number
   unit_cost: number
@@ -40,7 +41,7 @@ export type RequisitionLineItemInput = {
 
 export type RequisitionLineItem = RequisitionLineItemInput & {
   id: number
-  line_item_number: number
+  line_item_number: string
   total: number | string
   requisition_id: number
 }

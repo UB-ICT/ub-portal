@@ -38,6 +38,7 @@ function mapApiItemsToDrafts(
 ): RequisitionLineItemDraft[] {
   return items.map((item) => ({
     id: String(item.id),
+    line_item_number: String(item.line_item_number ?? ""),
     description: item.description,
     quantity: Number(item.quantity),
     unit_cost: Number(item.unit_cost),
@@ -235,7 +236,9 @@ export function RequisitionForm({
     }
 
     if (!isLineItemsValid(lineItems)) {
-      setFormError("Each line item needs a description, quantity, and unit cost.")
+      setFormError(
+        "Each line item needs a line number, description, quantity, and unit cost."
+      )
       return
     }
 

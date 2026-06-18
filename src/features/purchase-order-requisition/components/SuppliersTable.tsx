@@ -1,4 +1,4 @@
-import { Check, Pencil, Trash2, X } from "lucide-react"
+import { Check, Pencil, RotateCcw, Trash2, X } from "lucide-react"
 import { useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
@@ -19,6 +19,7 @@ import {
   getSupplierStatusStyles,
   supplierIsReviewable,
 } from "../lib/supplier-admin-utils"
+import { isSupplierDeleted } from "../lib/supplier-utils"
 
 type SuppliersTableProps = {
   suppliers: Supplier[]
@@ -26,6 +27,7 @@ type SuppliersTableProps = {
   isLoading?: boolean
   onEdit: (supplier: Supplier) => void
   onDelete: (supplier: Supplier) => void
+  onActivate: (supplier: Supplier) => void
   onApprove: (supplier: Supplier, comments?: string) => Promise<void>
   onReject: (supplier: Supplier, comments?: string) => Promise<void>
 }
@@ -36,6 +38,7 @@ export function SuppliersTable({
   isLoading = false,
   onEdit,
   onDelete,
+  onActivate,
   onApprove,
   onReject,
 }: SuppliersTableProps) {
@@ -98,45 +101,104 @@ export function SuppliersTable({
             header: "Supplier",
             accessor: "name",
             mobile: true,
-            render: (_, row) => (
-              <div>
-                <p className="font-medium text-foreground">{row.name}</p>
-                <p className="text-xs text-muted-foreground">{row.email}</p>
-              </div>
-            ),
+            render: (_, row) => {
+              const deleted = isSupplierDeleted(row)
+
+              return (
+                <div>
+                  <p
+                    className={cn(
+                      "font-medium",
+                      deleted
+                        ? "text-destructive line-through decoration-destructive"
+                        : "text-foreground"
+                    )}
+                  >
+                    {row.name}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-xs",
+                      deleted
+                        ? "text-destructive line-through decoration-destructive"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {row.email}
+                  </p>
+                </div>
+              )
+            },
           },
           {
             header: "Contact",
             accessor: "contact_person",
-            render: (_, row) => (
-              <div>
-                <p>{row.contact_person || "—"}</p>
-                <p className="text-xs text-muted-foreground">
-                  {row.phone_number || "—"}
-                </p>
-              </div>
-            ),
+            render: (_, row) => {
+              const deleted = isSupplierDeleted(row)
+
+              return (
+                <div>
+                  <p
+                    className={cn(
+                      deleted &&
+                        "text-destructive line-through decoration-destructive"
+                    )}
+                  >
+                    {row.contact_person || "—"}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-xs",
+                      deleted
+                        ? "text-destructive line-through decoration-destructive"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {row.phone_number || "—"}
+                  </p>
+                </div>
+              )
+            },
           },
           {
             header: "TIN",
             accessor: "TIN",
-            render: (value) => String(value ?? "—"),
+            render: (value, row) => {
+              const deleted = isSupplierDeleted(row)
+
+              return (
+                <span
+                  className={cn(
+                    deleted &&
+                      "text-destructive line-through decoration-destructive"
+                  )}
+                >
+                  {String(value ?? "—")}
+                </span>
+              )
+            },
           },
           {
             header: "Status",
             accessor: "status",
             mobile: true,
-            render: (_, row) => (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "font-medium",
-                  getSupplierStatusStyles(row.status?.name)
-                )}
-              >
-                {row.status?.name ?? "Unknown"}
-              </Badge>
-            ),
+            render: (_, row) => {
+              const deleted = isSupplierDeleted(row)
+
+              return (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "font-medium",
+                    getSupplierStatusStyles(row.status?.name),
+                    deleted &&
+                      "text-destructive line-through decoration-destructive"
+                  )}
+                >
+                  {row.status?.name ?? "Unknown"}
+                </Badge>
+              )
+            },
           },
           {
             header: "Actions",
@@ -144,46 +206,60 @@ export function SuppliersTable({
             className: "text-right",
             render: (_, row) => (
               <div className="flex flex-wrap justify-end gap-1">
-                <UBButton
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onEdit(row)}
-                  aria-label={`Edit ${row.name}`}
-                >
-                  <Pencil className="size-4" />
-                </UBButton>
-                <UBButton
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onDelete(row)}
-                  aria-label={`Delete ${row.name}`}
-                >
-                  <Trash2 className="size-4" />
-                </UBButton>
-                {canReviewSuppliers && supplierIsReviewable(row) ? (
+                {isSupplierDeleted(row) ? (
+                  <UBButton
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onActivate(row)}
+                  >
+                    <RotateCcw className="size-4" data-icon="inline-start" />
+                    Set active
+                  </UBButton>
+                ) : (
                   <>
                     <UBButton
                       type="button"
                       size="sm"
-                      variant="outline"
-                      onClick={() => openReviewDialog(row, "approve")}
+                      variant="ghost"
+                      onClick={() => onEdit(row)}
+                      aria-label={`Edit ${row.name}`}
                     >
-                      <Check className="size-4" data-icon="inline-start" />
-                      Approve
+                      <Pencil className="size-4" />
                     </UBButton>
                     <UBButton
                       type="button"
                       size="sm"
-                      variant="outline"
-                      onClick={() => openReviewDialog(row, "reject")}
+                      variant="ghost"
+                      onClick={() => onDelete(row)}
+                      aria-label={`Delete ${row.name}`}
                     >
-                      <X className="size-4" data-icon="inline-start" />
-                      Reject
+                      <Trash2 className="size-4" />
                     </UBButton>
+                    {canReviewSuppliers && supplierIsReviewable(row) ? (
+                      <>
+                        <UBButton
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openReviewDialog(row, "approve")}
+                        >
+                          <Check className="size-4" data-icon="inline-start" />
+                          Approve
+                        </UBButton>
+                        <UBButton
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openReviewDialog(row, "reject")}
+                        >
+                          <X className="size-4" data-icon="inline-start" />
+                          Reject
+                        </UBButton>
+                      </>
+                    ) : null}
                   </>
-                ) : null}
+                )}
               </div>
             ),
           },

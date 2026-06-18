@@ -3,6 +3,7 @@ import { useEffect } from "react"
 import { UBSelect } from "@/components/shared/UBSelect"
 import { useSuppliersStore } from "@/store/suppliers-store"
 
+import { getSelectableSuppliers } from "../lib/supplier-admin-utils"
 import { AddSupplierForm } from "./AddSupplierForm"
 
 type SupplierSelectProps = {
@@ -28,7 +29,7 @@ export function SupplierSelect({
     void fetchSuppliers()
   }, [fetchSuppliers])
 
-  const options = suppliers.map((supplier) => ({
+  const options = getSelectableSuppliers(suppliers).map((supplier) => ({
     value: String(supplier.id),
     label: supplier.name,
   }))

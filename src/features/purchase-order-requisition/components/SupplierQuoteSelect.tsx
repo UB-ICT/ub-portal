@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils"
 import { useSuppliersStore } from "@/store/suppliers-store"
 
 import { isSupplierApproved } from "../lib/supplier-utils"
+import { getSelectableSuppliers } from "../lib/supplier-admin-utils"
 import { AddSupplierForm } from "./AddSupplierForm"
 
 function SupplierNotesHint({ supplierId }: { supplierId: string }) {
@@ -96,7 +97,7 @@ export function SupplierQuoteSelect({
   const labelId = `${label.replace(/\s+/g, "-").toLowerCase()}-label`
   const errorId = `${labelId}-error`
 
-  const availableSuppliers = suppliers.filter(
+  const availableSuppliers = getSelectableSuppliers(suppliers).filter(
     (supplier) => !excludeSupplierIds.includes(String(supplier.id))
   )
 

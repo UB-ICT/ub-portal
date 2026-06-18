@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 
 export type RequisitionLineItemDraft = {
   id: string
+  line_item_number: string
   description: string
   quantity: number
   unit_cost: number
@@ -15,6 +16,7 @@ export type RequisitionLineItemDraft = {
 export function createEmptyLineItem(): RequisitionLineItemDraft {
   return {
     id: crypto.randomUUID(),
+    line_item_number: "",
     description: "",
     quantity: 1,
     unit_cost: 0,
@@ -116,6 +118,7 @@ export function RequisitionLineItemsTable({
           <table className="min-w-full border-collapse text-sm">
           <thead className="bg-muted/40">
             <tr className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <th className="w-28 px-2 py-2 font-medium">Line Item #</th>
               <th className="px-2 py-2 font-medium">Description</th>
               <th className="w-20 px-2 py-2 font-medium">Qty</th>
               <th className="w-28 px-2 py-2 font-medium">Unit cost</th>
@@ -128,7 +131,7 @@ export function RequisitionLineItemsTable({
             {items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-2 py-6 text-center text-sm text-muted-foreground"
                 >
                   No line items yet. Add at least one item to continue.
@@ -137,6 +140,21 @@ export function RequisitionLineItemsTable({
             ) : (
               items.map((item, index) => (
                 <tr key={item.id} className="border-t border-border/70">
+                  <td className={getStripedCellClassName(index, stripedRows)}>
+                    <input
+                      type="text"
+                      aria-label="Line item number"
+                      placeholder="Enter line #"
+                      className={inputClassName}
+                      value={item.line_item_number}
+                      onChange={(event) =>
+                        updateItem(item.id, {
+                          line_item_number: event.target.value,
+                        })
+                      }
+                      disabled={disabled}
+                    />
+                  </td>
                   <td className={getStripedCellClassName(index, stripedRows)}>
                     <input
                       type="text"
@@ -219,7 +237,7 @@ export function RequisitionLineItemsTable({
             <tfoot>
               <tr className="border-t border-border bg-muted/20">
                 <td
-                  colSpan={3}
+                  colSpan={4}
                   className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground"
                 >
                   Grand total
@@ -265,6 +283,7 @@ export function RequisitionLineItemsTable({
 
 export function mapLineItemsForApi(items: RequisitionLineItemDraft[]) {
   return items.map((item) => ({
+    line_item_number: item.line_item_number.trim(),
     description: item.description.trim(),
     quantity: item.quantity,
     unit_cost: item.unit_cost,
@@ -277,6 +296,7 @@ export function isLineItemsValid(items: RequisitionLineItemDraft[]) {
     items.length > 0 &&
     items.every(
       (item) =>
+        item.line_item_number.trim().length > 0 &&
         item.description.trim().length > 0 &&
         item.quantity > 0 &&
         item.unit_cost >= 0

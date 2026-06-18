@@ -16,6 +16,7 @@ const STATUS_OPTIONS = [
   { value: "Approved", label: "Approved" },
   { value: "Rejected", label: "Rejected" },
   { value: "Under Review", label: "Under Review" },
+  { value: "Deleted", label: "Deleted" },
 ]
 
 const SORT_OPTIONS: { value: SupplierSortField; label: string }[] = [

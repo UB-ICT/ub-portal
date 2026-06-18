@@ -1,5 +1,7 @@
 import type { Supplier } from "@/lib/api/suppliers"
 
+import { isSupplierDeleted } from "./supplier-utils"
+
 export type SupplierSortField =
   | "name"
   | "email"
@@ -95,6 +97,10 @@ export function filterAndSortSuppliers(
 export function getSupplierStatusStyles(statusName?: string | null) {
   const normalized = (statusName ?? "").toLowerCase()
 
+  if (normalized.includes("deleted")) {
+    return "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+  }
+
   if (normalized.includes("approve")) {
     return "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200"
   }
@@ -111,6 +117,18 @@ export function getSupplierStatusStyles(statusName?: string | null) {
 }
 
 export function supplierIsReviewable(supplier: Supplier) {
+  if (isSupplierDeleted(supplier)) {
+    return false
+  }
+
   const status = (supplier.status?.name ?? "").toLowerCase()
   return status.includes("pending") || status.includes("review")
+}
+
+export function getDeletedSupplierTextClass(isDeleted: boolean) {
+  return isDeleted ? "text-destructive line-through decoration-destructive" : undefined
+}
+
+export function getSelectableSuppliers(suppliers: Supplier[]) {
+  return suppliers.filter((supplier) => !isSupplierDeleted(supplier))
 }

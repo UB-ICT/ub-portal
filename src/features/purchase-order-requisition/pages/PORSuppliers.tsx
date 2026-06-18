@@ -24,6 +24,7 @@ export function PORSuppliersPage() {
   const error = useSuppliersStore((state) => state.error)
   const fetchSuppliers = useSuppliersStore((state) => state.fetchSuppliers)
   const deleteSupplier = useSuppliersStore((state) => state.deleteSupplier)
+  const activateSupplier = useSuppliersStore((state) => state.activateSupplier)
   const approveSupplier = useSuppliersStore((state) => state.approveSupplier)
   const rejectSupplier = useSuppliersStore((state) => state.rejectSupplier)
 
@@ -53,7 +54,7 @@ export function PORSuppliersPage() {
 
   const handleDeleteSupplier = async (supplier: Supplier) => {
     const confirmed = window.confirm(
-      `Delete ${supplier.name}? This cannot be undone.`
+      `Mark ${supplier.name} as deleted? The supplier will be removed from requisition quotes but remain visible in this list.`
     )
 
     if (!confirmed) {
@@ -61,6 +62,18 @@ export function PORSuppliersPage() {
     }
 
     await deleteSupplier(supplier.id)
+  }
+
+  const handleActivateSupplier = async (supplier: Supplier) => {
+    const confirmed = window.confirm(
+      `Set ${supplier.name} to active? The supplier will be approved and available on requisitions again.`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    await activateSupplier(supplier.id)
   }
 
   return (
@@ -89,6 +102,7 @@ export function PORSuppliersPage() {
           isLoading={isLoading || isSaving}
           onEdit={handleEditSupplier}
           onDelete={handleDeleteSupplier}
+          onActivate={handleActivateSupplier}
           onApprove={async (supplier: Supplier, comments?: string) => {
             await approveSupplier(supplier.id, { comments })
           }}

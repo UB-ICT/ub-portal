@@ -15,6 +15,7 @@ import {
 const sampleItems: RequisitionLineItemDraft[] = [
   {
     id: "item-1",
+    line_item_number: "ICT-001",
     description: "27-inch 4K Development Monitors",
     quantity: 5,
     unit_cost: 350,
@@ -22,6 +23,7 @@ const sampleItems: RequisitionLineItemDraft[] = [
   },
   {
     id: "item-2",
+    line_item_number: "ICT-014",
     description: "Mechanical Keyboards",
     quantity: 10,
     unit_cost: 85,
@@ -29,6 +31,7 @@ const sampleItems: RequisitionLineItemDraft[] = [
   },
   {
     id: "item-3",
+    line_item_number: "LAB-003",
     description: "USB-C Docking Stations",
     quantity: 6,
     unit_cost: 130,

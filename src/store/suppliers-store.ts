@@ -2,6 +2,7 @@ import { create } from "zustand"
 
 import {
   approveSupplier,
+  activateSupplier,
   createSupplier,
   createSupplierQuick,
   deleteSupplier,
@@ -43,6 +44,7 @@ type SuppliersState = {
     id: number,
     payload?: SupplierReviewPayload
   ) => Promise<Supplier | null>
+  activateSupplier: (id: number) => Promise<Supplier | null>
   reset: () => void
 }
 
@@ -214,11 +216,11 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
     set({ isSaving: true, error: null })
 
     try {
-      await deleteSupplier(id)
+      const supplier = await deleteSupplier(id)
       set((state) => ({
-        suppliers: state.suppliers.filter((item) => item.id !== id),
+        suppliers: upsertSupplier(state.suppliers, supplier),
         selectedSupplier:
-          state.selectedSupplier?.id === id ? null : state.selectedSupplier,
+          state.selectedSupplier?.id === id ? supplier : state.selectedSupplier,
         isSaving: false,
         error: null,
       }))
@@ -274,6 +276,28 @@ export const useSuppliersStore = create<SuppliersState>((set, get) => ({
           error instanceof Error
             ? error.message
             : "Failed to reject supplier.",
+      })
+      return null
+    }
+  },
+  activateSupplier: async (id) => {
+    set({ isSaving: true, error: null })
+
+    try {
+      const supplier = await activateSupplier(id)
+      set((state) => ({
+        suppliers: upsertSupplier(state.suppliers, supplier),
+        isSaving: false,
+        error: null,
+      }))
+      return supplier
+    } catch (error) {
+      set({
+        isSaving: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to set supplier to active.",
       })
       return null
     }
