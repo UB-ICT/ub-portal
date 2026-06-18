@@ -19,6 +19,7 @@ type SupplierQuoteRowProps = {
   onChange: (quote: SupplierQuoteDraft) => void
   onRemove: () => void
   disabled?: boolean
+  showRecommendedToggle?: boolean
   excludeSupplierIds?: string[]
   uploadError?: string | null
 }
@@ -32,6 +33,7 @@ export function SupplierQuoteRow({
   onChange,
   onRemove,
   disabled = false,
+  showRecommendedToggle = true,
   excludeSupplierIds = [],
   uploadError,
 }: SupplierQuoteRowProps) {
@@ -105,18 +107,20 @@ export function SupplierQuoteRow({
           />
 
           <div className="flex flex-col justify-end">
-            <label className="mb-2 flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={quote.isRecommended}
-                onChange={(event) =>
-                  onChange({ ...quote, isRecommended: event.target.checked })
-                }
-                disabled={disabled}
-                className="size-4 rounded border-input"
-              />
-              <span>Recommended</span>
-            </label>
+            {showRecommendedToggle ? (
+              <label className="mb-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={quote.isRecommended}
+                  onChange={(event) =>
+                    onChange({ ...quote, isRecommended: event.target.checked })
+                  }
+                  disabled={disabled}
+                  className="size-4 rounded border-input"
+                />
+                <span>Recommended</span>
+              </label>
+            ) : null}
           </div>
 
           <div className="w-full md:col-span-2 xl:col-span-4">

@@ -4,6 +4,7 @@ import { readStoredAccessToken } from "@/lib/auth/storage"
 type ApiResponse<T> = {
   success: boolean
   data: T
+  meta?: SupplierListMeta
   message?: string
 }
 
@@ -21,10 +22,15 @@ export type Supplier = {
   TIN?: string | null
   notes?: string | null
   status_id?: number | null
+  approved_by_user_id?: string | null
   status?: SupplierStatus | null
 }
 
-export type CreateSupplierPayload = {
+export type SupplierListMeta = {
+  can_review_suppliers: boolean
+}
+
+export type CreateSupplierQuickPayload = {
   name: string
   contact_person?: string
   phone_number?: string
@@ -33,7 +39,20 @@ export type CreateSupplierPayload = {
   notes?: string
 }
 
+export type CreateSupplierPayload = {
+  name: string
+  contact_person: string
+  phone_number: string
+  email: string
+  TIN: string
+  notes?: string
+}
+
 export type UpdateSupplierPayload = CreateSupplierPayload
+
+export type SupplierReviewPayload = {
+  comments?: string
+}
 
 const BASE_PATH = "/requisitionSystem/suppliers"
 
@@ -51,34 +70,71 @@ async function request<T>(endpoint: string, options: RequestInit = {}) {
     token: getToken(),
   })
 
-  return response.data
+  return response
 }
 
 export async function fetchSuppliers() {
-  return request<Supplier[]>(BASE_PATH)
+  const response = await request<Supplier[]>(BASE_PATH)
+
+  return {
+    suppliers: response.data,
+    meta: response.meta ?? { can_review_suppliers: false },
+  }
 }
 
 export async function fetchSupplier(id: number) {
-  return request<Supplier>(`${BASE_PATH}/${id}`)
+  const response = await request<Supplier>(`${BASE_PATH}/${id}`)
+  return response.data
 }
 
-export async function createSupplier(payload: CreateSupplierPayload) {
-  return request<Supplier>(BASE_PATH, {
+export async function createSupplierQuick(payload: CreateSupplierQuickPayload) {
+  const response = await request<Supplier>(`${BASE_PATH}/quick`, {
     method: "POST",
     body: JSON.stringify(payload),
   })
+
+  return response.data
+}
+
+export async function createSupplier(payload: CreateSupplierPayload) {
+  const response = await request<Supplier>(BASE_PATH, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+
+  return response.data
 }
 
 export async function updateSupplier(id: number, payload: UpdateSupplierPayload) {
-  return request<Supplier>(`${BASE_PATH}/${id}`, {
+  const response = await request<Supplier>(`${BASE_PATH}/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
   })
+
+  return response.data
 }
 
 export async function deleteSupplier(id: number) {
-  return apiRequest<ApiResponse<null>>(`${BASE_PATH}/${id}`, {
+  await apiRequest<ApiResponse<null>>(`${BASE_PATH}/${id}`, {
     method: "DELETE",
     token: getToken(),
   })
+}
+
+export async function approveSupplier(id: number, payload?: SupplierReviewPayload) {
+  const response = await request<Supplier>(`${BASE_PATH}/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  })
+
+  return response.data
+}
+
+export async function rejectSupplier(id: number, payload?: SupplierReviewPayload) {
+  const response = await request<Supplier>(`${BASE_PATH}/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  })
+
+  return response.data
 }

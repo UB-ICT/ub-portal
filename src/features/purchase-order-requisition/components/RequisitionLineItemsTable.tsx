@@ -30,8 +30,14 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
-function calculateLineTotal(item: RequisitionLineItemDraft) {
+export function calculateLineTotal(item: RequisitionLineItemDraft) {
   return item.quantity * item.unit_cost
+}
+
+export function calculateRequisitionTotalFromLineItems(
+  items: RequisitionLineItemDraft[]
+) {
+  return items.reduce((sum, item) => sum + calculateLineTotal(item), 0)
 }
 
 type RequisitionLineItemsTableProps = {

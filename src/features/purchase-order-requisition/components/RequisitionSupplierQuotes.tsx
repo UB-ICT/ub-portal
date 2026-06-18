@@ -6,8 +6,12 @@ import { cn } from "@/lib/utils"
 import { useRequisitionQuotesStore } from "@/store/requisition-quotes-store"
 
 import {
+  applyRecommendedSupplierDefaults,
   createEmptySupplierQuote,
+  getCompleteSupplierQuotes,
+  getSupplierQuoteRequirementMessage,
   revokeSupplierQuotePreview,
+  SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD,
   type SupplierQuoteDraft,
 } from "../lib/supplier-quotes"
 import { SupplierQuoteRow } from "./SupplierQuoteRow"
@@ -16,6 +20,7 @@ type RequisitionSupplierQuotesProps = {
   quotes: SupplierQuoteDraft[]
   onChange: (quotes: SupplierQuoteDraft[]) => void
   requisitionId?: number
+  requisitionTotal?: number
   disabled?: boolean
   className?: string
   error?: string | null
@@ -48,6 +53,7 @@ export function RequisitionSupplierQuotes({
   quotes,
   onChange,
   requisitionId,
+  requisitionTotal = 0,
   disabled = false,
   className,
   error,
@@ -61,6 +67,10 @@ export function RequisitionSupplierQuotes({
 
   const hasLoadedAttachments = useRef(false)
 
+  const emitChange = (nextQuotes: SupplierQuoteDraft[]) => {
+    onChange(applyRecommendedSupplierDefaults(nextQuotes))
+  }
+
   useEffect(() => {
     hasLoadedAttachments.current = false
   }, [requisitionId])
@@ -72,7 +82,7 @@ export function RequisitionSupplierQuotes({
 
     void fetchAttachments(requisitionId).then((attachments) => {
       hasLoadedAttachments.current = true
-      onChange(
+      emitChange(
         attachments.length > 0
           ? mapAttachmentsToQuotes(attachments)
           : [createEmptySupplierQuote()]
@@ -82,7 +92,7 @@ export function RequisitionSupplierQuotes({
 
   const updateQuote = (clientId: string, nextQuote: SupplierQuoteDraft) => {
     if (nextQuote.isRecommended) {
-      onChange(
+      emitChange(
         quotes.map((quote) =>
           quote.clientId === clientId
             ? nextQuote
@@ -92,7 +102,7 @@ export function RequisitionSupplierQuotes({
       return
     }
 
-    onChange(
+    emitChange(
       quotes.map((quote) => (quote.clientId === clientId ? nextQuote : quote))
     )
   }
@@ -107,16 +117,21 @@ export function RequisitionSupplierQuotes({
     }
 
     revokeSupplierQuotePreview(quote)
-    onChange(quotes.filter((item) => item.clientId !== quote.clientId))
+    emitChange(quotes.filter((item) => item.clientId !== quote.clientId))
   }
 
   const addQuote = () => {
-    onChange([...quotes, createEmptySupplierQuote()])
+    emitChange([...quotes, createEmptySupplierQuote()])
   }
 
   const usedSupplierIds = quotes
     .map((quote) => quote.supplierId)
     .filter(Boolean)
+
+  const completeQuoteCount = getCompleteSupplierQuotes(quotes).length
+  const showRecommendedToggle =
+    requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD ||
+    completeQuoteCount > 1
 
   return (
     <section className={cn("space-y-3", className)}>
@@ -126,7 +141,7 @@ export function RequisitionSupplierQuotes({
             Supplier quotes
           </h3>
           <p className="text-xs text-muted-foreground">
-            Upload a PDF quote and assign a supplier for each vendor option.
+            {getSupplierQuoteRequirementMessage(requisitionTotal)}
           </p>
         </div>
         <UBButton
@@ -155,6 +170,7 @@ export function RequisitionSupplierQuotes({
               onChange={(nextQuote) => updateQuote(quote.clientId, nextQuote)}
               onRemove={() => void removeQuote(quote)}
               disabled={disabled || isLoading}
+              showRecommendedToggle={showRecommendedToggle}
               excludeSupplierIds={usedSupplierIds.filter(
                 (supplierId) => supplierId !== quote.supplierId
               )}

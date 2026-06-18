@@ -25,9 +25,10 @@ const meta = {
     label: { control: "text" },
     error: { control: "text" },
     disabled: { control: "boolean" },
+    allowAddSupplier: { control: "boolean" },
   },
   parameters: componentParameters(
-    "Supplier picker for quote uploads. Unapproved suppliers appear struck through with a not approved label."
+    "Supplier picker for quote uploads. Unapproved suppliers appear struck through with a not approved label. Includes an add-new-supplier dialog."
   ),
   decorators: [withPanel("max-w-md space-y-6 p-6")],
   beforeEach: () => {
@@ -69,12 +70,49 @@ export const WithSelection: Story = {
   },
 }
 
+export const WithAddSupplierDialog: Story = {
+  render: (args) => {
+    const [value, setValue] = useState("")
+
+    return (
+      <StorybookSuppliersProvider
+        suppliers={mockSuppliers}
+        mockCreateSupplier
+      >
+        <SupplierQuoteSelect {...args} value={value} onValueChange={setValue} />
+      </StorybookSuppliersProvider>
+    )
+  },
+  args: {
+    label: "Supplier",
+    allowAddSupplier: true,
+  },
+}
+
+export const WithoutAddSupplier: Story = {
+  render: (args) => {
+    const [value, setValue] = useState("")
+
+    return (
+      <StorybookSuppliersProvider suppliers={mockSuppliers}>
+        <SupplierQuoteSelect {...args} value={value} onValueChange={setValue} />
+      </StorybookSuppliersProvider>
+    )
+  },
+  args: {
+    label: "Supplier",
+    allowAddSupplier: false,
+  },
+}
+
 function StorybookSuppliersProvider({
   suppliers,
   children,
+  mockCreateSupplier = false,
 }: {
   suppliers: Supplier[]
   children: ReactNode
+  mockCreateSupplier?: boolean
 }) {
   const useSuppliersStore = require("@/store/suppliers-store")
     .useSuppliersStore as typeof import("@/store/suppliers-store").useSuppliersStore
@@ -82,7 +120,33 @@ function StorybookSuppliersProvider({
   useSuppliersStore.setState({
     suppliers,
     isLoading: false,
+    isSaving: false,
     error: null,
+    createSupplierQuick: mockCreateSupplier
+      ? async (payload) => {
+          const supplier: Supplier = {
+            id: Date.now(),
+            name: payload.name,
+            contact_person: payload.contact_person ?? null,
+            phone_number: payload.phone_number ?? null,
+            email: payload.email ?? null,
+            TIN: payload.TIN ?? null,
+            notes: payload.notes ?? null,
+            status_id: 2,
+            status: { id: 2, name: "Pending" },
+          }
+
+          useSuppliersStore.setState((state) => ({
+            suppliers: [...state.suppliers, supplier].sort((left, right) =>
+              left.name.localeCompare(right.name)
+            ),
+            isSaving: false,
+            error: null,
+          }))
+
+          return supplier
+        }
+      : useSuppliersStore.getState().createSupplierQuick,
   })
 
   return children

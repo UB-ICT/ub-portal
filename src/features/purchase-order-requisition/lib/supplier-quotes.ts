@@ -16,6 +16,8 @@ export type SupplierQuoteUploadMeta = {
   quote_reference_number?: string | null
 }
 
+export const SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD = 1000
+
 export function createEmptySupplierQuote(): SupplierQuoteDraft {
   return {
     clientId: crypto.randomUUID(),
@@ -29,19 +31,84 @@ export function createEmptySupplierQuote(): SupplierQuoteDraft {
   }
 }
 
-export function isSupplierQuotesValid(quotes: SupplierQuoteDraft[]) {
+export function isCompleteSupplierQuote(quote: SupplierQuoteDraft) {
   return (
-    quotes.length > 0 &&
-    quotes.every(
-      (quote) =>
-        quote.supplierId !== "" && (quote.file !== null || quote.attachmentId)
-    )
+    quote.supplierId !== "" && (quote.file !== null || quote.attachmentId)
   )
 }
 
+export function getCompleteSupplierQuotes(quotes: SupplierQuoteDraft[]) {
+  return quotes.filter(isCompleteSupplierQuote)
+}
+
+export function getRequiredQuoteCount(requisitionTotal: number) {
+  return requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD ? 3 : 1
+}
+
+export function getSupplierQuoteRequirementMessage(requisitionTotal: number) {
+  const requiredCount = getRequiredQuoteCount(requisitionTotal)
+
+  if (requiredCount === 1) {
+    return "Requisitions under $1,000 require one supplier quote with a PDF."
+  }
+
+  return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more require at least ${requiredCount} supplier quotes and one recommended supplier.`
+}
+
+export function applyRecommendedSupplierDefaults(
+  quotes: SupplierQuoteDraft[]
+): SupplierQuoteDraft[] {
+  const completeQuotes = getCompleteSupplierQuotes(quotes)
+
+  if (completeQuotes.length !== 1) {
+    return quotes
+  }
+
+  const recommendedSupplierId = completeQuotes[0].supplierId
+
+  return quotes.map((quote) =>
+    isCompleteSupplierQuote(quote) &&
+    quote.supplierId === recommendedSupplierId
+      ? { ...quote, isRecommended: true }
+      : quote
+  )
+}
+
+export function validateSupplierQuotes(
+  quotes: SupplierQuoteDraft[],
+  requisitionTotal: number
+): string | null {
+  const completeQuotes = getCompleteSupplierQuotes(quotes)
+  const requiredCount = getRequiredQuoteCount(requisitionTotal)
+
+  if (completeQuotes.length < requiredCount) {
+    if (requiredCount === 1) {
+      return "Add at least one supplier quote with a PDF file and supplier selected."
+    }
+
+    return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more require at least ${requiredCount} supplier quotes with PDF files and suppliers selected.`
+  }
+
+  if (
+    requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD &&
+    completeQuotes.filter((quote) => quote.isRecommended).length !== 1
+  ) {
+    return "Select exactly one recommended supplier quote."
+  }
+
+  return null
+}
+
+export function isSupplierQuotesValid(
+  quotes: SupplierQuoteDraft[],
+  requisitionTotal: number
+) {
+  return validateSupplierQuotes(quotes, requisitionTotal) === null
+}
+
 export function mapSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {
-  return quotes
-    .filter((quote) => quote.supplierId)
+  return applyRecommendedSupplierDefaults(quotes)
+    .filter(isCompleteSupplierQuote)
     .map((quote) => ({
       supplier_id: Number(quote.supplierId),
       is_recommended: quote.isRecommended,
@@ -53,10 +120,14 @@ export function mapSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {
 export function mapSupplierQuoteToUploadMeta(
   quote: SupplierQuoteDraft
 ): SupplierQuoteUploadMeta {
+  const [normalizedQuote] = applyRecommendedSupplierDefaults([quote])
+
   return {
-    is_recommended: quote.isRecommended,
-    quoted_total: quote.quotedTotal ? Number(quote.quotedTotal) : null,
-    quote_reference_number: quote.quoteReferenceNumber.trim() || null,
+    is_recommended: normalizedQuote.isRecommended,
+    quoted_total: normalizedQuote.quotedTotal
+      ? Number(normalizedQuote.quotedTotal)
+      : null,
+    quote_reference_number: normalizedQuote.quoteReferenceNumber.trim() || null,
   }
 }
 

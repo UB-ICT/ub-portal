@@ -1,16 +1,27 @@
-import { useEffect } from "react"
+import { Plus } from "lucide-react"
+import { useEffect, useState } from "react"
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { UB_SELECT_ADD_NEW_VALUE } from "@/components/shared/UBSelect"
 import { cn } from "@/lib/utils"
 import { useSuppliersStore } from "@/store/suppliers-store"
 
 import { isSupplierApproved } from "../lib/supplier-utils"
+import { AddSupplierForm } from "./AddSupplierForm"
 
 function SupplierNotesHint({ supplierId }: { supplierId: string }) {
   const suppliers = useSuppliersStore((state) => state.suppliers)
@@ -33,6 +44,7 @@ type SupplierQuoteSelectProps = {
   error?: string
   disabled?: boolean
   excludeSupplierIds?: string[]
+  allowAddSupplier?: boolean
 }
 
 function SupplierOptionContent({
@@ -68,10 +80,14 @@ export function SupplierQuoteSelect({
   error,
   disabled = false,
   excludeSupplierIds = [],
+  allowAddSupplier = true,
 }: SupplierQuoteSelectProps) {
   const suppliers = useSuppliersStore((state) => state.suppliers)
   const isLoading = useSuppliersStore((state) => state.isLoading)
   const fetchSuppliers = useSuppliersStore((state) => state.fetchSuppliers)
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [selectKey, setSelectKey] = useState(0)
 
   useEffect(() => {
     void fetchSuppliers()
@@ -88,6 +104,21 @@ export function SupplierQuoteSelect({
     (supplier) => String(supplier.id) === value
   )
 
+  const handleValueChange = (nextValue: string) => {
+    if (allowAddSupplier && nextValue === UB_SELECT_ADD_NEW_VALUE) {
+      setAddDialogOpen(true)
+      setSelectKey((current) => current + 1)
+      return
+    }
+
+    onValueChange(nextValue)
+  }
+
+  const handleSupplierCreated = (option: { value: string; label: string }) => {
+    onValueChange(option.value)
+    setAddDialogOpen(false)
+  }
+
   return (
     <div className="w-full">
       <label
@@ -98,8 +129,9 @@ export function SupplierQuoteSelect({
       </label>
 
       <Select
+        key={selectKey}
         value={value || undefined}
-        onValueChange={onValueChange}
+        onValueChange={handleValueChange}
         disabled={disabled || isLoading}
       >
         <SelectTrigger
@@ -120,6 +152,20 @@ export function SupplierQuoteSelect({
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
+          {allowAddSupplier ? (
+            <>
+              <SelectItem
+                value={UB_SELECT_ADD_NEW_VALUE}
+                className="font-medium text-primary"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Plus className="size-4" />
+                  Add new supplier
+                </span>
+              </SelectItem>
+              <SelectSeparator />
+            </>
+          ) : null}
           {availableSuppliers.map((supplier) => {
             const approved = isSupplierApproved(supplier)
 
@@ -146,6 +192,23 @@ export function SupplierQuoteSelect({
       ) : null}
 
       {value ? <SupplierNotesHint supplierId={value} /> : null}
+
+      {allowAddSupplier ? (
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add supplier</DialogTitle>
+              <DialogDescription>
+                Create a new supplier and select it for this quote.
+              </DialogDescription>
+            </DialogHeader>
+            <AddSupplierForm
+              onCreated={handleSupplierCreated}
+              onCancel={() => setAddDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   )
 }

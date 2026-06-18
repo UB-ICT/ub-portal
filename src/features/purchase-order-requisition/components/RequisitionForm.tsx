@@ -10,15 +10,16 @@ import { useRequisitionsStore } from "@/store/requisitions-store"
 import { normalizeRequisitionPriority } from "../lib/requisition-priorities"
 import {
   createEmptySupplierQuote,
-  isSupplierQuotesValid,
   mapSupplierQuoteToUploadMeta,
   mapSupplierQuotesToPayload,
   revokeSupplierQuotePreviews,
+  validateSupplierQuotes,
   type SupplierQuoteDraft,
 } from "../lib/supplier-quotes"
 
 import {
   createEmptyLineItem,
+  calculateRequisitionTotalFromLineItems,
   isLineItemsValid,
   mapLineItemsForApi,
   RequisitionLineItemsTable,
@@ -202,6 +203,7 @@ export function RequisitionForm({
   const isFormDisabled =
     isLoading || isSaving || (mode === "edit" && !isEditable)
   const canAddLineItems = canAddLineItemsToRequisition(statusLabel, mode)
+  const requisitionTotal = calculateRequisitionTotalFromLineItems(lineItems)
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -217,10 +219,13 @@ export function RequisitionForm({
       return
     }
 
-    if (!isSupplierQuotesValid(supplierQuotes)) {
-      setFormError(
-        "Add at least one supplier quote with a PDF file and supplier selected."
-      )
+    const supplierQuoteError = validateSupplierQuotes(
+      supplierQuotes,
+      requisitionTotal
+    )
+
+    if (supplierQuoteError) {
+      setFormError(supplierQuoteError)
       return
     }
 
@@ -355,6 +360,7 @@ export function RequisitionForm({
         quotes={supplierQuotes}
         onChange={setSupplierQuotes}
         requisitionId={mode === "edit" ? requisitionId : undefined}
+        requisitionTotal={requisitionTotal}
         disabled={isFormDisabled}
       />
 

@@ -8,7 +8,9 @@ import { useSuppliersStore } from "@/store/suppliers-store"
 type AddSupplierFormProps = UBSelectAddOptionContext
 
 export function AddSupplierForm({ onCreated, onCancel }: AddSupplierFormProps) {
-  const createSupplier = useSuppliersStore((state) => state.createSupplier)
+  const createSupplierQuick = useSuppliersStore(
+    (state) => state.createSupplierQuick
+  )
   const isSaving = useSuppliersStore((state) => state.isSaving)
   const error = useSuppliersStore((state) => state.error)
 
@@ -29,7 +31,7 @@ export function AddSupplierForm({ onCreated, onCancel }: AddSupplierFormProps) {
       return
     }
 
-    const supplier = await createSupplier({
+    const supplier = await createSupplierQuick({
       name: name.trim(),
       contact_person: contactPerson.trim() || undefined,
       phone_number: phoneNumber.trim() || undefined,
