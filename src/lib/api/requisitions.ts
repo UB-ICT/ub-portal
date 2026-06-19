@@ -26,6 +26,11 @@ export type RequisitionStageRecord = {
   name: string
 }
 
+export type RequisitionUserStageAction =
+  | "approved"
+  | "rejected"
+  | "cost_center_review"
+
 export type RequisitionSupplierPivot = {
   id: number
   name: string
@@ -70,6 +75,7 @@ export type Pipeline = {
 export type RequisitionRecord = {
   id: number
   number: string
+  purchase_order_number?: string | null
   cost_center_id: number
   date_prepared: string
   status_id: number
@@ -88,6 +94,9 @@ export type RequisitionRecord = {
   stage?: RequisitionStageRecord
   is_editable?: boolean
   can_approve?: boolean
+  show_approval_actions?: boolean
+  user_stage_action?: RequisitionUserStageAction | null
+  can_edit_purchase_order_number?: boolean
   pipeline?: Pipeline
   current_stage_sequence?: number
 }
@@ -118,6 +127,10 @@ export type UpdateRequisitionPayload = CreateRequisitionPayload & {
 
 export type RequisitionApprovalPayload = {
   comments?: string | null
+}
+
+export type UpdateRequisitionPurchaseOrderPayload = {
+  purchase_order_number?: string | null
 }
 
 const BASE_PATH = "/requisitionSystem"
@@ -192,6 +205,19 @@ export async function requestRequisitionReview(
     `${BASE_PATH}/requisitions/${id}/request-review`,
     {
       method: "POST",
+      body: JSON.stringify(payload),
+    }
+  )
+}
+
+export async function updateRequisitionPurchaseOrderNumber(
+  id: number,
+  payload: UpdateRequisitionPurchaseOrderPayload
+) {
+  return request<RequisitionRecord>(
+    `${BASE_PATH}/requisitions/${id}/purchase-order-number`,
+    {
+      method: "PATCH",
       body: JSON.stringify(payload),
     }
   )

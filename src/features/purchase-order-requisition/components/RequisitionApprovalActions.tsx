@@ -2,22 +2,43 @@ import { Check, MessageSquareWarning, X } from "lucide-react"
 import { useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
+import type { RequisitionUserStageAction } from "@/lib/api/requisitions"
 import { cn } from "@/lib/utils"
 import { useRequisitionLogsStore } from "@/store/requisition-logs-store"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 
+import {
+  getRequisitionUserStageActionButtonClass,
+  getRequisitionUserStageActionDescription,
+  getRequisitionUserStageActionHighlightClass,
+  getRequisitionUserStageActionLabel,
+} from "../lib/requisition-approval-utils"
+
 type RequisitionApprovalActionsProps = {
   requisitionId: number
   stageName?: string | null
+  canAct?: boolean
+  userStageAction?: RequisitionUserStageAction | null
   className?: string
   onDecision?: () => void
 }
 
 type ReviewAction = "approve" | "reject" | "request-review"
 
+const ACTION_TO_USER_STAGE: Record<
+  ReviewAction,
+  RequisitionUserStageAction
+> = {
+  approve: "approved",
+  reject: "rejected",
+  "request-review": "cost_center_review",
+}
+
 export function RequisitionApprovalActions({
   requisitionId,
   stageName,
+  canAct = false,
+  userStageAction = null,
   className,
   onDecision,
 }: RequisitionApprovalActionsProps) {
@@ -37,7 +58,14 @@ export function RequisitionApprovalActions({
   const [comments, setComments] = useState("")
   const [localError, setLocalError] = useState<string | null>(null)
 
+  const hasRecordedAction = Boolean(userStageAction)
+  const actionsDisabled = isReviewing || !canAct || hasRecordedAction
+
   const handleDecision = async (action: ReviewAction) => {
+    if (actionsDisabled) {
+      return
+    }
+
     setLocalError(null)
 
     const payload = {
@@ -70,11 +98,27 @@ export function RequisitionApprovalActions({
       <div>
         <h3 className="text-sm font-semibold tracking-tight">Approval decision</h3>
         <p className="text-xs text-muted-foreground">
-          {stageName
-            ? `You are acting at the ${stageName} stage. Approve to advance the pipeline, reject to stop it, or request more information from the cost center.`
-            : "Approve to advance the pipeline, reject to stop it, or request more information from the cost center."}
+          {hasRecordedAction && userStageAction
+            ? getRequisitionUserStageActionDescription(
+                userStageAction,
+                stageName
+              )
+            : stageName
+              ? `You are acting at the ${stageName} stage. Approve to advance the pipeline, reject to stop it, or request more information from the cost center.`
+              : "Approve to advance the pipeline, reject to stop it, or request more information from the cost center."}
         </p>
       </div>
+
+      {hasRecordedAction && userStageAction ? (
+        <div
+          className={cn(
+            "rounded-lg border px-4 py-3 text-sm font-medium",
+            getRequisitionUserStageActionHighlightClass(userStageAction)
+          )}
+        >
+          {getRequisitionUserStageActionLabel(userStageAction)}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <label
@@ -89,7 +133,7 @@ export function RequisitionApprovalActions({
           onChange={(event) => setComments(event.target.value)}
           rows={3}
           placeholder="Add review notes for the activity log..."
-          disabled={isReviewing}
+          disabled={actionsDisabled}
           className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
@@ -102,7 +146,11 @@ export function RequisitionApprovalActions({
         <UBButton
           type="button"
           onClick={() => void handleDecision("approve")}
-          disabled={isReviewing}
+          disabled={actionsDisabled}
+          className={getRequisitionUserStageActionButtonClass(
+            "approved",
+            userStageAction === ACTION_TO_USER_STAGE.approve
+          )}
         >
           <Check className="size-4" data-icon="inline-start" />
           {isReviewing ? "Processing..." : "Approve"}
@@ -111,7 +159,11 @@ export function RequisitionApprovalActions({
           type="button"
           variant="outline"
           onClick={() => void handleDecision("request-review")}
-          disabled={isReviewing}
+          disabled={actionsDisabled}
+          className={getRequisitionUserStageActionButtonClass(
+            "cost_center_review",
+            userStageAction === ACTION_TO_USER_STAGE["request-review"]
+          )}
         >
           <MessageSquareWarning className="size-4" data-icon="inline-start" />
           Request more information
@@ -120,8 +172,15 @@ export function RequisitionApprovalActions({
           type="button"
           variant="outline"
           onClick={() => void handleDecision("reject")}
-          disabled={isReviewing}
-          className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={actionsDisabled}
+          className={cn(
+            !hasRecordedAction &&
+              "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive",
+            getRequisitionUserStageActionButtonClass(
+              "rejected",
+              userStageAction === ACTION_TO_USER_STAGE.reject
+            )
+          )}
         >
           <X className="size-4" data-icon="inline-start" />
           Reject

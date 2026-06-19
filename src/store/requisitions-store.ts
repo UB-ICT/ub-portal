@@ -10,12 +10,14 @@ import {
   rejectRequisition,
   requestRequisitionReview,
   updateRequisition,
+  updateRequisitionPurchaseOrderNumber,
   type CostCenter,
   type CreateRequisitionPayload,
   type Pipeline,
   type RequisitionApprovalPayload,
   type RequisitionRecord,
   type UpdateRequisitionPayload,
+  type UpdateRequisitionPurchaseOrderPayload,
 } from "@/lib/api/requisitions"
 import { fetchPipelines } from "@/lib/api/pipelines"
 import { readStoredAccessToken } from "@/lib/auth/storage"
@@ -31,6 +33,7 @@ type RequisitionsState = {
   isLoadingSelected: boolean
   isSaving: boolean
   isReviewing: boolean
+  isSavingPurchaseOrder: boolean
   error: string | null
   
   fetchRequisitions: (force?: boolean) => Promise<RequisitionRecord[]>
@@ -54,6 +57,10 @@ type RequisitionsState = {
     id: number,
     payload?: RequisitionApprovalPayload
   ) => Promise<RequisitionRecord | null>
+  updateRequisitionPurchaseOrderNumber: (
+    id: number,
+    payload: UpdateRequisitionPurchaseOrderPayload
+  ) => Promise<RequisitionRecord | null>
   deleteRequisition: (id: number) => Promise<boolean>
   fetchFormData: (force?: boolean) => Promise<void>
   fetchApprovalPipeline: (force?: boolean) => Promise<Pipeline | null>
@@ -72,6 +79,7 @@ const initialState = {
   isLoadingSelected: false,
   isSaving: false,
   isReviewing: false,
+  isSavingPurchaseOrder: false,
   error: null as string | null,
 }
 
@@ -268,6 +276,31 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
           error instanceof Error
             ? error.message
             : "Failed to send requisition back for review.",
+      })
+      return null
+    }
+  },
+  updateRequisitionPurchaseOrderNumber: async (id, payload) => {
+    set({ isSavingPurchaseOrder: true, error: null })
+
+    try {
+      const requisition = await updateRequisitionPurchaseOrderNumber(id, payload)
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isSavingPurchaseOrder: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isSavingPurchaseOrder: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update purchase order number.",
       })
       return null
     }

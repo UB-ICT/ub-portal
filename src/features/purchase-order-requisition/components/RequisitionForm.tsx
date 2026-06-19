@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { uploadRequisitionQuote } from "@/lib/api/attachments"
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
-import type { RequisitionPriority, RequisitionRecord } from "@/lib/api/requisitions"
+import type { RequisitionPriority, RequisitionRecord, RequisitionUserStageAction } from "@/lib/api/requisitions"
 import { cn } from "@/lib/utils"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 import { normalizeRequisitionPriority } from "../lib/requisition-priorities"
@@ -105,6 +105,12 @@ export function RequisitionForm({
   const updateRequisition = useRequisitionsStore(
     (state) => state.updateRequisition
   )
+  const updateRequisitionPurchaseOrderNumber = useRequisitionsStore(
+    (state) => state.updateRequisitionPurchaseOrderNumber
+  )
+  const isSavingPurchaseOrder = useRequisitionsStore(
+    (state) => state.isSavingPurchaseOrder
+  )
   const fetchLogs = useRequisitionLogsStore((state) => state.fetchLogs)
 
   const [referenceNumber, setReferenceNumber] = useState("")
@@ -125,7 +131,13 @@ export function RequisitionForm({
   ])
   const [formError, setFormError] = useState<string | null>(null)
   const [isEditable, setIsEditable] = useState(true)
+  const [showApprovalActions, setShowApprovalActions] = useState(false)
   const [canApprove, setCanApprove] = useState(false)
+  const [userStageAction, setUserStageAction] =
+    useState<RequisitionUserStageAction | null>(null)
+  const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("")
+  const [canEditPurchaseOrderNumber, setCanEditPurchaseOrderNumber] =
+    useState(false)
   const [activityComment, setActivityComment] = useState("")
 
   const resetCreateForm = () => {
@@ -146,7 +158,11 @@ export function RequisitionForm({
     setLineItems([createEmptyLineItem()])
     setFormError(null)
     setIsEditable(true)
+    setShowApprovalActions(false)
     setCanApprove(false)
+    setUserStageAction(null)
+    setPurchaseOrderNumber("")
+    setCanEditPurchaseOrderNumber(false)
     setActivityComment("")
   }
 
@@ -181,6 +197,12 @@ export function RequisitionForm({
       )
     )
     setCanApprove(Boolean(requisition.can_approve))
+    setShowApprovalActions(Boolean(requisition.show_approval_actions))
+    setUserStageAction(requisition.user_stage_action ?? null)
+    setPurchaseOrderNumber(requisition.purchase_order_number ?? "")
+    setCanEditPurchaseOrderNumber(
+      Boolean(requisition.can_edit_purchase_order_number)
+    )
     setActivityComment("")
     setFormError(null)
   }
@@ -223,6 +245,8 @@ export function RequisitionForm({
   const requisitionTotal = calculateRequisitionTotalFromLineItems(lineItems)
   const actionButtonsDisabled =
     isLoading || isSaving || (mode === "edit" && !isEditable)
+  const isApprovedRequisition = statusLabel.toLowerCase() === "approved"
+  const showPurchaseOrderSection = mode === "edit" && isApprovedRequisition
 
   const validateForm = (shouldSubmit: boolean) => {
     if (!costCenterId) {
@@ -322,6 +346,29 @@ export function RequisitionForm({
     }
   }
 
+  const handleSavePurchaseOrderNumber = async () => {
+    if (!requisitionId || !canEditPurchaseOrderNumber) {
+      return
+    }
+
+    setFormError(null)
+
+    const requisition = await updateRequisitionPurchaseOrderNumber(
+      requisitionId,
+      {
+        purchase_order_number: purchaseOrderNumber.trim() || null,
+      }
+    )
+
+    if (!requisition) {
+      return
+    }
+
+    applyRequisitionState(requisition)
+    await fetchLogs(requisition.id, true)
+    onSuccess?.(requisition)
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)}>
       <div className="flex flex-col gap-4">
@@ -395,6 +442,41 @@ export function RequisitionForm({
           />
         ) : null}
       </div>
+
+      {showPurchaseOrderSection ? (
+        <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="flex-1">
+              <UBInput
+                label="Purchase order number"
+                value={purchaseOrderNumber}
+                onChange={(event) => setPurchaseOrderNumber(event.target.value)}
+                placeholder={
+                  canEditPurchaseOrderNumber
+                    ? "Enter the purchase order number"
+                    : "Not assigned"
+                }
+                readOnly={!canEditPurchaseOrderNumber}
+                disabled={!canEditPurchaseOrderNumber || isSavingPurchaseOrder}
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                {canEditPurchaseOrderNumber
+                  ? "Assign the purchase order number after this requisition has been fully approved."
+                  : "The purchase order number can only be assigned by a purchase officer after approval."}
+              </p>
+            </div>
+            {canEditPurchaseOrderNumber ? (
+              <UBButton
+                type="button"
+                onClick={() => void handleSavePurchaseOrderNumber()}
+                disabled={isSavingPurchaseOrder}
+              >
+                {isSavingPurchaseOrder ? "Saving..." : "Save PO number"}
+              </UBButton>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <RequisitionSupplierQuotes
         quotes={supplierQuotes}
@@ -479,10 +561,12 @@ export function RequisitionForm({
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </div>
 
-      {mode === "edit" && requisitionId && canApprove ? (
+      {mode === "edit" && requisitionId && showApprovalActions ? (
         <RequisitionApprovalActions
           requisitionId={requisitionId}
           stageName={stageLabel}
+          canAct={canApprove}
+          userStageAction={userStageAction}
           onDecision={() => void handleApprovalDecision()}
         />
       ) : null}
