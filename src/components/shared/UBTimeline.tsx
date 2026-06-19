@@ -1,6 +1,5 @@
 import { Check } from "lucide-react"
 import type * as React from "react"
-
 import { cn } from "@/lib/utils"
 
 export type UBTimelineStep = {
@@ -25,60 +24,77 @@ export function UBTimeline({
 
   return (
     <div
-      className={cn("rounded-2xl border bg-card p-6", className)}
+      className={cn("rounded-2xl border bg-card p-6 shadow-sm", className)}
       {...props}
     >
-      <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+      {/* Title block */}
+      <p className="text-xs font-semibold tracking-wider text-muted-foreground/80 uppercase">
         {timelineTitle}
       </p>
 
-      <div className="mt-5 overflow-x-auto">
-        <div className="min-w-max">
-          <div className="flex items-start">
-            {steps.map((step, index) => {
-              const stepNumber = index + 1
-              const isCompleted = stepNumber < clampedCurrentStep
-              const isCurrent = stepNumber === clampedCurrentStep
-              const isPending = stepNumber > clampedCurrentStep
-              const isLast = index === totalSteps - 1
+      <div className="relative mt-8 px-4">
+        {/* Connecting track line — Uses border token for perfectly adaptive grey */}
+        <div className="absolute top-5 right-10 left-10 z-0 h-[1px] bg-border" />
 
-              return (
+        <div className="relative z-10 flex items-start justify-between gap-2">
+          {steps.map((step, index) => {
+            const stepNumber = index + 1
+            const isCompleted = stepNumber < clampedCurrentStep
+            const isCurrent = stepNumber === clampedCurrentStep
+            const isPending = stepNumber > clampedCurrentStep
+
+            return (
+              <div
+                key={`${step.title}-${stepNumber}`}
+                className="relative flex flex-1 flex-col items-center"
+              >
+                {/* Colored Active Line segment */}
+                {index > 0 && stepNumber <= clampedCurrentStep && (
+                  <div
+                    className="absolute z-0 h-[2px] bg-primary"
+                    style={{
+                      top: "20px",
+                      left: "-50%",
+                      right: "50%",
+                    }}
+                  />
+                )}
+
+                {/* Step Circle Badge */}
                 <div
-                  key={`${step.title}-${stepNumber}`}
                   className={cn(
-                    "relative flex min-w-[8.75rem] flex-col items-center",
-                    !isLast && "pr-8"
+                    "relative z-10 flex size-10 items-center justify-center rounded-full border text-sm font-medium shadow-sm transition-all duration-200",
+                    isCompleted &&
+                    "border-primary bg-primary text-primary-foreground",
+                    isCurrent &&
+                    "scale-105 border-amber-500 bg-amber-500 font-semibold text-white",
+                    // Pending state now defaults to text-muted-foreground for crisp light-mode contrast
+                    isPending &&
+                    "border-muted-foreground/30 bg-card text-muted-foreground"
                   )}
                 >
-                  {!isLast ? (
-                    <div
-                      className={cn(
-                        "absolute top-5 left-1/2 h-0.5 w-full",
-                        stepNumber < clampedCurrentStep
-                          ? "bg-primary"
-                          : "bg-border"
-                      )}
-                    />
-                  ) : null}
-
-                  <div
-                    className={cn(
-                      "relative z-10 flex size-10 items-center justify-center rounded-full border text-sm font-semibold",
-                      isCompleted && "border-primary bg-primary text-primary-foreground",
-                      isCurrent && "border-amber-500 bg-amber-500 text-white",
-                      isPending && "border-muted-foreground/40 bg-background text-muted-foreground"
-                    )}
-                  >
-                    {isCompleted ? <Check className="size-4" /> : stepNumber}
-                  </div>
-
-                  <p className="mt-3 text-center text-xs font-medium text-muted-foreground">
-                    {step.title}
-                  </p>
+                  {isCompleted ? (
+                    <Check className="size-4 stroke-[3]" />
+                  ) : (
+                    stepNumber
+                  )}
                 </div>
-              )
-            })}
-          </div>
+
+                {/* Status-Driven Labels */}
+                <p
+                  className={cn(
+                    "mt-3 max-w-[120px] text-center text-xs break-words transition-colors duration-200",
+                    isCompleted && "font-semibold text-primary",
+                    isCurrent && "font-bold text-amber-600 dark:text-amber-400",
+                    // Changed from text-slate-400 to text-muted-foreground so it's readable in light and dark mode
+                    isPending && "font-medium text-muted-foreground/80"
+                  )}
+                >
+                  {step.title}
+                </p>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

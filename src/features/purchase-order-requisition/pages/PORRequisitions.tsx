@@ -4,6 +4,7 @@ import { Navigate } from "react-router-dom"
 import { UBButton } from "@/components/shared/UBButton"
 import { RequisitionForm } from "@/features/purchase-order-requisition/components/RequisitionForm"
 import { RequisitionPane } from "@/features/purchase-order-requisition/components/RequisitionPane"
+import { UBTimeline } from "@/components/shared/UBTimeline"
 import type { RequisitionRecord } from "@/lib/api/requisitions"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 
@@ -11,12 +12,14 @@ type PanelMode = "create" | "edit"
 
 export function PORRequisitionsPage() {
   const [panelMode, setPanelMode] = useState<PanelMode>("create")
-  const [selectedRequisitionId, setSelectedRequisitionId] = useState<
-    number | null
-  >(null)
-  const fetchRequisitions = useRequisitionsStore(
-    (state) => state.fetchRequisitions
-  )
+  const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
+
+  // 1. Pull server state directly from your existing Zustand store
+  const requisitions = useRequisitionsStore((state) => state.requisitions)
+  const fetchRequisitions = useRequisitionsStore((state) => state.fetchRequisitions)
+
+  // Find the focused requisition record from your stored state array
+  const activeRequisition = requisitions.find((r) => r.id === selectedRequisitionId)
 
   const handleSelectRequisition = (id: number) => {
     setSelectedRequisitionId(id)
@@ -29,6 +32,7 @@ export function PORRequisitionsPage() {
   }
 
   const handleFormSuccess = async (requisition: RequisitionRecord) => {
+    // 2. This refetches your list cache, pulling down the updated current_stage_sequence
     await fetchRequisitions(true)
     setSelectedRequisitionId(requisition.id)
     setPanelMode("edit")
@@ -37,6 +41,26 @@ export function PORRequisitionsPage() {
   const handleCancel = () => {
     handleNewRequisition()
   }
+
+  // 3. Static fallback timeline steps if relationships are unpopulated
+  const defaultSteps = [
+    { title: "Draft" },
+    { title: "Submitted" },
+    { title: "Director Approval" },
+    { title: "Budget Officer Approval" },
+    { title: "Vice President Approval" },
+    { title: "Director of Finance" },
+  ]
+
+  // 4. Sort and extract steps if the backend relationships are present
+  const timelineSteps = activeRequisition?.pipeline?.stages
+    ? [...activeRequisition.pipeline.stages]
+      .sort((a, b) => (a.pivot?.sequence ?? 0) - (b.pivot?.sequence ?? 0))
+      .map((stage) => ({ title: stage.name }))
+    : defaultSteps
+
+  // 5. Read the database tracking tracker sequence (defaults to 1 for previews)
+  const currentStep = activeRequisition?.current_stage_sequence ?? 1
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
@@ -65,6 +89,16 @@ export function PORRequisitionsPage() {
                 ? "Edit the selected requisition and save your changes."
                 : "Fill in the details below to create a new requisition."}
             </p>
+          </div>
+
+          {/* 6. Timeline panel component connected to state variables */}
+          <div className="shrink-0 border-b bg-muted/30 p-4">
+            <UBTimeline
+              timelineTitle={panelMode === "edit" ? "Approval Progress" : "Pipeline Preview"}
+              steps={timelineSteps}
+              currentStep={currentStep}
+              className="border-none bg-transparent p-0 shadow-none"
+            />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">

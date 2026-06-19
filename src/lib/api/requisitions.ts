@@ -46,6 +46,22 @@ export type RequisitionLineItem = RequisitionLineItemInput & {
   requisition_id: number
 }
 
+export type PipelineStage = {
+  id: number
+  name: string
+  pivot?: {
+    pipeline_id: number
+    stage_id: number
+    sequence: number
+  }
+}
+
+export type Pipeline = {
+  id: number
+  name: string
+  stages?: PipelineStage[]
+}
+
 export type RequisitionRecord = {
   id: number
   number: string
@@ -65,6 +81,8 @@ export type RequisitionRecord = {
   cost_center?: CostCenter
   status?: RequisitionStatusRecord
   is_editable?: boolean
+  pipeline?: Pipeline
+  current_stage_sequence?: number
 }
 
 export type RequisitionSupplierInput = {
