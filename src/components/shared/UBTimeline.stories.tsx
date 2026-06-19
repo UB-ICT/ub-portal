@@ -17,8 +17,9 @@ const meta = {
     steps: [
       { title: "Submitted" },
       { title: "Director Approval" },
-      { title: "Finance Review" },
-      { title: "Final Approval" },
+      { title: "Budget Officer Approval" },
+      { title: "Vice President Approval" },
+      { title: "Director of Finance" },
     ],
     currentStep: 2,
   },
@@ -40,44 +41,5 @@ type Story = StoryObj<typeof meta>
 export const ApprovalPipeline: Story = {
   play: async ({ canvasElement }) => {
     await expectTextVisible(canvasElement, "Approval pipeline")
-  },
-}
-
-export const RegistrationPipeline: Story = {
-  args: {
-    timelineTitle: "Registration pipeline",
-    steps: [
-      { title: "Submitted" },
-      { title: "Documents Check" },
-      { title: "Director Approval" },
-      { title: "Registered" },
-    ],
-    currentStep: 3,
-  },
-}
-
-export const CompletedPipeline: Story = {
-  args: {
-    timelineTitle: "Approval pipeline",
-    steps: [
-      { title: "Submitted" },
-      { title: "Director Approval" },
-      { title: "Finance Review" },
-      { title: "Final Approval" },
-    ],
-    currentStep: 4,
-  },
-}
-
-export const EarlyStagePipeline: Story = {
-  args: {
-    timelineTitle: "Registration pipeline",
-    steps: [
-      { title: "Submitted" },
-      { title: "Director Approval" },
-      { title: "Finance Review" },
-      { title: "Final Approval" },
-    ],
-    currentStep: 1,
   },
 }

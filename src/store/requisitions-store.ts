@@ -23,6 +23,7 @@ type RequisitionsState = {
   isLoadingSelected: boolean
   isSaving: boolean
   error: string | null
+  
   fetchRequisitions: (force?: boolean) => Promise<RequisitionRecord[]>
   fetchRequisitionById: (id: number) => Promise<RequisitionRecord | null>
   createRequisition: (
@@ -35,6 +36,7 @@ type RequisitionsState = {
   deleteRequisition: (id: number) => Promise<boolean>
   fetchFormData: (force?: boolean) => Promise<void>
   reset: () => void
+  
 }
 
 const initialState = {
