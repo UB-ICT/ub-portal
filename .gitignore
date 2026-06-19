@@ -11,7 +11,10 @@ node_modules
 dist
 storybook-static
 dist-ssr
-*.local
+
+# Environment overrides (committed: .env.local, .env.development, .env.production)
+.env
+.env.*
 
 # Editor directories and files
 .vscode/*
