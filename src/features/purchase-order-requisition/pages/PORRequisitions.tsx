@@ -1,25 +1,57 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Navigate } from "react-router-dom"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { RequisitionForm } from "@/features/purchase-order-requisition/components/RequisitionForm"
 import { RequisitionPane } from "@/features/purchase-order-requisition/components/RequisitionPane"
+import { mapPipelineToTimelineSteps } from "@/features/purchase-order-requisition/lib/pipeline-utils"
 import { UBTimeline } from "@/components/shared/UBTimeline"
 import type { RequisitionRecord } from "@/lib/api/requisitions"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 
 type PanelMode = "create" | "edit"
 
+function resolveActiveRequisition(
+  requisitions: RequisitionRecord[],
+  selectedRequisition: RequisitionRecord | null,
+  selectedRequisitionId: number | null
+) {
+  if (
+    selectedRequisitionId &&
+    selectedRequisition?.id === selectedRequisitionId
+  ) {
+    return selectedRequisition
+  }
+
+  return requisitions.find((requisition) => requisition.id === selectedRequisitionId)
+}
+
 export function PORRequisitionsPage() {
   const [panelMode, setPanelMode] = useState<PanelMode>("create")
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
 
-  // 1. Pull server state directly from your existing Zustand store
   const requisitions = useRequisitionsStore((state) => state.requisitions)
+  const selectedRequisition = useRequisitionsStore(
+    (state) => state.selectedRequisition
+  )
+  const approvalPipeline = useRequisitionsStore((state) => state.approvalPipeline)
+  const isLoadingPipeline = useRequisitionsStore(
+    (state) => state.isLoadingPipeline
+  )
   const fetchRequisitions = useRequisitionsStore((state) => state.fetchRequisitions)
+  const fetchApprovalPipeline = useRequisitionsStore(
+    (state) => state.fetchApprovalPipeline
+  )
 
-  // Find the focused requisition record from your stored state array
-  const activeRequisition = requisitions.find((r) => r.id === selectedRequisitionId)
+  const activeRequisition = resolveActiveRequisition(
+    requisitions,
+    selectedRequisition,
+    selectedRequisitionId
+  )
+
+  useEffect(() => {
+    void fetchApprovalPipeline()
+  }, [fetchApprovalPipeline])
 
   const handleSelectRequisition = (id: number) => {
     setSelectedRequisitionId(id)
@@ -32,7 +64,6 @@ export function PORRequisitionsPage() {
   }
 
   const handleFormSuccess = async (requisition: RequisitionRecord) => {
-    // 2. This refetches your list cache, pulling down the updated current_stage_sequence
     await fetchRequisitions(true)
     setSelectedRequisitionId(requisition.id)
     setPanelMode("edit")
@@ -42,24 +73,11 @@ export function PORRequisitionsPage() {
     handleNewRequisition()
   }
 
-  // 3. Static fallback timeline steps if relationships are unpopulated
-  const defaultSteps = [
-    { title: "Draft" },
-    { title: "Submitted" },
-    { title: "Director Approval" },
-    { title: "Budget Officer Approval" },
-    { title: "Vice President Approval" },
-    { title: "Director of Finance" },
-  ]
-
-  // 4. Sort and extract steps if the backend relationships are present
-  const timelineSteps = activeRequisition?.pipeline?.stages
-    ? [...activeRequisition.pipeline.stages]
-      .sort((a, b) => (a.pivot?.sequence ?? 0) - (b.pivot?.sequence ?? 0))
-      .map((stage) => ({ title: stage.name }))
-    : defaultSteps
-
-  // 5. Read the database tracking tracker sequence (defaults to 1 for previews)
+  const pipeline = activeRequisition?.pipeline ?? approvalPipeline
+  const timelineSteps = useMemo(
+    () => mapPipelineToTimelineSteps(pipeline),
+    [pipeline]
+  )
   const currentStep = activeRequisition?.current_stage_sequence ?? 1
 
   return (
@@ -91,14 +109,25 @@ export function PORRequisitionsPage() {
             </p>
           </div>
 
-          {/* 6. Timeline panel component connected to state variables */}
           <div className="shrink-0 border-b bg-muted/30 p-4">
-            <UBTimeline
-              timelineTitle={panelMode === "edit" ? "Approval Progress" : "Pipeline Preview"}
-              steps={timelineSteps}
-              currentStep={currentStep}
-              className="border-none bg-transparent p-0 shadow-none"
-            />
+            {isLoadingPipeline && timelineSteps.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Loading approval pipeline...
+              </p>
+            ) : timelineSteps.length > 0 ? (
+              <UBTimeline
+                timelineTitle={
+                  panelMode === "edit" ? "Approval Progress" : "Pipeline Preview"
+                }
+                steps={timelineSteps}
+                currentStep={currentStep}
+                className="border-none bg-transparent p-0 shadow-none"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No pipeline stages are configured.
+              </p>
+            )}
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">

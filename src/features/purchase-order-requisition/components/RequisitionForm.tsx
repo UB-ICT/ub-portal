@@ -1,5 +1,5 @@
-import { Save, X } from "lucide-react"
-import { useEffect, useState, type FormEvent } from "react"
+import { Save, Send, X } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { uploadRequisitionQuote } from "@/lib/api/attachments"
 import { UBButton } from "@/components/shared/UBButton"
@@ -29,8 +29,13 @@ import { CurrencySelect } from "./CurrencySelect"
 import { PrioritySelect } from "./PrioritySelect"
 import { RequisitionSupplierQuotes } from "./RequisitionSupplierQuotes"
 import { RequisitionActivityLog } from "./RequisitionActivityLog"
+import { RequisitionApprovalActions } from "./RequisitionApprovalActions"
 import { toDateInputValue } from "../lib/requisition-mappers"
-import { canCostCenterEditRequisition, canAddLineItemsToRequisition } from "../lib/requisition-log-utils"
+import {
+  canAddLineItemsToRequisition,
+  canCostCenterEditRequisition,
+  canSubmitRequisition,
+} from "../lib/requisition-log-utils"
 import { useRequisitionLogsStore } from "@/store/requisition-logs-store"
 
 function mapApiItemsToDrafts(
@@ -106,6 +111,7 @@ export function RequisitionForm({
   const [costCenterLabel, setCostCenterLabel] = useState("")
   const [costCenterId, setCostCenterId] = useState<number | null>(null)
   const [statusLabel, setStatusLabel] = useState("")
+  const [stageLabel, setStageLabel] = useState("")
   const [currencyId, setCurrencyId] = useState("")
   const [priority, setPriority] = useState<RequisitionPriority>("routine")
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("")
@@ -119,6 +125,7 @@ export function RequisitionForm({
   ])
   const [formError, setFormError] = useState<string | null>(null)
   const [isEditable, setIsEditable] = useState(true)
+  const [canApprove, setCanApprove] = useState(false)
   const [activityComment, setActivityComment] = useState("")
 
   const resetCreateForm = () => {
@@ -130,6 +137,7 @@ export function RequisitionForm({
     setCostCenterLabel(assignedCostCenter?.name ?? "")
     setCostCenterId(assignedCostCenter?.id ?? null)
     setStatusLabel("")
+    setStageLabel("")
     setCurrencyId("")
     setPriority("routine")
     setExpectedDeliveryDate("")
@@ -138,7 +146,43 @@ export function RequisitionForm({
     setLineItems([createEmptyLineItem()])
     setFormError(null)
     setIsEditable(true)
+    setCanApprove(false)
     setActivityComment("")
+  }
+
+  const applyRequisitionState = (requisition: RequisitionRecord) => {
+    setReferenceNumber(requisition.number)
+    setCostCenterLabel(requisition.cost_center?.name ?? "")
+    setCostCenterId(requisition.cost_center_id)
+    setStatusLabel(requisition.status?.name ?? "")
+    setStageLabel(requisition.stage?.name ?? "")
+    setCurrencyId(String(requisition.currency_id))
+    setPriority(normalizeRequisitionPriority(requisition.priority))
+    setExpectedDeliveryDate(
+      requisition.expected_delivery_date
+        ? toDateInputValue(requisition.expected_delivery_date)
+        : ""
+    )
+    setIsRecurring(Boolean(requisition.is_recurring))
+    setReminderDate(
+      requisition.reminder_date
+        ? toDateInputValue(requisition.reminder_date)
+        : ""
+    )
+    setLineItems(
+      requisition.items?.length
+        ? mapApiItemsToDrafts(requisition.items)
+        : [createEmptyLineItem()]
+    )
+    setIsEditable(
+      canCostCenterEditRequisition(
+        requisition.status?.name,
+        requisition.is_editable
+      )
+    )
+    setCanApprove(Boolean(requisition.can_approve))
+    setActivityComment("")
+    setFormError(null)
   }
 
   useEffect(() => {
@@ -160,36 +204,7 @@ export function RequisitionForm({
         return
       }
 
-      setReferenceNumber(requisition.number)
-      setCostCenterLabel(requisition.cost_center?.name ?? "")
-      setCostCenterId(requisition.cost_center_id)
-      setStatusLabel(requisition.status?.name ?? "")
-      setCurrencyId(String(requisition.currency_id))
-      setPriority(normalizeRequisitionPriority(requisition.priority))
-      setExpectedDeliveryDate(
-        requisition.expected_delivery_date
-          ? toDateInputValue(requisition.expected_delivery_date)
-          : ""
-      )
-      setIsRecurring(Boolean(requisition.is_recurring))
-      setReminderDate(
-        requisition.reminder_date
-          ? toDateInputValue(requisition.reminder_date)
-          : ""
-      )
-      setLineItems(
-        requisition.items?.length
-          ? mapApiItemsToDrafts(requisition.items)
-          : [createEmptyLineItem()]
-      )
-      setIsEditable(
-        canCostCenterEditRequisition(
-          requisition.status?.name,
-          requisition.is_editable
-        )
-      )
-      setActivityComment("")
-      setFormError(null)
+      applyRequisitionState(requisition)
     })
   }, [mode, requisitionId, fetchRequisitionById])
 
@@ -204,46 +219,54 @@ export function RequisitionForm({
   const isFormDisabled =
     isLoading || isSaving || (mode === "edit" && !isEditable)
   const canAddLineItems = canAddLineItemsToRequisition(statusLabel, mode)
+  const showSubmitAction = canSubmitRequisition(statusLabel, mode)
   const requisitionTotal = calculateRequisitionTotalFromLineItems(lineItems)
+  const actionButtonsDisabled =
+    isLoading || isSaving || (mode === "edit" && !isEditable)
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault()
-    setFormError(null)
-
+  const validateForm = (shouldSubmit: boolean) => {
     if (!costCenterId) {
-      setFormError("No cost center is available for this requisition.")
-      return
+      return "No cost center is available for this requisition."
     }
 
     if (!currencyId) {
-      setFormError("Please select a currency.")
-      return
+      return "Please select a currency."
     }
 
-    const supplierQuoteError = validateSupplierQuotes(
-      supplierQuotes,
-      requisitionTotal
-    )
+    if (shouldSubmit) {
+      const supplierQuoteError = validateSupplierQuotes(
+        supplierQuotes,
+        requisitionTotal
+      )
 
-    if (supplierQuoteError) {
-      setFormError(supplierQuoteError)
-      return
+      if (supplierQuoteError) {
+        return supplierQuoteError
+      }
     }
 
     if (isRecurring && !reminderDate) {
-      setFormError("Please set a reminder date for recurring requisitions.")
-      return
+      return "Please set a reminder date for recurring requisitions."
     }
 
     if (!isLineItemsValid(lineItems)) {
-      setFormError(
-        "Each line item needs a line number, description, quantity, and unit cost."
-      )
+      return "Each line item needs a line number, description, quantity, and unit cost."
+    }
+
+    return null
+  }
+
+  const persistRequisition = async (shouldSubmit: boolean) => {
+    setFormError(null)
+
+    const validationError = validateForm(shouldSubmit)
+
+    if (validationError) {
+      setFormError(validationError)
       return
     }
 
     const payload = {
-      cost_center_id: costCenterId,
+      cost_center_id: costCenterId as number,
       currency_id: Number(currencyId),
       priority,
       expected_delivery_date: expectedDeliveryDate || null,
@@ -251,6 +274,7 @@ export function RequisitionForm({
       reminder_date: isRecurring ? reminderDate : null,
       suppliers: mapSupplierQuotesToPayload(supplierQuotes),
       items: mapLineItemsForApi(lineItems),
+      submit: shouldSubmit,
     }
 
     const requisition =
@@ -278,6 +302,7 @@ export function RequisitionForm({
     }
 
     if (mode === "edit") {
+      applyRequisitionState(requisition)
       setActivityComment("")
       await fetchLogs(requisition.id, true)
     }
@@ -285,9 +310,21 @@ export function RequisitionForm({
     onSuccess?.(requisition)
   }
 
+  const handleApprovalDecision = async () => {
+    if (!requisitionId) {
+      return
+    }
+
+    const requisition = await fetchRequisitionById(requisitionId)
+
+    if (requisition) {
+      applyRequisitionState(requisition)
+    }
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         {mode === "edit" && !isEditable ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
             This requisition is locked while it is under review. It can only be
@@ -394,20 +431,39 @@ export function RequisitionForm({
         allowAddItems={canAddLineItems}
         footerActions={
           <>
-            <UBButton type="submit" disabled={isFormDisabled}>
+            <UBButton
+              type="button"
+              onClick={() => void persistRequisition(false)}
+              disabled={actionButtonsDisabled}
+            >
               <Save className="size-4" data-icon="inline-start" />
               {isSaving
                 ? "Saving..."
                 : mode === "edit"
                   ? "Update requisition"
-                  : "Create requisition"}
+                  : "Save draft"}
             </UBButton>
+            {showSubmitAction ? (
+              <UBButton
+                type="button"
+                variant="secondary"
+                onClick={() => void persistRequisition(true)}
+                disabled={actionButtonsDisabled}
+              >
+                <Send className="size-4" data-icon="inline-start" />
+                {isSaving
+                  ? "Submitting..."
+                  : mode === "edit"
+                    ? "Submit requisition"
+                    : "Create & submit"}
+              </UBButton>
+            ) : null}
             {onCancel ? (
               <UBButton
                 type="button"
                 variant="outline"
                 onClick={onCancel}
-                disabled={isSaving}
+                disabled={actionButtonsDisabled}
               >
                 <X className="size-4" data-icon="inline-start" />
                 Cancel
@@ -421,7 +477,15 @@ export function RequisitionForm({
         <p className="text-sm text-destructive">{formError}</p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      </form>
+      </div>
+
+      {mode === "edit" && requisitionId && canApprove ? (
+        <RequisitionApprovalActions
+          requisitionId={requisitionId}
+          stageName={stageLabel}
+          onDecision={() => void handleApprovalDecision()}
+        />
+      ) : null}
 
       {mode === "edit" && requisitionId ? (
         <RequisitionActivityLog requisitionId={requisitionId} />

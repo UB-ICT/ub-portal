@@ -21,6 +21,11 @@ export type RequisitionStatusRecord = {
   name: string
 }
 
+export type RequisitionStageRecord = {
+  id: number
+  name: string
+}
+
 export type RequisitionSupplierPivot = {
   id: number
   name: string
@@ -80,7 +85,9 @@ export type RequisitionRecord = {
   attachments?: RequisitionAttachment[]
   cost_center?: CostCenter
   status?: RequisitionStatusRecord
+  stage?: RequisitionStageRecord
   is_editable?: boolean
+  can_approve?: boolean
   pipeline?: Pipeline
   current_stage_sequence?: number
 }
@@ -101,11 +108,16 @@ export type CreateRequisitionPayload = {
   reminder_date?: string | null
   suppliers?: RequisitionSupplierInput[]
   items: RequisitionLineItemInput[]
+  submit?: boolean
 }
 
 export type UpdateRequisitionPayload = CreateRequisitionPayload & {
   number?: string
   activity_comment?: string | null
+}
+
+export type RequisitionApprovalPayload = {
+  comments?: string | null
 }
 
 const BASE_PATH = "/requisitionSystem"
@@ -150,6 +162,39 @@ export async function updateRequisition(
     method: "PUT",
     body: JSON.stringify(payload),
   })
+}
+
+export async function approveRequisition(
+  id: number,
+  payload: RequisitionApprovalPayload = {}
+) {
+  return request<RequisitionRecord>(`${BASE_PATH}/requisitions/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function rejectRequisition(
+  id: number,
+  payload: RequisitionApprovalPayload = {}
+) {
+  return request<RequisitionRecord>(`${BASE_PATH}/requisitions/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function requestRequisitionReview(
+  id: number,
+  payload: RequisitionApprovalPayload = {}
+) {
+  return request<RequisitionRecord>(
+    `${BASE_PATH}/requisitions/${id}/request-review`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  )
 }
 
 export async function deleteRequisition(id: number) {

@@ -1,27 +1,36 @@
 import { create } from "zustand"
 
 import {
+  approveRequisition,
   createRequisition,
   deleteRequisition,
   fetchAssignedCostCenter,
   fetchRequisition,
   fetchRequisitions,
+  rejectRequisition,
+  requestRequisitionReview,
   updateRequisition,
   type CostCenter,
   type CreateRequisitionPayload,
+  type Pipeline,
+  type RequisitionApprovalPayload,
   type RequisitionRecord,
   type UpdateRequisitionPayload,
 } from "@/lib/api/requisitions"
+import { fetchPipelines } from "@/lib/api/pipelines"
 import { readStoredAccessToken } from "@/lib/auth/storage"
 
 type RequisitionsState = {
   requisitions: RequisitionRecord[]
   assignedCostCenter: CostCenter | null
+  approvalPipeline: Pipeline | null
   selectedRequisition: RequisitionRecord | null
   isLoadingList: boolean
   isLoadingFormData: boolean
+  isLoadingPipeline: boolean
   isLoadingSelected: boolean
   isSaving: boolean
+  isReviewing: boolean
   error: string | null
   
   fetchRequisitions: (force?: boolean) => Promise<RequisitionRecord[]>
@@ -33,8 +42,21 @@ type RequisitionsState = {
     id: number,
     payload: UpdateRequisitionPayload
   ) => Promise<RequisitionRecord | null>
+  approveRequisition: (
+    id: number,
+    payload?: RequisitionApprovalPayload
+  ) => Promise<RequisitionRecord | null>
+  rejectRequisition: (
+    id: number,
+    payload?: RequisitionApprovalPayload
+  ) => Promise<RequisitionRecord | null>
+  requestRequisitionReview: (
+    id: number,
+    payload?: RequisitionApprovalPayload
+  ) => Promise<RequisitionRecord | null>
   deleteRequisition: (id: number) => Promise<boolean>
   fetchFormData: (force?: boolean) => Promise<void>
+  fetchApprovalPipeline: (force?: boolean) => Promise<Pipeline | null>
   reset: () => void
   
 }
@@ -42,16 +64,20 @@ type RequisitionsState = {
 const initialState = {
   requisitions: [] as RequisitionRecord[],
   assignedCostCenter: null as CostCenter | null,
+  approvalPipeline: null as Pipeline | null,
   selectedRequisition: null as RequisitionRecord | null,
   isLoadingList: false,
   isLoadingFormData: false,
+  isLoadingPipeline: false,
   isLoadingSelected: false,
   isSaving: false,
+  isReviewing: false,
   error: null as string | null,
 }
 
 let listFetchPromise: Promise<RequisitionRecord[]> | null = null
 let formDataFetchPromise: Promise<void> | null = null
+let pipelineFetchPromise: Promise<Pipeline | null> | null = null
 
 export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
   ...initialState,
@@ -171,6 +197,81 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
       return null
     }
   },
+  approveRequisition: async (id, payload) => {
+    set({ isReviewing: true, error: null })
+
+    try {
+      const requisition = await approveRequisition(id, payload)
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isReviewing: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isReviewing: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to approve requisition.",
+      })
+      return null
+    }
+  },
+  rejectRequisition: async (id, payload) => {
+    set({ isReviewing: true, error: null })
+
+    try {
+      const requisition = await rejectRequisition(id, payload)
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isReviewing: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isReviewing: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to reject requisition.",
+      })
+      return null
+    }
+  },
+  requestRequisitionReview: async (id, payload) => {
+    set({ isReviewing: true, error: null })
+
+    try {
+      const requisition = await requestRequisitionReview(id, payload)
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isReviewing: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isReviewing: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to send requisition back for review.",
+      })
+      return null
+    }
+  },
   deleteRequisition: async (id) => {
     set({ isSaving: true, error: null })
 
@@ -244,9 +345,57 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
 
     return formDataFetchPromise
   },
+  fetchApprovalPipeline: async (force = false) => {
+    if (!force && get().approvalPipeline && !get().isLoadingPipeline) {
+      return get().approvalPipeline
+    }
+
+    if (pipelineFetchPromise) {
+      return pipelineFetchPromise
+    }
+
+    const token = readStoredAccessToken()
+
+    if (!token) {
+      set({ approvalPipeline: null, isLoadingPipeline: false })
+      return null
+    }
+
+    pipelineFetchPromise = (async () => {
+      set({ isLoadingPipeline: true, error: null })
+
+      try {
+        const pipelines = await fetchPipelines()
+        const approvalPipeline = pipelines[0] ?? null
+
+        set({
+          approvalPipeline,
+          isLoadingPipeline: false,
+          error: null,
+        })
+
+        return approvalPipeline
+      } catch (error) {
+        set({
+          approvalPipeline: null,
+          isLoadingPipeline: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to load approval pipeline.",
+        })
+        return null
+      } finally {
+        pipelineFetchPromise = null
+      }
+    })()
+
+    return pipelineFetchPromise
+  },
   reset: () => {
     listFetchPromise = null
     formDataFetchPromise = null
+    pipelineFetchPromise = null
     set(initialState)
   },
 }))
