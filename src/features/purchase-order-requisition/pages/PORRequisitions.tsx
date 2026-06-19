@@ -44,6 +44,7 @@ export function PORRequisitionsPage() {
 
   // 3. Static fallback timeline steps if relationships are unpopulated
   const defaultSteps = [
+    { title: "Draft" },
     { title: "Submitted" },
     { title: "Director Approval" },
     { title: "Budget Officer Approval" },
