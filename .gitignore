@@ -12,7 +12,7 @@ dist
 storybook-static
 dist-ssr
 
-# Environment overrides (committed: .env.local, .env.development, .env.production)
+# Environment files (.env.localhost.local etc. for machine-specific overrides)
 .env
 .env.*
 

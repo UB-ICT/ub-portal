@@ -12,7 +12,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { useTheme } from "@/components/theme-provider"
@@ -81,6 +81,8 @@ export function UBHeader({
   const isDarkMode = theme === "dark"
   const [isAppsOpen, setIsAppsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const appsMenuRef = useRef<HTMLDivElement>(null)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
   const storeApplications = useApplicationsStore((state) => state.applications)
   const isLoadingApplications = useApplicationsStore((state) => state.isLoading)
   const fetchMyApplications = useApplicationsStore(
@@ -96,6 +98,44 @@ export function UBHeader({
       void fetchMyApplications()
     }
   }, [applicationsOverride, fetchMyApplications])
+
+  useEffect(() => {
+    if (!isAppsOpen && !isProfileOpen) {
+      return
+    }
+
+    const closeMenus = () => {
+      setIsAppsOpen(false)
+      setIsProfileOpen(false)
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node
+
+      if (
+        appsMenuRef.current?.contains(target) ||
+        profileMenuRef.current?.contains(target)
+      ) {
+        return
+      }
+
+      closeMenus()
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenus()
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [isAppsOpen, isProfileOpen])
 
   const handleApplicationClick = async (application: PortalApplication) => {
     setIsAppsOpen(false)
@@ -130,7 +170,7 @@ export function UBHeader({
     "inline-flex w-full items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-left text-sm text-foreground transition-colors hover:border-border hover:bg-muted"
 
   return (
-    <header className="border-b bg-background/90 backdrop-blur pb-2">
+    <header className="relative z-50 border-b bg-background/90 pb-2 backdrop-blur">
       <div className="flex items-center justify-between gap-4 px-6 py-4 lg:px-8">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="hidden max-w-xl flex-1 sm:block">
@@ -161,7 +201,7 @@ export function UBHeader({
             onClick={onNotificationsClick}
           />
 
-          <div className="relative">
+          <div className="relative" ref={appsMenuRef}>
             <button
               type="button"
               onClick={handleAppsClick}
@@ -173,7 +213,7 @@ export function UBHeader({
             </button>
 
             {isAppsOpen ? (
-              <div className="absolute top-11 right-0 z-20 w-64 rounded-xl border bg-popover p-3 shadow-sm">
+              <div className="absolute top-11 right-0 z-50 w-64 rounded-xl border bg-popover p-3 shadow-lg">
                 {isLoadingApplications && applications.length === 0 ? (
                   <p className="px-2 py-3 text-sm text-muted-foreground">
                     Loading applications...
@@ -203,7 +243,7 @@ export function UBHeader({
             ) : null}
           </div>
 
-          <div className="relative">
+          <div className="relative" ref={profileMenuRef}>
             <button
               type="button"
               onClick={handleProfileClick}
@@ -223,7 +263,7 @@ export function UBHeader({
             </button>
 
             {isProfileOpen ? (
-              <div className="absolute top-11 right-0 z-20 w-72 rounded-xl border bg-popover p-3 shadow-sm">
+              <div className="absolute top-11 right-0 z-50 w-72 rounded-xl border bg-popover p-3 shadow-lg">
                 <div className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2.5">
                   <div className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-primary">
                     {userImageSrc ? (

@@ -1,17 +1,11 @@
 import type { ReactNode } from "react"
-import { ShieldCheck, Sparkles } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
 
 type AuthLayoutProps = {
   title: string
   description: string
   children: ReactNode
 }
-
-const loginHighlights = [
-  "Single sign-on with your UB Google account",
-  "Server-issued session token handled through TanStack Query",
-  "Ready for route-based expansion across the portal",
-]
 
 export function AuthLayout({
   title,
@@ -38,23 +32,6 @@ export function AuthLayout({
                 {description}
               </p>
             </div>
-          </div>
-
-          <div className="space-y-4 rounded-3xl bg-white/10 p-6 backdrop-blur">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Sparkles className="size-4" />
-              Portal foundation
-            </div>
-            <ul className="space-y-3 text-sm leading-6 text-primary-foreground/80">
-              {loginHighlights.map((highlight) => (
-                <li
-                  key={highlight}
-                  className="rounded-2xl border border-white/10 bg-black/10 px-4 py-3"
-                >
-                  {highlight}
-                </li>
-              ))}
-            </ul>
           </div>
         </section>
 

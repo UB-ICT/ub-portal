@@ -3,7 +3,6 @@ export type AppEnvironment = "local" | "development" | "production"
 /** Fallback API host when VITE_API_HOST is not set. */
 export const DEFAULT_API_HOST = "http://localhost:3031"
 
-const DEFAULT_API_BASE_URL = `${DEFAULT_API_HOST}/api/v1`
 const DEFAULT_GOOGLE_SSO_SYSTEM = "portal"
 const DEFAULT_APP_TITLE = "UB Portal"
 const DEFAULT_PORTAL_HOST = "http://localhost:5173"
