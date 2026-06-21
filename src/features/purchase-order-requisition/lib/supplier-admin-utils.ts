@@ -1,6 +1,6 @@
 import type { Supplier } from "@/lib/api/suppliers"
 
-import { isSupplierDeleted } from "./supplier-utils"
+import { isSupplierDeleted, isSupplierRejected } from "./supplier-utils"
 
 export type SupplierSortField =
   | "name"
@@ -130,5 +130,7 @@ export function getDeletedSupplierTextClass(isDeleted: boolean) {
 }
 
 export function getSelectableSuppliers(suppliers: Supplier[]) {
-  return suppliers.filter((supplier) => !isSupplierDeleted(supplier))
+  return suppliers.filter(
+    (supplier) => !isSupplierDeleted(supplier) && !isSupplierRejected(supplier)
+  )
 }

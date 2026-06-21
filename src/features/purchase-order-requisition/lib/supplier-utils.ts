@@ -1,6 +1,7 @@
 import type { Supplier } from "@/lib/api/suppliers"
 
 export const APPROVED_SUPPLIER_STATUS_ID = 3
+export const REJECTED_SUPPLIER_STATUS_ID = 4
 export const DELETED_SUPPLIER_STATUS_ID = 7
 
 export function isSupplierDeleted(
@@ -15,12 +16,28 @@ export function isSupplierDeleted(
   return supplier.status_id === DELETED_SUPPLIER_STATUS_ID
 }
 
+export function isSupplierRejected(
+  supplier: Pick<Supplier, "status_id"> & {
+    status?: { name?: string | null } | null
+  }
+) {
+  if (supplier.status?.name?.toLowerCase() === "rejected") {
+    return true
+  }
+
+  return supplier.status_id === REJECTED_SUPPLIER_STATUS_ID
+}
+
 export function isSupplierApproved(
   supplier: Pick<Supplier, "status_id"> & {
     status?: { name?: string | null } | null
   }
 ) {
   if (isSupplierDeleted(supplier)) {
+    return false
+  }
+
+  if (isSupplierRejected(supplier)) {
     return false
   }
 
