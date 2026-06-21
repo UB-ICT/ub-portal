@@ -1,4 +1,4 @@
-import { Ban, Save, Send, X } from "lucide-react"
+import { Save, Send, X } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { uploadRequisitionQuote } from "@/lib/api/attachments"
@@ -105,9 +105,6 @@ export function RequisitionForm({
   )
   const updateRequisition = useRequisitionsStore(
     (state) => state.updateRequisition
-  )
-  const cancelRequisition = useRequisitionsStore(
-    (state) => state.cancelRequisition
   )
   const updateRequisitionPurchaseOrderNumber = useRequisitionsStore(
     (state) => state.updateRequisitionPurchaseOrderNumber
@@ -357,34 +354,6 @@ export function RequisitionForm({
     }
   }
 
-  const handleCancelRequisition = async () => {
-    if (!requisitionId || !canCancelRequisition) {
-      return
-    }
-
-    const confirmed = window.confirm(
-      "Cancel this requisition? It will stop moving through approval and cannot be approved, rejected, or sent back for review."
-    )
-
-    if (!confirmed) {
-      return
-    }
-
-    setFormError(null)
-
-    const requisition = await cancelRequisition(requisitionId, {
-      comments: activityComment.trim() || null,
-    })
-
-    if (!requisition) {
-      return
-    }
-
-    applyRequisitionState(requisition)
-    await fetchLogs(requisition.id, true)
-    onSuccess?.(requisition)
-  }
-
   const handleSavePurchaseOrderNumber = async () => {
     if (!requisitionId || !canEditPurchaseOrderNumber) {
       return
@@ -585,17 +554,6 @@ export function RequisitionForm({
                     : "Create & submit"}
               </UBButton>
             ) : null}
-            {mode === "edit" && canCancelRequisition ? (
-              <UBButton
-                type="button"
-                variant="destructive"
-                onClick={() => void handleCancelRequisition()}
-                disabled={actionButtonsDisabled}
-              >
-                <Ban className="size-4" data-icon="inline-start" />
-                {isReviewing ? "Cancelling..." : "Cancel requisition"}
-              </UBButton>
-            ) : null}
             {onCancel ? (
               <UBButton
                 type="button"
@@ -617,11 +575,14 @@ export function RequisitionForm({
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </div>
 
-      {mode === "edit" && requisitionId && showApprovalActions ? (
+      {mode === "edit" &&
+      requisitionId &&
+      (showApprovalActions || canCancelRequisition) ? (
         <RequisitionApprovalActions
           requisitionId={requisitionId}
           stageName={stageLabel}
           canAct={canApprove}
+          canCancel={canCancelRequisition}
           userStageAction={userStageAction}
           onDecision={() => void handleApprovalDecision()}
         />
