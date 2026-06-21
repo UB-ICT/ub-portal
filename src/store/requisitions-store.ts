@@ -2,6 +2,7 @@ import { create } from "zustand"
 
 import {
   approveRequisition,
+  cancelRequisition,
   createRequisition,
   deleteRequisition,
   fetchAssignedCostCenter,
@@ -54,6 +55,10 @@ type RequisitionsState = {
     payload?: RequisitionApprovalPayload
   ) => Promise<RequisitionRecord | null>
   requestRequisitionReview: (
+    id: number,
+    payload?: RequisitionApprovalPayload
+  ) => Promise<RequisitionRecord | null>
+  cancelRequisition: (
     id: number,
     payload?: RequisitionApprovalPayload
   ) => Promise<RequisitionRecord | null>
@@ -276,6 +281,31 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
           error instanceof Error
             ? error.message
             : "Failed to send requisition back for review.",
+      })
+      return null
+    }
+  },
+  cancelRequisition: async (id, payload) => {
+    set({ isReviewing: true, error: null })
+
+    try {
+      const requisition = await cancelRequisition(id, payload)
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isReviewing: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isReviewing: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to cancel requisition.",
       })
       return null
     }

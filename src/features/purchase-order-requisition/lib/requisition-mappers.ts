@@ -21,6 +21,10 @@ export function mapApiStatusToCardStatus(
     return "rejected"
   }
 
+  if (normalized.includes("cancel")) {
+    return "cancelled"
+  }
+
   return "pending"
 }
 

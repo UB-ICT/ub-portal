@@ -21,6 +21,7 @@ const STATUS_LABELS: Record<RequisitionListItem["status"], string> = {
   approved: "Approved",
   rejected: "Rejected",
   "in-review": "In review",
+  cancelled: "Cancelled",
 }
 
 function getRequisitionSearchText(requisition: RequisitionListItem) {

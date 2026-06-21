@@ -97,6 +97,7 @@ export type RequisitionRecord = {
   show_approval_actions?: boolean
   user_stage_action?: RequisitionUserStageAction | null
   can_edit_purchase_order_number?: boolean
+  can_cancel?: boolean
   pipeline?: Pipeline
   current_stage_sequence?: number
 }
@@ -208,6 +209,16 @@ export async function requestRequisitionReview(
       body: JSON.stringify(payload),
     }
   )
+}
+
+export async function cancelRequisition(
+  id: number,
+  payload: RequisitionApprovalPayload = {}
+) {
+  return request<RequisitionRecord>(`${BASE_PATH}/requisitions/${id}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
 }
 
 export async function updateRequisitionPurchaseOrderNumber(

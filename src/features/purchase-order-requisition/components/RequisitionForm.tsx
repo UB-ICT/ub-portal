@@ -1,4 +1,4 @@
-import { Save, Send, X } from "lucide-react"
+import { Ban, Save, Send, X } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { uploadRequisitionQuote } from "@/lib/api/attachments"
@@ -94,6 +94,7 @@ export function RequisitionForm({
     (state) => state.isLoadingSelected
   )
   const isSaving = useRequisitionsStore((state) => state.isSaving)
+  const isReviewing = useRequisitionsStore((state) => state.isReviewing)
   const error = useRequisitionsStore((state) => state.error)
   const fetchFormData = useRequisitionsStore((state) => state.fetchFormData)
   const fetchRequisitionById = useRequisitionsStore(
@@ -104,6 +105,9 @@ export function RequisitionForm({
   )
   const updateRequisition = useRequisitionsStore(
     (state) => state.updateRequisition
+  )
+  const cancelRequisition = useRequisitionsStore(
+    (state) => state.cancelRequisition
   )
   const updateRequisitionPurchaseOrderNumber = useRequisitionsStore(
     (state) => state.updateRequisitionPurchaseOrderNumber
@@ -138,6 +142,7 @@ export function RequisitionForm({
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("")
   const [canEditPurchaseOrderNumber, setCanEditPurchaseOrderNumber] =
     useState(false)
+  const [canCancelRequisition, setCanCancelRequisition] = useState(false)
   const [activityComment, setActivityComment] = useState("")
 
   const resetCreateForm = () => {
@@ -163,6 +168,7 @@ export function RequisitionForm({
     setUserStageAction(null)
     setPurchaseOrderNumber("")
     setCanEditPurchaseOrderNumber(false)
+    setCanCancelRequisition(false)
     setActivityComment("")
   }
 
@@ -203,6 +209,7 @@ export function RequisitionForm({
     setCanEditPurchaseOrderNumber(
       Boolean(requisition.can_edit_purchase_order_number)
     )
+    setCanCancelRequisition(Boolean(requisition.can_cancel))
     setActivityComment("")
     setFormError(null)
   }
@@ -238,13 +245,17 @@ export function RequisitionForm({
   }, [assignedCostCenter, mode])
 
   const isLoading = isLoadingFormData || (mode === "edit" && isLoadingSelected)
+  const isCancelledRequisition = statusLabel.toLowerCase() === "cancelled"
   const isFormDisabled =
-    isLoading || isSaving || (mode === "edit" && !isEditable)
+    isLoading ||
+    isSaving ||
+    isReviewing ||
+    (mode === "edit" && !isEditable)
   const canAddLineItems = canAddLineItemsToRequisition(statusLabel, mode)
   const showSubmitAction = canSubmitRequisition(statusLabel, mode)
   const requisitionTotal = calculateRequisitionTotalFromLineItems(lineItems)
   const actionButtonsDisabled =
-    isLoading || isSaving || (mode === "edit" && !isEditable)
+    isLoading || isSaving || isReviewing || (mode === "edit" && !isEditable)
   const isApprovedRequisition = statusLabel.toLowerCase() === "approved"
   const showPurchaseOrderSection = mode === "edit" && isApprovedRequisition
 
@@ -346,6 +357,34 @@ export function RequisitionForm({
     }
   }
 
+  const handleCancelRequisition = async () => {
+    if (!requisitionId || !canCancelRequisition) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      "Cancel this requisition? It will stop moving through approval and cannot be approved, rejected, or sent back for review."
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setFormError(null)
+
+    const requisition = await cancelRequisition(requisitionId, {
+      comments: activityComment.trim() || null,
+    })
+
+    if (!requisition) {
+      return
+    }
+
+    applyRequisitionState(requisition)
+    await fetchLogs(requisition.id, true)
+    onSuccess?.(requisition)
+  }
+
   const handleSavePurchaseOrderNumber = async () => {
     if (!requisitionId || !canEditPurchaseOrderNumber) {
       return
@@ -372,7 +411,13 @@ export function RequisitionForm({
   return (
     <div className={cn("flex flex-col gap-6", className)}>
       <div className="flex flex-col gap-4">
-        {mode === "edit" && !isEditable ? (
+        {mode === "edit" && isCancelledRequisition ? (
+          <div className="rounded-lg border border-slate-300 bg-slate-100 px-4 py-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+            This requisition has been cancelled and is no longer moving through
+            the approval pipeline.
+          </div>
+        ) : null}
+        {mode === "edit" && !isEditable && !isCancelledRequisition ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
             This requisition is locked while it is under review. It can only be
             edited again when the status is set to Cost Center Review.
@@ -538,6 +583,17 @@ export function RequisitionForm({
                   : mode === "edit"
                     ? "Submit requisition"
                     : "Create & submit"}
+              </UBButton>
+            ) : null}
+            {mode === "edit" && canCancelRequisition ? (
+              <UBButton
+                type="button"
+                variant="destructive"
+                onClick={() => void handleCancelRequisition()}
+                disabled={actionButtonsDisabled}
+              >
+                <Ban className="size-4" data-icon="inline-start" />
+                {isReviewing ? "Cancelling..." : "Cancel requisition"}
               </UBButton>
             ) : null}
             {onCancel ? (

@@ -9,6 +9,7 @@ export type RequisitionLogAction =
   | "rejected"
   | "comment"
   | "cost_center_review"
+  | "cancelled"
 
 export type RequisitionLogUser = {
   id: string
