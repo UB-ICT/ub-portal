@@ -115,7 +115,7 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
             <UBCard
               subtitle="In Review"
               title={String(activeMetrics.pending ?? 0)}
-              description="Awaiting decision"
+              description="Awaiting Director/Dean's approval"
               className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-amber-500"
             />
 
