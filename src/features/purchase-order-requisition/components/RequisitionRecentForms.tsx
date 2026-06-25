@@ -2,8 +2,10 @@ import React, { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Clock, ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchAllForms } from "@/lib/api/dashboard"
+import { useNavigate } from "react-router-dom"
 
 export const RecentFormsTable: React.FC = () => {
+  const navigate = useNavigate()
   const {
     data: forms,
     isLoading,
@@ -84,7 +86,7 @@ export const RecentFormsTable: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => console.log("Navigate to all submissions")}
+          onClick={() => navigate("/requisitions/forms")}
           className="text-sm font-medium text-purple-700 hover:underline"
         >
           View all &rarr;
