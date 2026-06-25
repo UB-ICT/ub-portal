@@ -12,11 +12,25 @@ export type DashboardMetrics = {
   draft?: number
 }
 
+export type RequisitionForm = {
+  id: number
+  number: string // e.g., REQ-2026-041
+  supplier_name: string // e.g., Belize Office Box
+  date_prepared: string // e.g., 2026-06-24
+  total: number // e.g., 2340.00
+  current_stage_name: string // e.g., Director review, Budget review
+}
+
 type ApiResponse<T> = {
   success: boolean
   role_context: string // The backend will tell us what role it used!
   metrics: T
   message?: string
+}
+
+type AllFormsApiResponse = {
+  success: boolean
+  data: RequisitionForm[]
 }
 
 const BASE_PATH = "requisitionSystem/requisitions/dashboard-metrics"
@@ -32,7 +46,6 @@ function getToken(token = readStoredAccessToken()) {
  * Fetch the authentic requisition metrics based on the logged-in user session.
  */
 export async function fetchDashboardMetrics() {
-  // Notice we dropped the custom query parameter string layout completely here:
   const response = await apiRequest<ApiResponse<DashboardMetrics>>(BASE_PATH, {
     method: "GET",
     token: getToken(),
@@ -43,4 +56,18 @@ export async function fetchDashboardMetrics() {
     metrics: response.metrics,
     roleContext: response.role_context,
   }
+}
+
+/**
+ * Fetch all respective forms permitted by the active user session token context.
+ */
+export async function fetchAllForms() {
+  const response = await apiRequest<AllFormsApiResponse>(
+    "requisitionSystem/requisitions/recent",
+    {
+      method: "GET",
+      token: getToken(),
+    }
+  )
+  return response.data
 }

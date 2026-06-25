@@ -1,7 +1,8 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { fetchDashboardMetrics } from "@/lib/api/dashboard"
-import { UBCard } from "../../../components/shared/UBCard" // Adjust import path
+import { UBCard } from "../../../components/shared/UBCard"
+import { RecentFormsTable } from "../components/RequisitionRecentForms"
 
 interface PORDashboardPageProps {}
 
@@ -60,7 +61,8 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   }
 
   return (
-    <div className="space-y-6 p-8">
+    /* 🚀 Added h-full, min-h-screen, and overflow-y-auto to guarantee page scrolling */
+    <div className="h-full min-h-screen w-full space-y-6 overflow-y-auto p-8">
       {/* 🧭 Clean Header Banner */}
       <div className="border-b border-border pb-5">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -132,6 +134,11 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
             />
           </div>
         )}
+      </div>
+
+      {/* 📊 Recent Forms Table Panel layout aligned cleanly */}
+      <div className="pt-2 pb-8">
+        <RecentFormsTable />
       </div>
     </div>
   )
