@@ -2,7 +2,6 @@ import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { fetchDashboardMetrics } from "@/lib/api/dashboard"
 import { UBCard } from "../../../components/shared/UBCard"
-import { RecentFormsTable } from "../components/RequisitionRecentForms"
 
 interface PORDashboardPageProps {}
 
@@ -30,10 +29,14 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   }
 
   const activeMetrics = data?.metrics ?? {}
+  console.log("Active Metrics:", activeMetrics) // Debugging: Log the metrics to verify structure and values
   const backendRole = data?.roleContext ?? "requester"
-
+  
   // Differentiate between management workflows and standard requester profiles
   const isWorkflowLayout = backendRole !== "requester"
+
+  // Director/Dean approves requisitions directly and never handles supplier requests
+  const showSupplierCard = backendRole !== "director-dean"
 
   const formatRoleName = (role: string) => {
     return role
@@ -79,7 +82,9 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
       {/* 🎴 Secure Grid Layout rendering exactly what your account permits */}
       <div>
         {isWorkflowLayout ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            className={`grid gap-6 sm:grid-cols-2 ${showSupplierCard ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}
+          >
             {/* 🏛️ MANAGEMENT WORKFLOW CARD DECK (Exact color matching to your image) */}
             <UBCard
               subtitle="Awaiting My Action"
@@ -102,12 +107,14 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
               className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-emerald-600"
             />
 
-            <UBCard
-              subtitle="Supplier Requests"
-              title={String(activeMetrics.supplier_requests ?? 0)}
-              description={getSupplierCardDescription(backendRole)}
-              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-purple-600"
-            />
+            {showSupplierCard && (
+              <UBCard
+                subtitle="Supplier Requests"
+                title={String(activeMetrics.supplier_requests ?? 0)}
+                description={getSupplierCardDescription(backendRole)}
+                className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-purple-600"
+              />
+            )}
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -134,11 +141,6 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
             />
           </div>
         )}
-      </div>
-
-      {/* 📊 Recent Forms Table Panel layout aligned cleanly */}
-      <div className="pt-2 pb-8">
-        <RecentFormsTable />
       </div>
     </div>
   )
