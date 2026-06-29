@@ -4,6 +4,15 @@ import { Clock, ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchAllForms } from "@/lib/api/dashboard"
 import { useNavigate } from "react-router-dom"
 
+// Workflow roles (director-dean, budget-officer, etc.) get a single "time at my stage"
+// figure; the requester view gets separate processing/approval totals. The shape of the
+// rows tells us which one the backend sent for the current user's role.
+function isStageTimingView(
+  forms: { time_at_stage_hours?: number | null }[]
+): boolean {
+  return forms.some((form) => "time_at_stage_hours" in form)
+}
+
 export const RecentFormsTable: React.FC = () => {
   const navigate = useNavigate()
   const {
@@ -43,9 +52,13 @@ export const RecentFormsTable: React.FC = () => {
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const paginatedForms = allForms.slice(startIndex, endIndex)
+  const stageTimingView = isStageTimingView(allForms)
 
   const getStageBadgeStyles = (stage: string) => {
     const normalize = stage.toLowerCase()
+    if (normalize.includes("requester")) {
+      return "bg-red-50 text-red-700 border-red-200"
+    }
     if (normalize.includes("director")) {
       return "bg-blue-50 text-blue-700 border-blue-200"
     }
@@ -103,13 +116,19 @@ export const RecentFormsTable: React.FC = () => {
               <th className="pt-2 pb-3">Date</th>
               <th className="pt-2 pb-3">Amount</th>
               <th className="pt-2 pb-3">Stage</th>
-              <th className="pt-2 pb-3">Processing Time</th>
-              <th className="pt-2 pb-3">Approval Time</th>
+              {stageTimingView ? (
+                <th className="pt-2 pb-3">Time at My Stage</th>
+              ) : (
+                <>
+                  <th className="pt-2 pb-3">Processing Time</th>
+                  <th className="pt-2 pb-3">Approval Time</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {paginatedForms.length > 0 ? (
-              paginatedForms.map((form: any) => (
+              paginatedForms.map((form) => (
                 <tr
                   key={form.id}
                   className="group transition-colors hover:bg-muted/30"
@@ -118,7 +137,7 @@ export const RecentFormsTable: React.FC = () => {
                     {form.number}
                   </td>
                   <td className="py-4 text-foreground/90">
-                    {form.supplier_name || "N/A"}
+                    {form.supplier_name || "-"}
                   </td>
                   <td className="py-4">{formatDate(form.date_prepared)}</td>
                   <td className="py-4 font-bold text-foreground">
@@ -132,18 +151,26 @@ export const RecentFormsTable: React.FC = () => {
                       {form.current_stage_name}
                     </span>
                   </td>
-                  <td className="py-4">
-                    {form.processing_time_display ?? "N/A"}
-                  </td>
-                  <td className="py-4">
-                    {form.approval_time_display ?? "N/A"}
-                  </td>
+                  {stageTimingView ? (
+                    <td className="py-4">
+                      {form.time_at_stage_display ?? "-"}
+                    </td>
+                  ) : (
+                    <>
+                      <td className="py-4">
+                        {form.processing_time_display ?? "-"}
+                      </td>
+                      <td className="py-4">
+                        {form.approval_time_display ?? "-"}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={stageTimingView ? 6 : 7}
                   className="py-8 text-center text-muted-foreground"
                 >
                   No recent requisition entries found.
