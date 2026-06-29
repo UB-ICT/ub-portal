@@ -5,6 +5,7 @@ import { UBDrawer, UBHeader } from "@/components/shared"
 type AppLayoutProps = {
   userName: string
   userEmail: string
+  userImageSrc?: string | null
   isLoggingOut?: boolean
   onLogout: () => void
   children: ReactNode
@@ -13,6 +14,7 @@ type AppLayoutProps = {
 export function AppLayout({
   userName,
   userEmail,
+  userImageSrc,
   onLogout,
   children,
 }: AppLayoutProps) {
@@ -25,6 +27,7 @@ export function AppLayout({
         <UBHeader
           userName={userName}
           userEmail={userEmail}
+          userImageSrc={userImageSrc ?? undefined}
           onSignOutClick={onLogout}
         />
       }
