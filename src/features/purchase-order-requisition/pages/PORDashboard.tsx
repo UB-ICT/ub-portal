@@ -2,6 +2,7 @@ import React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { fetchDashboardMetrics } from "@/lib/api/dashboard"
 import { UBCard } from "../../../components/shared/UBCard"
+import { RecentFormsTable } from "../components/RequisitionRecentForms"
 
 interface PORDashboardPageProps {}
 
@@ -142,6 +143,8 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
           </div>
         )}
       </div>
+
+      <RecentFormsTable />
     </div>
   )
 }

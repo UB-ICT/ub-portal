@@ -103,6 +103,8 @@ export const RecentFormsTable: React.FC = () => {
               <th className="pt-2 pb-3">Date</th>
               <th className="pt-2 pb-3">Amount</th>
               <th className="pt-2 pb-3">Stage</th>
+              <th className="pt-2 pb-3">Processing Time</th>
+              <th className="pt-2 pb-3">Approval Time</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -130,12 +132,18 @@ export const RecentFormsTable: React.FC = () => {
                       {form.current_stage_name}
                     </span>
                   </td>
+                  <td className="py-4">
+                    {form.processing_time_display ?? "N/A"}
+                  </td>
+                  <td className="py-4">
+                    {form.approval_time_display ?? "N/A"}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="py-8 text-center text-muted-foreground"
                 >
                   No recent requisition entries found.
