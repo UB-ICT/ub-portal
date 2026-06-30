@@ -11,11 +11,9 @@ import {
 
 const STATUS_OPTIONS = [
   { value: "", label: "All statuses" },
-  { value: "Draft", label: "Draft" },
   { value: "Pending", label: "Pending" },
   { value: "Approved", label: "Approved" },
   { value: "Rejected", label: "Rejected" },
-  { value: "Under Review", label: "Under Review" },
   { value: "Deleted", label: "Deleted" },
 ]
 
