@@ -7,6 +7,7 @@ type AppLayoutProps = {
   userEmail: string
   userImageSrc?: string | null
   isLoggingOut?: boolean
+  showSearch?: boolean
   onLogout: () => void
   children: ReactNode
 }
@@ -15,6 +16,7 @@ export function AppLayout({
   userName,
   userEmail,
   userImageSrc,
+  showSearch,
   onLogout,
   children,
 }: AppLayoutProps) {
@@ -28,6 +30,7 @@ export function AppLayout({
           userName={userName}
           userEmail={userEmail}
           userImageSrc={userImageSrc ?? undefined}
+          showSearch={showSearch}
           onSignOutClick={onLogout}
         />
       }

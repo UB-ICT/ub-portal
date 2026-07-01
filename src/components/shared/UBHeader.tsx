@@ -30,6 +30,7 @@ type UBHeaderProps = {
   userImageSrc?: string
   notificationCount?: number
   showAdminActions?: boolean
+  showSearch?: boolean
   applications?: PortalApplication[]
   onThemeToggle?: () => void
   onNotificationsClick?: () => void
@@ -64,6 +65,7 @@ export function UBHeader({
   userImageSrc,
   notificationCount = 0,
   showAdminActions = false,
+  showSearch = true,
   applications: applicationsOverride,
   onThemeToggle,
   onNotificationsClick,
@@ -81,6 +83,7 @@ export function UBHeader({
   const isDarkMode = theme === "dark"
   const [isAppsOpen, setIsAppsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null)
   const appsMenuRef = useRef<HTMLDivElement>(null)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const storeApplications = useApplicationsStore((state) => state.applications)
@@ -98,6 +101,8 @@ export function UBHeader({
       void fetchMyApplications()
     }
   }, [applicationsOverride, fetchMyApplications])
+
+  const showUserImage = Boolean(userImageSrc) && userImageSrc !== failedImageSrc
 
   useEffect(() => {
     if (!isAppsOpen && !isProfileOpen) {
@@ -173,17 +178,19 @@ export function UBHeader({
     <header className="relative z-50 border-b bg-background/90 pb-2 backdrop-blur">
       <div className="flex items-center justify-between gap-4 px-6 py-4 lg:px-8">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="hidden max-w-xl flex-1 sm:block">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="search"
-                aria-label="Search"
-                placeholder="Search news, apps, topics..."
-                className="h-10 w-full rounded-full border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
-              />
-            </label>
-          </div>
+          {showSearch ? (
+            <div className="hidden max-w-xl flex-1 sm:block">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="search"
+                  aria-label="Search"
+                  placeholder="Search news, apps, topics..."
+                  className="h-10 w-full rounded-full border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                />
+              </label>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
@@ -225,7 +232,7 @@ export function UBHeader({
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {applications.map((application) => {
-                      const Icon = resolveMenuIcon(application.icon)
+                      const Icon = resolveMenuIcon(application.icon, application.label)
 
                       return (
                         <UBIconTileButton
@@ -251,11 +258,12 @@ export function UBHeader({
               aria-label="Open profile"
               aria-expanded={isProfileOpen}
             >
-              {userImageSrc ? (
+              {showUserImage ? (
                 <img
                   src={userImageSrc}
                   alt={`${userName} profile`}
                   className="size-full object-cover"
+                  onError={() => setFailedImageSrc(userImageSrc ?? null)}
                 />
               ) : (
                 <span className={cn("inline-flex size-full items-center justify-center bg-primary/10")}>{getUserInitials(userName)}</span>
@@ -266,11 +274,12 @@ export function UBHeader({
               <div className="absolute top-11 right-0 z-50 w-72 rounded-xl border bg-popover p-3 shadow-lg">
                 <div className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2.5">
                   <div className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-primary">
-                    {userImageSrc ? (
+                    {showUserImage ? (
                       <img
                         src={userImageSrc}
                         alt={`${userName} profile`}
                         className="size-full object-cover"
+                        onError={() => setFailedImageSrc(userImageSrc ?? null)}
                       />
                     ) : (
                       <span>{getUserInitials(userName)}</span>

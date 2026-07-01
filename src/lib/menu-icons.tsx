@@ -29,16 +29,51 @@ const MENU_ICON_MAP: Record<string, LucideIcon> = {
   Users,
 }
 
-export function resolveMenuIcon(icon?: string | null): LucideIcon {
-  if (!icon) {
-    return LayoutGrid
+// Keyword -> icon, used to infer an icon from a menu item's label when no
+// explicit (or unrecognized) icon key is provided.
+const NAME_ICON_KEYWORDS: Array<{ keywords: string[]; icon: LucideIcon }> = [
+  { keywords: ["requisition", "purchase order", "purchase-order"], icon: ClipboardList },
+  { keywords: ["supplier", "vendor"], icon: Users },
+  { keywords: ["form", "report", "document", "invoice"], icon: FileText },
+  { keywords: ["student", "academic", "course", "enrollment"], icon: GraduationCap },
+  { keywords: ["setting", "config", "admin"], icon: Settings },
+  { keywords: ["user", "people", "staff", "team"], icon: Users },
+  { keywords: ["library", "reading", "resource"], icon: BookOpen },
+  { keywords: ["dashboard", "app", "menu"], icon: Grid3X3 },
+]
+
+function resolveIconFromName(name: string): LucideIcon | undefined {
+  const normalized = name.trim().toLowerCase()
+
+  if (!normalized) {
+    return undefined
   }
 
-  const normalized = icon.trim()
+  return NAME_ICON_KEYWORDS.find(({ keywords }) =>
+    keywords.some((keyword) => normalized.includes(keyword))
+  )?.icon
+}
 
-  return (
-    MENU_ICON_MAP[normalized] ??
-    MENU_ICON_MAP[normalized.toLowerCase()] ??
-    LayoutGrid
-  )
+export function resolveMenuIcon(
+  icon?: string | null,
+  name?: string | null
+): LucideIcon {
+  if (icon) {
+    const normalized = icon.trim()
+    const mapped = MENU_ICON_MAP[normalized] ?? MENU_ICON_MAP[normalized.toLowerCase()]
+
+    if (mapped) {
+      return mapped
+    }
+  }
+
+  if (name) {
+    const fromName = resolveIconFromName(name)
+
+    if (fromName) {
+      return fromName
+    }
+  }
+
+  return LayoutGrid
 }

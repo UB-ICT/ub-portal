@@ -27,7 +27,7 @@ export function mapMenuItemsToDrawerItems(
 ): UBDrawerItem[] {
   return menuItems.map((item) => {
     const normalizedPath = resolveMenuItemRoute(item.path, applicationPath)
-    const Icon = resolveMenuIcon(item.icon)
+    const Icon = resolveMenuIcon(item.icon, item.label)
     const isExternal = /^https?:\/\//i.test(normalizedPath)
 
     return {
