@@ -10,6 +10,8 @@ export type DashboardMetrics = {
   approved?: number
   rejected?: number
   draft?: number
+  avg_processing_time_hours?: number
+  avg_approval_time_hours?: number
 }
 
 export type RequisitionForm = {
@@ -19,6 +21,16 @@ export type RequisitionForm = {
   date_prepared: string // e.g., 2026-06-24
   total: number // e.g., 2340.00
   current_stage_name: string // e.g., Director review, Budget review
+
+  // 👤 Requester (or unmapped role) view: totals across the whole pipeline.
+  processing_time_hours?: number | null // submission to final approval/rejection; null while still in progress
+  processing_time_display?: string | null // e.g., "6 minutes", "2h 15m", "3d 4h"
+  approval_time_hours?: number | null // submission to most recent approval signature; null if no approval has happened yet
+  approval_time_display?: string | null // e.g., "6 minutes", "2h 15m", "3d 4h"
+
+  // 🏛️ Workflow role view (director-dean, budget-officer, etc.): a single figure for time spent at their own stage.
+  time_at_stage_hours?: number | null
+  time_at_stage_display?: string | null
 }
 
 type ApiResponse<T> = {

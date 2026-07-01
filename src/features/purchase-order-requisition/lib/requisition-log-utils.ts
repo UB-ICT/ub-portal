@@ -64,7 +64,11 @@ export function canCostCenterEditRequisition(
 
   const normalized = statusName?.toLowerCase() ?? ""
 
-  return normalized === "draft" || normalized === "cost center review"
+  return (
+    normalized === "draft" ||
+    normalized === "cost center review" ||
+    normalized === "rejected"
+  )
 }
 
 export function canAddLineItemsToRequisition(
@@ -88,5 +92,9 @@ export function canSubmitRequisition(
 
   const normalized = statusName?.toLowerCase() ?? ""
 
-  return normalized === "draft" || normalized === "cost center review"
+  return (
+    normalized === "draft" ||
+    normalized === "cost center review" ||
+    normalized === "rejected"
+  )
 }

@@ -14,6 +14,13 @@ export function ApplicationLayout() {
   )
 
   useEffect(() => {
+    document.title = "Purchase Order Requisitions | UB Portal"
+    return () => {
+      document.title = "UB Portal"
+    }
+  }, [])
+
+  useEffect(() => {
     if (!isReady) {
       return
     }
