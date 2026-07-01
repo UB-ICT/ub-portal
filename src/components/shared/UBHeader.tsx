@@ -152,6 +152,10 @@ export function UBHeader({
   const showUserImage = Boolean(userImageSrc) && userImageSrc !== failedImageSrc
 
   useEffect(() => {
+    setFailedImageSrc(null)
+  }, [userName, userImageSrc])
+
+  useEffect(() => {
     if (!applicationsOverride) {
       void fetchMyApplications()
     }
@@ -543,3 +547,4 @@ export function UBHeader({
     </header>
   )
 }
+
