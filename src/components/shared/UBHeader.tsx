@@ -116,6 +116,7 @@ export function UBHeader({
   const [isAppsOpen, setIsAppsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null)
   const appsMenuRef = useRef<HTMLDivElement>(null)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const notificationsMenuRef = useRef<HTMLDivElement>(null)
@@ -147,6 +148,8 @@ export function UBHeader({
     (state) => state.markAllAsRead
   )
   const notificationCount = notificationCountOverride ?? storeUnreadCount
+
+  const showUserImage = Boolean(userImageSrc) && userImageSrc !== failedImageSrc
 
   useEffect(() => {
     if (!applicationsOverride) {
@@ -418,11 +421,12 @@ export function UBHeader({
               aria-label="Open profile"
               aria-expanded={isProfileOpen}
             >
-              {userImageSrc ? (
+              {showUserImage ? (
                 <img
                   src={userImageSrc}
                   alt={`${userName} profile`}
                   className="size-full object-cover"
+                  onError={() => setFailedImageSrc(userImageSrc ?? null)}
                 />
               ) : (
                 <span className={cn("inline-flex size-full items-center justify-center bg-primary/10")}>{getUserInitials(userName)}</span>
@@ -433,11 +437,12 @@ export function UBHeader({
               <div className="absolute top-11 right-0 z-50 w-72 rounded-xl border bg-popover p-3 shadow-lg">
                 <div className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2.5">
                   <div className="inline-flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-primary">
-                    {userImageSrc ? (
+                    {showUserImage ? (
                       <img
                         src={userImageSrc}
                         alt={`${userName} profile`}
                         className="size-full object-cover"
+                        onError={() => setFailedImageSrc(userImageSrc ?? null)}
                       />
                     ) : (
                       <span>{getUserInitials(userName)}</span>
