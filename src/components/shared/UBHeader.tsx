@@ -105,6 +105,10 @@ export function UBHeader({
   const showUserImage = Boolean(userImageSrc) && userImageSrc !== failedImageSrc
 
   useEffect(() => {
+    setFailedImageSrc(null)
+  }, [userName, userImageSrc])
+
+  useEffect(() => {
     if (!isAppsOpen && !isProfileOpen) {
       return
     }
