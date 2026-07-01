@@ -74,7 +74,7 @@ export function UBDrawer({
   const isLoadingMenu = useApplicationMenuStore((state) => state.isLoading)
   const menuError = useApplicationMenuStore((state) => state.error)
   const items = itemsOverride ?? storeDrawerItems
-  const ApplicationIcon = resolveMenuIcon(applicationMenu?.icon)
+  const ApplicationIcon = resolveMenuIcon(applicationMenu?.icon, applicationMenu?.label)
   const activeItemId = useMemo(
     () => resolveActiveDrawerItemId(items, location.pathname),
     [items, location.pathname]

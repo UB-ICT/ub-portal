@@ -34,6 +34,7 @@ export function ApplicationLayout() {
     <AppLayout
       userName={user.name}
       userEmail={user.email}
+      showSearch={false}
       onLogout={handleLogout}
     >
       <Outlet />
