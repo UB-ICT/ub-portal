@@ -117,15 +117,30 @@ export const useNotificationsStore = create<NotificationsState>(
       await markNotificationRead(notificationId)
     },
     markAllAsRead: async () => {
+      const { notifications, unreadCount } = get()
+
+      const nextNotifications = notifications.map((item) => ({
+        ...item,
+        read_at: item.read_at ?? new Date().toISOString(),
+      }))
+
       set({
-        notifications: get().notifications.map((item) => ({
-          ...item,
-          read_at: item.read_at ?? new Date().toISOString(),
-        })),
+        notifications: nextNotifications,
         unreadCount: 0,
       })
 
-      await markAllNotificationsRead()
+      try {
+        await markAllNotificationsRead()
+      } catch (error) {
+        set({
+          notifications,
+          unreadCount,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to mark notifications as read.",
+        })
+      }
     },
     reset: () => {
       notificationsFetchPromise = null
