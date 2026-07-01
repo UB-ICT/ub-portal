@@ -162,6 +162,7 @@ export function UBHeader({
     void fetchNotifications()
 
     const intervalId = window.setInterval(() => {
+      void fetchNotifications(true)
       void refreshUnreadCount()
     }, NOTIFICATION_POLL_INTERVAL_MS)
 
