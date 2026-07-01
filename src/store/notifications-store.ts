@@ -92,9 +92,19 @@ export const useNotificationsStore = create<NotificationsState>(
         return 0
       }
 
-      const unreadCount = await fetchUnreadNotificationCount(token)
-      set({ unreadCount })
-      return unreadCount
+      try {
+        const unreadCount = await fetchUnreadNotificationCount(token)
+        set({ unreadCount })
+        return unreadCount
+      } catch (error) {
+        set({
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to refresh unread notifications.",
+        })
+        return get().unreadCount
+      }
     },
     markAsRead: async (notificationId: string) => {
       const notification = get().notifications.find(
