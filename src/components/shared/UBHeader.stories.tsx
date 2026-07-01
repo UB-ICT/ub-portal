@@ -67,6 +67,7 @@ const meta = {
     userEmail: { control: "text" },
     notificationCount: { control: "number" },
     showAdminActions: { control: "boolean" },
+    showSearch: { control: "boolean" },
   },
   parameters: componentParameters(
     "Portal header variant with logo/title + search on the left, and theme toggle, notifications, app launcher, and user profile on the right.",
@@ -106,5 +107,11 @@ export const AdminUser: Story = {
     userName: "Maria Castillo",
     userEmail: "maria.castillo@ub.edu.bz",
     notificationCount: 9,
+  },
+}
+
+export const WithoutSearch: Story = {
+  args: {
+    showSearch: false,
   },
 }
