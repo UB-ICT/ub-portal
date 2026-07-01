@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { UBInput, UBNativeSelect } from "@/components/shared/UBInput"
 import { cn } from "@/lib/utils"
+import { useStatusesStore } from "@/store/statuses-store"
 
 import {
   DEFAULT_SUPPLIER_SEARCH,
@@ -9,13 +10,7 @@ import {
   type SupplierSortField,
 } from "../lib/supplier-admin-utils"
 
-const STATUS_OPTIONS = [
-  { value: "", label: "All statuses" },
-  { value: "Pending", label: "Pending" },
-  { value: "Approved", label: "Approved" },
-  { value: "Rejected", label: "Rejected" },
-  { value: "Deleted", label: "Deleted" },
-]
+const SUPPLIER_STATUS_NAMES = ["Pending", "Approved", "Rejected", "Deleted"]
 
 const SORT_OPTIONS: { value: SupplierSortField; label: string }[] = [
   { value: "name", label: "Name" },
@@ -33,6 +28,21 @@ type SearchSuppliersProps = {
 export function SearchSuppliers({ onSearch, className }: SearchSuppliersProps) {
   const [values, setValues] =
     useState<SupplierSearchCriteria>(DEFAULT_SUPPLIER_SEARCH)
+
+  const statuses = useStatusesStore((state) => state.statuses)
+  const isLoadingStatuses = useStatusesStore((state) => state.isLoading)
+  const fetchStatuses = useStatusesStore((state) => state.fetchStatuses)
+
+  useEffect(() => {
+    void fetchStatuses()
+  }, [fetchStatuses])
+
+  const statusOptions = [
+    { value: "", label: "All statuses" },
+    ...statuses
+      .filter((status) => SUPPLIER_STATUS_NAMES.includes(status.name))
+      .map((status) => ({ value: status.name, label: status.name })),
+  ]
 
   const applySearch = (nextValues: SupplierSearchCriteria) => {
     setValues(nextValues)
@@ -57,8 +67,9 @@ export function SearchSuppliers({ onSearch, className }: SearchSuppliersProps) {
         />
         <UBNativeSelect
           label="Status"
-          options={STATUS_OPTIONS}
+          options={statusOptions}
           value={values.status}
+          disabled={isLoadingStatuses}
           onChange={(event) =>
             applySearch({ ...values, status: event.target.value })
           }
