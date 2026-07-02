@@ -29,12 +29,26 @@ export type ActiveApplicationMenu = {
   children: PortalMenuItem[]
 }
 
+export type ProfileMenuResponse = {
+  user: { name: string; email: string; initials: string }
+  navigation: PortalMenuItem[]
+  external_links: PortalMenuItem[]
+}
+
 export async function fetchMyApplications(token = readStoredAccessToken()) {
   if (!token) {
     return []
   }
 
   return apiRequest<PortalApplication[]>("/menu/my-applications", { token })
+}
+
+export async function fetchProfileMenu(token = readStoredAccessToken()) {
+  if (!token) {
+    return null
+  }
+
+  return apiRequest<ProfileMenuResponse>("/menu/profile", { token })
 }
 
 export async function fetchActiveApplicationMenu(

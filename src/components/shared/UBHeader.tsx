@@ -3,17 +3,19 @@ import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { useTheme } from "@/components/theme-provider"
-import type { PortalApplication } from "@/lib/api/menu"
+import type { PortalApplication, PortalMenuItem } from "@/lib/api/menu"
 import type { PortalNotification } from "@/lib/api/notifications"
 import { resolveMenuIcon } from "@/lib/menu-icons"
 import { cn, getUserInitials } from "@/lib/utils"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
 import { useApplicationsStore } from "@/store/applications-store"
 import { useNotificationsStore } from "@/store/notifications-store"
+import { useProfileMenuStore } from "@/store/profile-menu-store"
 import { UBIconTileButton } from "./UBButton"
 import { UBNotificationBell } from "./UBNotificationBell"
 
 const NOTIFICATION_POLL_INTERVAL_MS = 60_000
+const ADMIN_CONSOLE_PATH = "/admin"
 
 function formatNotificationTime(isoDate: string) {
   const date = new Date(isoDate)
@@ -48,9 +50,9 @@ type UBHeaderProps = {
   userEmail?: string
   userImageSrc?: string
   notificationCount?: number
-  showAdminActions?: boolean
   showSearch?: boolean
   applications?: PortalApplication[]
+  navigation?: PortalMenuItem[]
   onThemeToggle?: () => void
   onNotificationsClick?: () => void
   onAppsClick?: () => void
@@ -74,6 +76,7 @@ export function UBHeader({
   notificationCount: notificationCountOverride,
   showSearch = true,
   applications: applicationsOverride,
+  navigation: navigationOverride,
   onThemeToggle,
   onNotificationsClick,
   onAppsClick,
@@ -100,6 +103,13 @@ export function UBHeader({
     (state) => state.loadApplication
   )
   const applications = applicationsOverride ?? storeApplications
+
+  const storeNavigation = useProfileMenuStore((state) => state.navigation)
+  const fetchProfileMenu = useProfileMenuStore((state) => state.fetchProfileMenu)
+  const navigation = navigationOverride ?? storeNavigation
+  const adminConsoleItem = navigation.find(
+    (item) => item.path === ADMIN_CONSOLE_PATH
+  )
 
   const notifications = useNotificationsStore((state) => state.notifications)
   const storeUnreadCount = useNotificationsStore((state) => state.unreadCount)
@@ -131,6 +141,12 @@ export function UBHeader({
       void fetchMyApplications()
     }
   }, [applicationsOverride, fetchMyApplications])
+
+  useEffect(() => {
+    if (!navigationOverride) {
+      void fetchProfileMenu()
+    }
+  }, [navigationOverride, fetchProfileMenu])
 
   useEffect(() => {
     if (notificationCountOverride !== undefined) {
@@ -202,6 +218,15 @@ export function UBHeader({
   const handleThemeToggle = () => {
     onThemeToggle?.()
     setTheme(isDarkMode ? "light" : "dark")
+  }
+
+  const handleAdminToolsClick = () => {
+    setIsProfileOpen(false)
+    onAdminToolsClick?.()
+
+    if (adminConsoleItem) {
+      navigate(adminConsoleItem.path)
+    }
   }
 
   const handleAppsClick = () => {
@@ -447,13 +472,15 @@ export function UBHeader({
                     <p className="truncate text-xs text-muted-foreground">
                       {userEmail ?? "user@ub.edu.bz"}
                     </p>
-                    <button
-                      type="button"
-                      onClick={onAdminToolsClick}
-                      className="mt-1 text-xs font-medium text-primary hover:underline"
-                    >
-                      Admin Console
-                    </button>
+                    {adminConsoleItem ? (
+                      <button
+                        type="button"
+                        onClick={handleAdminToolsClick}
+                        className="mt-1 text-xs font-medium text-primary hover:underline"
+                      >
+                        {adminConsoleItem.label}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 

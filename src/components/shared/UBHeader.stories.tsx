@@ -66,7 +66,6 @@ const meta = {
     userName: { control: "text" },
     userEmail: { control: "text" },
     notificationCount: { control: "number" },
-    showAdminActions: { control: "boolean" },
     showSearch: { control: "boolean" },
   },
   parameters: componentParameters(
@@ -103,7 +102,15 @@ export const ZeroNotifications: Story = {
 
 export const AdminUser: Story = {
   args: {
-    showAdminActions: true,
+    navigation: [
+      {
+        id: "admin-console",
+        label: "Admin Console",
+        path: "/admin",
+        icon: "squares-plus",
+        sort_order: 4,
+      },
+    ],
     userName: "Maria Castillo",
     userEmail: "maria.castillo@ub.edu.bz",
     notificationCount: 9,
