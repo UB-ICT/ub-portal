@@ -34,6 +34,7 @@ export type UBDrawerItem = {
 
 export type UBDrawerProps = {
   items?: UBDrawerItem[]
+  appLabel?: string
   header?: React.ReactNode
   children?: React.ReactNode
   open?: boolean
@@ -49,6 +50,7 @@ export type UBDrawerProps = {
 
 export function UBDrawer({
   items: itemsOverride,
+  appLabel,
   header,
   children,
   open,
@@ -79,7 +81,7 @@ export function UBDrawer({
     () => resolveActiveDrawerItemId(items, location.pathname),
     [items, location.pathname]
   )
-  const applicationLabel = applicationMenu?.label ?? "UB Portal"
+  const applicationLabel = applicationMenu?.label ?? appLabel ?? "UB Portal"
 
   useEffect(() => {
     if (open === undefined) {
