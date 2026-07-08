@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { useTheme } from "@/components/theme-provider"
 import type { PortalApplication, PortalMenuItem } from "@/lib/api/menu"
 import type { PortalNotification } from "@/lib/api/notifications"
+import { writePostLoginRedirect } from "@/lib/auth/storage"
 import { resolveMenuIcon } from "@/lib/menu-icons"
 import { cn, getUserInitials } from "@/lib/utils"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
@@ -224,9 +225,15 @@ export function UBHeader({
     setIsProfileOpen(false)
     onAdminToolsClick?.()
 
-    if (adminConsoleItem) {
-      navigate(adminConsoleItem.path)
+    if (!adminConsoleItem) {
+      return
     }
+
+    // Admin Console requires a fresh login every time, not just navigation:
+    // route back here once the user signs back in, then run the same
+    // full logout the sign-out button uses.
+    writePostLoginRedirect(adminConsoleItem.path)
+    onSignOutClick?.()
   }
 
   const handleAppsClick = () => {

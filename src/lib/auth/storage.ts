@@ -114,6 +114,32 @@ export function clearStoredAuth() {
   window.localStorage.removeItem(AUTH_PROFILE_KEY)
 }
 
+const POST_LOGIN_REDIRECT_KEY = "ub_portal_post_login_redirect"
+
+// Survives clearStoredAuth() (different key) so a forced logout that happens
+// on the way to a fresh login can still land the user back where they meant to go.
+export function writePostLoginRedirect(path: string) {
+  if (!isBrowser()) {
+    return
+  }
+
+  window.localStorage.setItem(POST_LOGIN_REDIRECT_KEY, path)
+}
+
+export function consumePostLoginRedirect(): string | null {
+  if (!isBrowser()) {
+    return null
+  }
+
+  const path = window.localStorage.getItem(POST_LOGIN_REDIRECT_KEY)
+
+  if (path) {
+    window.localStorage.removeItem(POST_LOGIN_REDIRECT_KEY)
+  }
+
+  return path
+}
+
 function buildCallbackErrorMessage(errorCode: string) {
   switch (errorCode) {
     case "user_creation_failed":

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
-import { Outlet } from "react-router-dom"
+import { Outlet, useNavigate } from "react-router-dom"
 
 import { AppLayout } from "@/components/layout/AppLayout"
 import { StatusScreen } from "@/components/layout/StatusScreen"
 import { useProtectedPortalSession } from "@/hooks/useProtectedPortalSession"
+import { useIdleTimeout } from "@/hooks/useIdleTimeout"
 import { useProfileMenuStore } from "@/store/profile-menu-store"
 import { mapMenuItemsToDrawerItems } from "@/store/application-menu-store"
 import { fetchActiveApplicationMenu } from "@/lib/api/menu"
@@ -12,9 +13,18 @@ import type { UBDrawerItem } from "@/components/shared"
 
 const ADMIN_CONSOLE_PATH = "/admin"
 const ADMIN_CONSOLE_FALLBACK_LABEL = "Identity Cloud"
+const ADMIN_IDLE_TIMEOUT_MS = 20 * 60 * 1000
 
 export const AdminLayout = () => {
+  const navigate = useNavigate()
   const { user, handleLogout, isReady } = useProtectedPortalSession()
+
+  // Idle inside the admin area only ends the admin session — the user's
+  // main portal token/session stays valid, they're just sent back to "/".
+  // Re-entering Admin Console always forces a fresh login regardless.
+  useIdleTimeout(ADMIN_IDLE_TIMEOUT_MS, () => {
+    navigate("/", { replace: true })
+  })
   const navigation = useProfileMenuStore((state) => state.navigation)
   const fetchProfileMenu = useProfileMenuStore(
     (state) => state.fetchProfileMenu
