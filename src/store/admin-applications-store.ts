@@ -23,6 +23,7 @@ type AdminApplicationsState = {
     id: string,
     payload: Partial<ApplicationPayload>
   ) => Promise<AdminApplicationRecord | null>
+  reorderApplications: (orderedIds: string[]) => Promise<void>
   reset: () => void
 }
 
@@ -150,6 +151,55 @@ export const useAdminApplicationsStore = create<AdminApplicationsState>(
               : "Failed to update application.",
         })
         return null
+      }
+    },
+    reorderApplications: async (orderedIds) => {
+      const previousApplications = get().applications
+
+      const reordered = orderedIds
+        .map((id, index) => {
+          const application = previousApplications.find(
+            (item) => item.id === id
+          )
+          return application ? { ...application, sort_order: index } : null
+        })
+        .filter((item): item is AdminApplicationRecord => item !== null)
+
+      if (reordered.length !== previousApplications.length) {
+        return
+      }
+
+      // Written directly rather than through upsertApplication/sortApplications:
+      // the array is already in its final order with correct sort_order values
+      // baked in, so re-deriving order from sort_order here would be redundant
+      // and, if done incrementally per PATCH response instead, could snap the
+      // grid back to a stale order while later requests are still in flight.
+      set({ applications: reordered, isSaving: true, error: null })
+
+      const previousSortOrderById = new Map(
+        previousApplications.map((item) => [item.id, item.sort_order])
+      )
+      const toPersist = reordered.filter(
+        (item) => previousSortOrderById.get(item.id) !== item.sort_order
+      )
+
+      try {
+        await Promise.all(
+          toPersist.map((item) =>
+            updateApplication(item.id, { sort_order: item.sort_order })
+          )
+        )
+        set({ isSaving: false, error: null })
+      } catch (error) {
+        console.error("Failed to save application order:", error)
+        set({
+          applications: previousApplications,
+          isSaving: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to save the new application order.",
+        })
       }
     },
     reset: () => {
