@@ -28,11 +28,16 @@ const STATUS_OPTIONS: UBSelectOption[] = [
 
 type ApplicationFormDialogProps = {
   open: boolean
+  // When set, the dialog edits this application; when null/undefined it's in
+  // "create" mode. isEdit below derives from this.
   application?: AdminApplicationRecord | null
   onOpenChange: (open: boolean) => void
   onSuccess?: (application: AdminApplicationRecord) => void
 }
 
+// Dialog used for both creating a new catalog application and editing an
+// existing one - which mode it's in is decided entirely by whether an
+// `application` prop was passed in.
 export function ApplicationFormDialog({
   open,
   application,
@@ -60,6 +65,9 @@ export function ApplicationFormDialog({
 
   const isEdit = Boolean(application)
 
+  // Reset the form fields from `application` (or to blank, when creating)
+  // every time the dialog opens - this also handles switching from editing
+  // one application straight to editing/creating another.
   useEffect(() => {
     if (!open) {
       return
@@ -75,8 +83,14 @@ export function ApplicationFormDialog({
     setIconError(null)
   }, [open, application])
 
+  // Uploads the chosen file immediately (separate from the form's own
+  // save/submit) and stores the returned URL in `icon` state, so the preview
+  // updates right away and the URL is ready to include when the form is
+  // eventually submitted.
   const handleIconFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
+    // Clear the input value so selecting the same file again still fires
+    // onChange (browsers otherwise dedupe repeat selections of the same file).
     event.target.value = ""
 
     if (!file) {
@@ -115,6 +129,8 @@ export function ApplicationFormDialog({
       icon: icon ?? undefined,
       description: description.trim() || undefined,
       category: category.trim() || undefined,
+      // Status can only be changed on an existing application - new
+      // applications are created with the backend's default status.
       ...(isEdit ? { status } : {}),
     }
 
@@ -123,6 +139,9 @@ export function ApplicationFormDialog({
         ? await updateApplication(application.id, payload)
         : await createApplication(payload)
 
+    // createApplication/updateApplication return null on failure (the error
+    // message is already surfaced via the store's `error` state below), so
+    // just leave the dialog open for the user to retry.
     if (!saved) {
       return
     }
@@ -163,6 +182,8 @@ export function ApplicationFormDialog({
             <label className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
               Icon
             </label>
+            {/* The real file input is visually hidden (sr-only); the styled
+                label below acts as the clickable button via htmlFor. */}
             <input
               type="file"
               accept="image/*"
