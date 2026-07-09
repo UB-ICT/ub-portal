@@ -1,35 +1,43 @@
 import { useEffect, useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
+import {
+  closestCorners,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable"
+
 import { UBButton } from "@/components/shared/UBButton"
 import { ApplicationFormDialog } from "@/features/identitiy-cloud/components/ApplicationFormDialog"
-import type {
-  AdminApplicationRecord,
-  AdminApplicationStatus,
-} from "@/lib/api/admin-applications"
+import { SortableApplicationCard } from "@/features/identitiy-cloud/components/SortableApplicationCard"
+import type { AdminApplicationRecord } from "@/lib/api/admin-applications"
 import { useAdminApplicationsStore } from "@/store/admin-applications-store"
-
-const STATUS_LABELS: Record<AdminApplicationStatus, string> = {
-  active: "Active",
-  maintenance: "Maintenance",
-  disabled: "Disabled",
-}
-
-const STATUS_BADGE_CLASSES: Record<AdminApplicationStatus, string> = {
-  active:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
-  maintenance:
-    "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
-  disabled: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
-}
 
 export const AdminApplicationsPage = () => {
   const applications = useAdminApplicationsStore((state) => state.applications)
   const isLoading = useAdminApplicationsStore((state) => state.isLoading)
+  const isSaving = useAdminApplicationsStore((state) => state.isSaving)
   const error = useAdminApplicationsStore((state) => state.error)
   const fetchCatalog = useAdminApplicationsStore((state) => state.fetchCatalog)
   const updateApplication = useAdminApplicationsStore(
     (state) => state.updateApplication
+  )
+  const reorderApplications = useAdminApplicationsStore(
+    (state) => state.reorderApplications
+  )
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -67,6 +75,26 @@ export const AdminApplicationsPage = () => {
     await updateApplication(application.id, { status: "active" })
   }
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    const oldIndex = applications.findIndex((item) => item.id === active.id)
+    const newIndex = applications.findIndex((item) => item.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return
+    }
+
+    const orderedIds = arrayMove(applications, oldIndex, newIndex).map(
+      (item) => item.id
+    )
+    void reorderApplications(orderedIds)
+  }
+
   return (
     <div className="h-full min-h-screen w-full space-y-6 overflow-y-auto p-8">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
@@ -88,64 +116,39 @@ export const AdminApplicationsPage = () => {
           Loading applications...
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {applications.length === 0 ? (
-            <div className="col-span-full rounded-lg border bg-card p-6 text-center text-muted-foreground">
-              No applications registered yet.
-            </div>
-          ) : (
-            applications.map((application) => (
-              <div
-                key={application.id}
-                className="flex flex-col rounded-2xl border bg-card p-6 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-lg font-semibold tracking-tight text-foreground">
-                    {application.label}
-                  </h3>
-                  <Badge className={STATUS_BADGE_CLASSES[application.status]}>
-                    {STATUS_LABELS[application.status]}
-                  </Badge>
-                </div>
-
-                {application.category ? (
-                  <Badge variant="outline" className="mt-2 w-fit">
-                    {application.category}
-                  </Badge>
-                ) : null}
-
-                <p className="mt-3 flex-1 text-sm leading-6 text-muted-foreground">
-                  {application.description || "No description provided."}
-                </p>
-
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Path: {application.path}
-                </p>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <UBButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditApp(application)}
-                  >
-                    Edit
-                  </UBButton>
-                  <UBButton
-                    variant={
-                      application.status === "active" ? "outline" : "default"
-                    }
-                    size="sm"
-                    onClick={() => void handleToggleStatus(application)}
-                  >
-                    {application.status === "active"
-                      ? "Deactivate"
-                      : "Activate"}
-                  </UBButton>
-                </div>
+        <>
+          {isSaving ? (
+            <p className="text-sm text-muted-foreground">Saving order...</p>
+          ) : null}
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {applications.length === 0 ? (
+              <div className="col-span-full rounded-lg border bg-card p-6 text-center text-muted-foreground">
+                No applications registered yet.
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={applications.map((application) => application.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  {applications.map((application) => (
+                    <SortableApplicationCard
+                      key={application.id}
+                      application={application}
+                      disabled={isLoading || isSaving}
+                      onEdit={handleEditApp}
+                      onToggleStatus={(app) => void handleToggleStatus(app)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+        </>
       )}
 
       <ApplicationFormDialog
