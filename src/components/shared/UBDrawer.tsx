@@ -12,7 +12,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer"
 import { resolveActiveDrawerItemId } from "@/lib/application-path"
-import { resolveMenuIcon } from "@/lib/menu-icons"
+import { MenuIcon } from "@/lib/menu-icons"
 import { cn } from "@/lib/utils"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
 
@@ -76,7 +76,6 @@ export function UBDrawer({
   const isLoadingMenu = useApplicationMenuStore((state) => state.isLoading)
   const menuError = useApplicationMenuStore((state) => state.error)
   const items = itemsOverride ?? storeDrawerItems
-  const ApplicationIcon = resolveMenuIcon(applicationMenu?.icon, applicationMenu?.label)
   const activeItemId = useMemo(
     () => resolveActiveDrawerItemId(items, location.pathname),
     [items, location.pathname]
@@ -198,7 +197,11 @@ export function UBDrawer({
         )}
       >
         <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <ApplicationIcon className="size-5" />
+          <MenuIcon
+            icon={applicationMenu?.icon}
+            label={applicationMenu?.label}
+            className="size-5"
+          />
         </div>
 
         {!isMini ? (

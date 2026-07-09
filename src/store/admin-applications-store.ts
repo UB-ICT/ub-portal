@@ -141,6 +141,7 @@ export const useAdminApplicationsStore = create<AdminApplicationsState>(
         }))
         return application
       } catch (error) {
+        console.error("Failed to update application:", error)
         set({
           isSaving: false,
           error:

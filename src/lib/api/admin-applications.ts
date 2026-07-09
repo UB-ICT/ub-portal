@@ -56,6 +56,20 @@ export async function createApplication(
   })
 }
 
+export async function uploadApplicationIcon(
+  file: File,
+  token = readStoredAccessToken()
+) {
+  const formData = new FormData()
+  formData.append("icon", file)
+
+  return apiRequest<{ url: string }>("/menu/icon", {
+    method: "POST",
+    body: formData,
+    token: getToken(token),
+  })
+}
+
 export async function updateApplication(
   id: string,
   payload: Partial<ApplicationPayload>,

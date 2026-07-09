@@ -1,7 +1,7 @@
 import { Mail, ShieldCheck, Users } from "lucide-react"
 
 import type { PortalApplication } from "@/lib/api/menu"
-import { resolveMenuIcon } from "@/lib/menu-icons"
+import { MenuIcon } from "@/lib/menu-icons"
 import { cn, getUserInitials } from "@/lib/utils"
 import { UBTag } from "./UBTag"
 
@@ -96,21 +96,21 @@ export function UBUserProfile({
 
         {applications.length > 0 ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {applications.map((application) => {
-              const Icon = resolveMenuIcon(application.icon, application.label)
-
-              return (
-                <div
-                  key={application.id}
-                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-                >
-                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted text-primary [&_svg]:size-4">
-                    <Icon />
-                  </span>
-                  <span className="truncate">{application.label}</span>
-                </div>
-              )
-            })}
+            {applications.map((application) => (
+              <div
+                key={application.id}
+                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+              >
+                <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted text-primary [&_svg]:size-4">
+                  <MenuIcon
+                    icon={application.icon}
+                    label={application.label}
+                    className="size-4"
+                  />
+                </span>
+                <span className="truncate">{application.label}</span>
+              </div>
+            ))}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">

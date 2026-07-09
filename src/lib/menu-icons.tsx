@@ -10,6 +10,8 @@ import {
   Users,
 } from "lucide-react"
 
+import { cn } from "@/lib/utils"
+
 const MENU_ICON_MAP: Record<string, LucideIcon> = {
   "book-open": BookOpen,
   BookOpen,
@@ -76,4 +78,37 @@ export function resolveMenuIcon(
   }
 
   return LayoutGrid
+}
+
+// Uploaded application icons are stored as a URL (or data URI) rather than a
+// keyword key into MENU_ICON_MAP, so this needs to be checked before falling
+// back to the Lucide keyword/label lookup above.
+export function isImageIconUrl(icon?: string | null): icon is string {
+  if (!icon) {
+    return false
+  }
+
+  return /^(https?:\/\/|\/storage\/|data:image\/)/i.test(icon.trim())
+}
+
+export type MenuIconProps = {
+  icon?: string | null
+  label?: string | null
+  className?: string
+}
+
+export function MenuIcon({ icon, label, className }: MenuIconProps) {
+  if (isImageIconUrl(icon)) {
+    return (
+      <img
+        src={icon}
+        alt={label ?? "Application icon"}
+        className={cn("object-contain", className)}
+      />
+    )
+  }
+
+  const Icon = resolveMenuIcon(icon, label)
+
+  return <Icon className={className} />
 }

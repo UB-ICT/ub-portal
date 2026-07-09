@@ -6,7 +6,7 @@ import { useTheme } from "@/components/theme-provider"
 import type { PortalApplication, PortalMenuItem } from "@/lib/api/menu"
 import type { PortalNotification } from "@/lib/api/notifications"
 import { writePostLoginRedirect } from "@/lib/auth/storage"
-import { resolveMenuIcon } from "@/lib/menu-icons"
+import { MenuIcon } from "@/lib/menu-icons"
 import { cn, getUserInitials } from "@/lib/utils"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
 import { useApplicationsStore } from "@/store/applications-store"
@@ -409,22 +409,21 @@ export function UBHeader({
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
-                    {applications.map((application) => {
-                      const Icon = resolveMenuIcon(
-                        application.icon,
-                        application.label
-                      )
-
-                      return (
-                        <UBIconTileButton
-                          key={application.id}
-                          label={application.label}
-                          icon={<Icon />}
-                          className="w-full"
-                          onClick={() => handleApplicationClick(application)}
-                        />
-                      )
-                    })}
+                    {applications.map((application) => (
+                      <UBIconTileButton
+                        key={application.id}
+                        label={application.label}
+                        icon={
+                          <MenuIcon
+                            icon={application.icon}
+                            label={application.label}
+                            className="size-5"
+                          />
+                        }
+                        className="w-full"
+                        onClick={() => handleApplicationClick(application)}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
