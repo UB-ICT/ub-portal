@@ -5,13 +5,12 @@ import {
   FileText,
   GraduationCap,
   Grid3X3,
-  KeyRound,
-  LayoutDashboard,
   LayoutGrid,
-  ScrollText,
   Settings,
-  ShieldCheck,
   Users,
+  Notebook,
+  Eye,
+  ShieldCheck,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -27,37 +26,37 @@ const MENU_ICON_MAP: Record<string, LucideIcon> = {
   GraduationCap,
   "grid-3x3": Grid3X3,
   Grid3X3,
-  "key-round": KeyRound,
-  KeyRound,
-  "layout-dashboard": LayoutDashboard,
-  LayoutDashboard,
   "layout-grid": LayoutGrid,
   LayoutGrid,
-  "scroll-text": ScrollText,
-  ScrollText,
   settings: Settings,
   Settings,
-  "shield-check": ShieldCheck,
-  ShieldCheck,
   users: Users,
   Users,
+  notebook: Notebook,
+  Notebook,
+  eye: Eye,
+  Eye,
 }
 
 // Keyword -> icon, used to infer an icon from a menu item's label when no
 // explicit (or unrecognized) icon key is provided.
 const NAME_ICON_KEYWORDS: Array<{ keywords: string[]; icon: LucideIcon }> = [
-  { keywords: ["requisition", "purchase order", "purchase-order"], icon: ClipboardList },
+  {
+    keywords: ["requisition", "purchase order", "purchase-order"],
+    icon: ClipboardList,
+  },
   { keywords: ["supplier", "vendor"], icon: Users },
-  { keywords: ["overview"], icon: LayoutDashboard },
-  { keywords: ["role", "permission"], icon: ShieldCheck },
-  { keywords: ["access request", "access-request"], icon: KeyRound },
-  { keywords: ["audit", "log"], icon: ScrollText },
   { keywords: ["form", "report", "document", "invoice"], icon: FileText },
-  { keywords: ["student", "academic", "course", "enrollment"], icon: GraduationCap },
+  {
+    keywords: ["student", "academic", "course", "enrollment"],
+    icon: GraduationCap,
+  },
   { keywords: ["setting", "config", "admin"], icon: Settings },
   { keywords: ["user", "people", "staff", "team"], icon: Users },
-  { keywords: ["library", "reading", "resource"], icon: BookOpen },
+  { keywords: ["library", "reading", "resource", "roles"], icon: BookOpen },
   { keywords: ["dashboard", "app", "menu"], icon: Grid3X3 },
+  { keywords: ["access requests"], icon: Eye },
+  { keywords: ["audit log"], icon: ShieldCheck },
 ]
 
 function resolveIconFromName(name: string): LucideIcon | undefined {
@@ -78,7 +77,8 @@ export function resolveMenuIcon(
 ): LucideIcon {
   if (icon) {
     const normalized = icon.trim()
-    const mapped = MENU_ICON_MAP[normalized] ?? MENU_ICON_MAP[normalized.toLowerCase()]
+    const mapped =
+      MENU_ICON_MAP[normalized] ?? MENU_ICON_MAP[normalized.toLowerCase()]
 
     if (mapped) {
       return mapped
