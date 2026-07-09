@@ -35,6 +35,12 @@ export const AdminApplicationsPage = () => {
     (state) => state.reorderApplications
   )
 
+  // Sensors decide what counts as "starting a drag":
+  // - PointerSensor with a distance threshold means the pointer has to move 8px
+  //   before a drag starts, so a plain click on the Edit/Activate buttons
+  //   inside a card registers as a click, not a drag.
+  // - KeyboardSensor lets a focused card be reordered with the keyboard
+  //   (space to pick up, arrow keys to move, space to drop) for accessibility.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -75,9 +81,12 @@ export const AdminApplicationsPage = () => {
     await updateApplication(application.id, { status: "active" })
   }
 
+  // Fired by DndContext when a drag gesture ends. `active` is the card that
+  // was dragged, `over` is whatever card it was dropped on top of.
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
+    // No drop target, or dropped back where it started - nothing to do.
     if (!over || active.id === over.id) {
       return
     }
@@ -89,6 +98,8 @@ export const AdminApplicationsPage = () => {
       return
     }
 
+    // arrayMove returns a new array with the item moved from oldIndex to
+    // newIndex; we only need the resulting id order to hand off to the store.
     const orderedIds = arrayMove(applications, oldIndex, newIndex).map(
       (item) => item.id
     )
@@ -126,11 +137,19 @@ export const AdminApplicationsPage = () => {
                 No applications registered yet.
               </div>
             ) : (
+              // DndContext is the outer drag-and-drop coordinator: it tracks
+              // sensors, figures out which card is being hovered over
+              // (closestCorners), and calls handleDragEnd once a drag finishes.
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCorners}
                 onDragEnd={handleDragEnd}
               >
+                {/* SortableContext tells dnd-kit the current order of ids and
+                    which layout algorithm to use for animating cards out of the
+                    way while dragging. rectSortingStrategy (rather than
+                    verticalListSortingStrategy) is used because this is a grid
+                    that reflows into 2 or 3 columns, not a single vertical list. */}
                 <SortableContext
                   items={applications.map((application) => application.id)}
                   strategy={rectSortingStrategy}

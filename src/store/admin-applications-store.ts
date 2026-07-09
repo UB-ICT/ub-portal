@@ -23,6 +23,7 @@ type AdminApplicationsState = {
     id: string,
     payload: Partial<ApplicationPayload>
   ) => Promise<AdminApplicationRecord | null>
+  // Persists a new drag-and-drop order for the applications grid.
   reorderApplications: (orderedIds: string[]) => Promise<void>
   reset: () => void
 }
@@ -153,9 +154,13 @@ export const useAdminApplicationsStore = create<AdminApplicationsState>(
         return null
       }
     },
+    // Called once per completed drag (see AdminApplications.tsx's onDragEnd),
+    // with the full list of application ids in their new order.
     reorderApplications: async (orderedIds) => {
       const previousApplications = get().applications
 
+      // Rebuild the applications array in the new order, and stamp each item's
+      // sort_order to match its new index (index 0 = first, 1 = second, etc).
       const reordered = orderedIds
         .map((id, index) => {
           const application = previousApplications.find(
@@ -165,10 +170,16 @@ export const useAdminApplicationsStore = create<AdminApplicationsState>(
         })
         .filter((item): item is AdminApplicationRecord => item !== null)
 
+      // Defensive check: if orderedIds doesn't line up with what's currently in
+      // the store (e.g. the list changed underneath the drag), bail out instead
+      // of committing a corrupted order.
       if (reordered.length !== previousApplications.length) {
         return
       }
 
+      // Update local state immediately (optimistic update) so the UI reflects
+      // the new order right away, before the server confirms it.
+      //
       // Written directly rather than through upsertApplication/sortApplications:
       // the array is already in its final order with correct sort_order values
       // baked in, so re-deriving order from sort_order here would be redundant
@@ -176,6 +187,9 @@ export const useAdminApplicationsStore = create<AdminApplicationsState>(
       // grid back to a stale order while later requests are still in flight.
       set({ applications: reordered, isSaving: true, error: null })
 
+      // Only send an update for items whose sort_order actually changed, so a
+      // drag that moves one card doesn't trigger a PATCH request for every
+      // application in the list.
       const previousSortOrderById = new Map(
         previousApplications.map((item) => [item.id, item.sort_order])
       )
@@ -184,6 +198,8 @@ export const useAdminApplicationsStore = create<AdminApplicationsState>(
       )
 
       try {
+        // Fire all the updates in parallel - each targets a different
+        // application id, so there's no ordering dependency between them.
         await Promise.all(
           toPersist.map((item) =>
             updateApplication(item.id, { sort_order: item.sort_order })
@@ -191,6 +207,9 @@ export const useAdminApplicationsStore = create<AdminApplicationsState>(
         )
         set({ isSaving: false, error: null })
       } catch (error) {
+        // If any request fails, undo the optimistic update and restore the
+        // order the server actually has, so the UI never shows an order that
+        // wasn't successfully saved.
         console.error("Failed to save application order:", error)
         set({
           applications: previousApplications,

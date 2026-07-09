@@ -30,6 +30,9 @@ type SortableApplicationCardProps = {
   onToggleStatus: (application: AdminApplicationRecord) => void
 }
 
+// A single draggable/sortable card in the AdminApplications grid. The whole
+// card is the drag surface (no separate drag handle) - dnd-kit's useSortable
+// hook wires up everything needed to pick it up, drag it, and drop it.
 export function SortableApplicationCard({
   application,
   disabled,
@@ -39,6 +42,9 @@ export function SortableApplicationCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: application.id, disabled })
 
+  // useSortable reports how far this card should currently be offset (while a
+  // drag is in progress, elsewhere in the list) - CSS.Transform.toString turns
+  // that into an inline `transform` style so the card visually slides into place.
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -53,6 +59,7 @@ export function SortableApplicationCard({
       className={cn(
         "flex flex-col rounded-2xl border bg-card p-6 shadow-sm",
         disabled ? "cursor-default" : "cursor-grab touch-none active:cursor-grabbing",
+        // Lift the card being dragged above its neighbors and fade it slightly.
         isDragging && "z-10 opacity-70 shadow-lg"
       )}
     >
