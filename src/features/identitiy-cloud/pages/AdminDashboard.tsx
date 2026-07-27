@@ -1,6 +1,8 @@
 import React from "react"
 
 import { ConnectedAppsCard } from "@/features/identitiy-cloud/components/ConnectedAppsCard"
+import { TotalRolesCard } from "@/features/identitiy-cloud/components/TotalRolesCard"
+import { TotalUsersCard } from "@/features/identitiy-cloud/components/TotalUsersCard"
 
 export const AdminDashboard: React.FC = () => {
   return (
@@ -15,6 +17,8 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <TotalUsersCard />
+        <TotalRolesCard />
         <ConnectedAppsCard />
       </div>
     </div>

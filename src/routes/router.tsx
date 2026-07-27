@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute"
 import { RootRoute } from "@/routes/RootRoute"
 import { AdminDashboard } from "@/features/identitiy-cloud/pages/AdminDashboard"
 import { AdminApplicationsPage } from "@/features/identitiy-cloud/pages/AdminApplications"
+import { AdminUsersPage } from "@/features/identitiy-cloud/pages/AdminUsers"
 import { PORDashboardPage } from "@/features/purchase-order-requisition/pages/PORDashboard"
 import { PORSuppliersPage } from "@/features/purchase-order-requisition/pages/PORSuppliers"
 import { PORRequisitionsPage } from "@/features/purchase-order-requisition/pages/PORRequisitions"
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
               {
                 path: "/admin/apps",
                 element: <AdminApplicationsPage />,
+              },
+              {
+                path: "/admin/users",
+                element: <AdminUsersPage />,
               },
             ],
           },
