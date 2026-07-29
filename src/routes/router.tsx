@@ -15,6 +15,7 @@ import { AdminRolesPage } from "@/features/identitiy-cloud/pages/AdminRoles"
 import { PORDashboardPage } from "@/features/purchase-order-requisition/pages/PORDashboard"
 import { PORSuppliersPage } from "@/features/purchase-order-requisition/pages/PORSuppliers"
 import { PORRequisitionsPage } from "@/features/purchase-order-requisition/pages/PORRequisitions"
+import { PORReportsPage } from "@/features/purchase-order-requisition/pages/PORReports"
 
 export const router = createBrowserRouter([
   {
@@ -75,6 +76,10 @@ export const router = createBrowserRouter([
               {
                 path: "suppliers",
                 element: <PORSuppliersPage />,
+              },
+              {
+                path: "reports",
+                element: <PORReportsPage />,
               },
             ],
           },

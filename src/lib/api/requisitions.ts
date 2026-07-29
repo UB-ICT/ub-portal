@@ -244,3 +244,7 @@ export async function deleteRequisition(id: number) {
 export async function fetchAssignedCostCenter() {
   return request<CostCenter | null>(`${BASE_PATH}/costCenters/assigned/me`)
 }
+
+export async function fetchCostCenters() {
+  return request<CostCenter[]>(`${BASE_PATH}/costCenters`)
+}
