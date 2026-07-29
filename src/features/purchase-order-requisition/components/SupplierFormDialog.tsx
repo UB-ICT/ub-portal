@@ -34,7 +34,7 @@ export function SupplierFormDialog({
   const [contactPerson, setContactPerson] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [email, setEmail] = useState("")
-  const [tin, setTin] = useState("")
+  const [tax, setTax] = useState("")
   const [notes, setNotes] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -49,7 +49,7 @@ export function SupplierFormDialog({
     setContactPerson(supplier?.contact_person ?? "")
     setPhoneNumber(supplier?.phone_number ?? "")
     setEmail(supplier?.email ?? "")
-    setTin(supplier?.TIN ?? "")
+    setTax(supplier?.TAX ?? "")
     setNotes(supplier?.notes ?? "")
     setFormError(null)
   }, [open, supplier])
@@ -63,8 +63,8 @@ export function SupplierFormDialog({
       return
     }
 
-    if (!contactPerson.trim() || !phoneNumber.trim() || !email.trim() || !tin.trim()) {
-      setFormError("Contact person, phone, email, and TIN are required.")
+    if (!contactPerson.trim() || !phoneNumber.trim() || !email.trim() || !tax.trim()) {
+      setFormError("Contact person, phone, email, and TAX are required.")
       return
     }
 
@@ -73,7 +73,7 @@ export function SupplierFormDialog({
       contact_person: contactPerson.trim(),
       phone_number: phoneNumber.trim(),
       email: email.trim(),
-      TIN: tin.trim(),
+      TAX: tax.trim(),
       notes: notes.trim() || undefined,
     }
 
@@ -131,9 +131,9 @@ export function SupplierFormDialog({
               required
             />
             <UBInput
-              label="TIN"
-              value={tin}
-              onChange={(event) => setTin(event.target.value)}
+              label="TAX"
+              value={tax}
+              onChange={(event) => setTax(event.target.value)}
               required
             />
           </div>

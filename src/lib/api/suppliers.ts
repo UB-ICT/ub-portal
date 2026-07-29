@@ -19,7 +19,7 @@ export type Supplier = {
   contact_person?: string | null
   phone_number?: string | null
   email?: string | null
-  TIN?: string | null
+  TAX?: string | null
   notes?: string | null
   status_id?: number | null
   approved_by_user_id?: string | null
@@ -35,7 +35,7 @@ export type CreateSupplierQuickPayload = {
   contact_person?: string
   phone_number?: string
   email?: string
-  TIN?: string
+  TAX?: string
   notes?: string
 }
 
@@ -44,7 +44,7 @@ export type CreateSupplierPayload = {
   contact_person: string
   phone_number: string
   email: string
-  TIN: string
+  TAX: string
   notes?: string
 }
 

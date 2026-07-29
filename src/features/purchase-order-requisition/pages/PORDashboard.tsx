@@ -70,11 +70,10 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   }
 
   return (
-    /* 🚀 Added h-full, min-h-screen, and overflow-y-auto to guarantee page scrolling */
-    <div className="h-full min-h-screen w-full space-y-6 overflow-y-auto p-8">
+    <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-2">
       {/* 🧭 Clean Header Banner */}
       <div className="border-b border-border pb-5">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Purchase Order Requisitions
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">

@@ -1,5 +1,13 @@
-import { Check, Pencil, RotateCcw, Trash2, X } from "lucide-react"
-import { useState } from "react"
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  X,
+} from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { UBTable } from "@/components/shared/UBTable"
@@ -49,6 +57,20 @@ export function SuppliersTable({
   const [reviewComments, setReviewComments] = useState("")
   const [isReviewing, setIsReviewing] = useState(false)
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  const totalPages = Math.max(1, Math.ceil(suppliers.length / itemsPerPage))
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages))
+  }, [totalPages])
+
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedSuppliers = suppliers.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  )
+
   const openReviewDialog = (
     supplier: Supplier,
     action: "approve" | "reject"
@@ -94,7 +116,7 @@ export function SuppliersTable({
     <>
       <UBTable
         rowKey="id"
-        data={suppliers}
+        data={paginatedSuppliers}
         striped
         columns={[
           {
@@ -161,8 +183,8 @@ export function SuppliersTable({
             },
           },
           {
-            header: "TIN",
-            accessor: "TIN",
+            header: "TAX",
+            accessor: "TAX",
             render: (value, row) => {
               const deleted = isSupplierDeleted(row)
 
@@ -265,6 +287,40 @@ export function SuppliersTable({
           },
         ]}
       />
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <p className="text-xs text-muted-foreground">
+            Showing page{" "}
+            <span className="font-medium text-foreground">{currentPage}</span>{" "}
+            of <span className="font-medium text-foreground">{totalPages}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <UBButton
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+              disabled={currentPage === 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="size-4" />
+            </UBButton>
+            <UBButton
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(page + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              aria-label="Next page"
+            >
+              <ChevronRight className="size-4" />
+            </UBButton>
+          </div>
+        </div>
+      )}
 
       <Dialog
         open={Boolean(reviewSupplier && reviewAction)}
