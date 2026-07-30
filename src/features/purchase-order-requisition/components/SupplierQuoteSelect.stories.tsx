@@ -130,7 +130,7 @@ function StorybookSuppliersProvider({
             contact_person: payload.contact_person ?? null,
             phone_number: payload.phone_number ?? null,
             email: payload.email ?? null,
-            TAX: payload.TAX ?? null,
+            TIN: payload.TIN ?? null,
             notes: payload.notes ?? null,
             status_id: 2,
             status: { id: 2, name: "Pending" },

@@ -18,7 +18,7 @@ export function AddSupplierForm({ onCreated, onCancel }: AddSupplierFormProps) {
   const [contactPerson, setContactPerson] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [email, setEmail] = useState("")
-  const [tax, setTax] = useState("")
+  const [tin, setTin] = useState("")
   const [notes, setNotes] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -36,7 +36,7 @@ export function AddSupplierForm({ onCreated, onCancel }: AddSupplierFormProps) {
       contact_person: contactPerson.trim() || undefined,
       phone_number: phoneNumber.trim() || undefined,
       email: email.trim() || undefined,
-      TAX: tax.trim() || undefined,
+      TIN: tin.trim() || undefined,
       notes: notes.trim() || undefined,
     })
 
@@ -81,10 +81,10 @@ export function AddSupplierForm({ onCreated, onCancel }: AddSupplierFormProps) {
         />
       </div>
       <UBInput
-        label="TAX"
-        value={tax}
-        onChange={(event) => setTax(event.target.value)}
-        placeholder="TAX-001"
+        label="TIN"
+        value={tin}
+        onChange={(event) => setTin(event.target.value)}
+        placeholder="TIN-001"
       />
       <UBTextarea
         label="Notes"

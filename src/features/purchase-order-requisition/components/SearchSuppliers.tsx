@@ -59,7 +59,7 @@ export function SearchSuppliers({ onSearch, className }: SearchSuppliersProps) {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <UBInput
           label="Search"
-          placeholder="Name, email, contact, TAX..."
+          placeholder="Name, email, contact, TIN..."
           value={values.query}
           onChange={(event) =>
             applySearch({ ...values, query: event.target.value })

@@ -16,7 +16,7 @@ const meta = {
     timelineTitle: "Approval pipeline",
     steps: [
       { title: "Submitted" },
-      { title: "Director Approval" },
+      { title: "Head of Department" },
       { title: "Budget Officer Approval" },
       { title: "Vice President Approval" },
       { title: "Director of Finance" },

@@ -29,7 +29,7 @@ export function getSupplierSearchText(supplier: Supplier) {
     supplier.email,
     supplier.contact_person,
     supplier.phone_number,
-    supplier.TAX,
+    supplier.TIN,
     supplier.notes,
     supplier.status?.name,
   ]
