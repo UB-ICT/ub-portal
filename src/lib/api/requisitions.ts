@@ -42,8 +42,7 @@ export type RequisitionSupplierPivot = {
 }
 
 export type RequisitionLineItemInput = {
-  line_item_number: string
-  description: string
+  chart_of_account_id: number
   quantity: number
   unit_cost: number
   comments?: string
@@ -51,7 +50,9 @@ export type RequisitionLineItemInput = {
 
 export type RequisitionLineItem = RequisitionLineItemInput & {
   id: number
+  // Derived server-side from chart_of_account_id; always kept in sync.
   line_item_number: string
+  description: string
   total: number | string
   requisition_id: number
 }
