@@ -68,7 +68,6 @@ export type CostCenterStageSummary = {
 
 type CostCenterStageSummaryApiResponse = CostCenterStageSummary & {
   success: boolean
-  role_context: string
 }
 
 const BASE_PATH = "requisitionSystem/requisitions/dashboard-metrics"
@@ -116,7 +115,6 @@ export async function fetchCostCenterStageSummary() {
     stages: response.stages,
     data: response.data,
     totals: response.totals,
-    roleContext: response.role_context,
   }
 }
 

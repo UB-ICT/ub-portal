@@ -58,11 +58,7 @@ type UBHeaderProps = {
   onNotificationsClick?: () => void
   onAppsClick?: () => void
   onProfileClick?: () => void
-  onViewProfile?: () => void
-  onSettingsClick?: () => void
-  onConnectUsersClick?: () => void
   onAdminToolsClick?: () => void
-  onGoogleSettingsClick?: () => void
   onSignOutClick?: () => void
 }
 

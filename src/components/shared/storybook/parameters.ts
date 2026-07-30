@@ -35,11 +35,7 @@ export const actionArgTypes = {
   onNotificationsClick: { action: "notificationsClicked" },
   onAppsClick: { action: "appsClicked" },
   onProfileClick: { action: "profileClicked" },
-  onViewProfile: { action: "viewProfile" },
-  onSettingsClick: { action: "settingsClicked" },
-  onConnectUsersClick: { action: "connectUsersClicked" },
   onAdminToolsClick: { action: "adminToolsClicked" },
-  onGoogleSettingsClick: { action: "googleSettingsClicked" },
   onSignOutClick: { action: "signOutClicked" },
   onRowClick: { action: "rowClicked" },
 } as const

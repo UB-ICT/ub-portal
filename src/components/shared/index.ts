@@ -3,16 +3,6 @@ export type { UBButtonProps, UBIconTileButtonProps } from "./UBButton"
 
 export { UBHeader } from "./UBHeader"
 
-export { UBUserProfile } from "./UBUserProfile"
-export type { UBUserProfileProps } from "./UBUserProfile"
-
-export { UBUserSettings } from "./UBUserSettings"
-export type {
-  UBNotificationPreference,
-  UBThemePreference,
-  UBUserSettingsProps,
-} from "./UBUserSettings"
-
 export { UBCard } from "./UBCard"
 export type { UBCardProps } from "./UBCard"
 

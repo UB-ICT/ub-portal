@@ -54,11 +54,7 @@ const meta = {
     onNotificationsClick: () => undefined,
     onAppsClick: () => undefined,
     onProfileClick: () => undefined,
-    onViewProfile: () => undefined,
-    onSettingsClick: () => undefined,
-    onConnectUsersClick: () => undefined,
     onAdminToolsClick: () => undefined,
-    onGoogleSettingsClick: () => undefined,
     onSignOutClick: () => undefined,
   },
   argTypes: {
