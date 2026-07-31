@@ -1,7 +1,14 @@
-import { ChevronDown, ChevronUp, Download, FileText, X } from "lucide-react"
+import { Download, Eye, FileText, X } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   downloadRequisitionAttachment,
   fetchAttachmentBlob,
@@ -34,18 +41,15 @@ export function PdfViewer({
   onRemove,
   disabled = false,
 }: PdfViewerProps) {
-  // The inline preview mounts a browser-native PDF viewer inside an
-  // <iframe>. Chromium can only cleanly host one of those at a time -
-  // auto-mounting a preview for every quote row broke the layout as soon
-  // as a second or third quote was added. Rendering the iframe on demand
-  // (one at a time, opt-in) avoids that entirely.
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [open, setOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const displayName = fileName || "Quote document.pdf"
+
   useEffect(() => {
-    if (!isExpanded) {
+    if (!open) {
       return
     }
 
@@ -101,17 +105,18 @@ export function PdfViewer({
 
     return () => {
       active = false
-      setPreviewUrl(null)
 
       if (objectUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(objectUrl)
       }
+
+      setPreviewUrl(null)
     }
-  }, [attachmentId, file, isExpanded])
+  }, [attachmentId, file, open])
 
   const handleDownload = async () => {
     if (file) {
-      triggerBlobDownload(file, fileName)
+      triggerBlobDownload(file, displayName)
       return
     }
 
@@ -120,7 +125,7 @@ export function PdfViewer({
     }
 
     const blob = await downloadRequisitionAttachment(attachmentId)
-    triggerBlobDownload(blob, fileName)
+    triggerBlobDownload(blob, displayName)
   }
 
   if (!file && !attachmentId) {
@@ -128,38 +133,32 @@ export function PdfViewer({
   }
 
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-lg border border-border/70 bg-muted/10",
-        className
-      )}
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-muted/20 px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
-          <FileText className="size-4 shrink-0 text-primary/80" />
-          <span className="truncate">{fileName || "Quote document.pdf"}</span>
-        </div>
+    <>
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/10 px-3 py-2",
+          className
+        )}
+      >
+        <UBButton
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-w-0 flex-1 justify-start"
+          onClick={() => setOpen(true)}
+          disabled={disabled}
+        >
+          <FileText className="size-4 shrink-0" data-icon="inline-start" />
+          <span className="truncate">{displayName}</span>
+          <Eye className="ml-auto size-4 shrink-0 opacity-70" />
+        </UBButton>
         <div className="flex shrink-0 items-center gap-1">
           <UBButton
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => setIsExpanded((current) => !current)}
-            disabled={disabled}
-          >
-            {isExpanded ? (
-              <ChevronUp className="size-4" data-icon="inline-start" />
-            ) : (
-              <ChevronDown className="size-4" data-icon="inline-start" />
-            )}
-            {isExpanded ? "Hide preview" : "Preview"}
-          </UBButton>
-          <UBButton
-            type="button"
-            variant="outline"
-            size="sm"
             onClick={() => void handleDownload()}
-            disabled={disabled || isLoading}
+            disabled={disabled}
           >
             <Download className="size-4" data-icon="inline-start" />
             Download
@@ -179,27 +178,51 @@ export function PdfViewer({
         </div>
       </div>
 
-      {isExpanded ? (
-        <div className="relative min-h-72 overflow-hidden bg-background">
-          {isLoading ? (
-            <div className="flex min-h-72 items-center justify-center text-sm text-muted-foreground">
-              Loading PDF preview...
-            </div>
-          ) : null}
-          {error ? (
-            <div className="flex min-h-72 items-center justify-center px-4 text-sm text-destructive">
-              {error}
-            </div>
-          ) : null}
-          {previewUrl && !error ? (
-            <iframe
-              title={fileName || "Quote PDF preview"}
-              src={`${previewUrl}#toolbar=0&navpanes=0`}
-              className="h-96 w-full border-0"
-            />
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="flex max-h-[90vh] w-[min(96vw,56rem)] max-w-4xl flex-col gap-3 overflow-hidden p-4 sm:max-w-4xl">
+          <DialogHeader className="pr-8">
+            <DialogTitle className="truncate">{displayName}</DialogTitle>
+            <DialogDescription>
+              Supplier quote PDF preview
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative min-h-[70vh] flex-1 overflow-hidden rounded-lg border border-border/70 bg-background">
+            {isLoading ? (
+              <div className="flex min-h-[70vh] items-center justify-center text-sm text-muted-foreground">
+                Loading PDF preview...
+              </div>
+            ) : null}
+            {error ? (
+              <div className="flex min-h-[70vh] items-center justify-center px-4 text-sm text-destructive">
+                {error}
+              </div>
+            ) : null}
+            {previewUrl && !error ? (
+              <iframe
+                title={displayName}
+                src={previewUrl}
+                className="h-[70vh] w-full border-0"
+              />
+            ) : null}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <UBButton
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleDownload()}
+            >
+              <Download className="size-4" data-icon="inline-start" />
+              Download
+            </UBButton>
+            <UBButton type="button" size="sm" onClick={() => setOpen(false)}>
+              Close
+            </UBButton>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

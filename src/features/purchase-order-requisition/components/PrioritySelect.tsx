@@ -1,15 +1,14 @@
-import { Select as SelectPrimitive } from "radix-ui"
-import { Check } from "lucide-react"
-
 import {
   Select,
   SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 import {
+  getRequisitionPriorityConfig,
   REQUISITION_PRIORITIES,
   type RequisitionPriority,
 } from "../lib/requisition-priorities"
@@ -49,6 +48,7 @@ export function PrioritySelect({
 }: PrioritySelectProps) {
   const labelId = `${label.replace(/\s+/g, "-").toLowerCase()}-label`
   const errorId = `${labelId}-error`
+  const selected = getRequisitionPriorityConfig(value)
 
   return (
     <div className="w-full">
@@ -74,31 +74,37 @@ export function PrioritySelect({
         </SelectTrigger>
         <SelectContent>
           {REQUISITION_PRIORITIES.map((priority) => (
-            <SelectPrimitive.Item
+            <SelectItem
               key={priority.value}
               value={priority.value}
-              className="relative flex w-full cursor-default items-start gap-2 rounded-lg py-1.5 pr-8 pl-2 text-sm outline-none select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+              textValue={priority.label}
             >
-              <span className="absolute right-2 flex size-3.5 items-center justify-center pt-1">
-                <SelectPrimitive.ItemIndicator>
-                  <Check className="size-4" />
-                </SelectPrimitive.ItemIndicator>
-              </span>
               <div className="flex flex-col gap-0.5 py-0.5">
-                <SelectPrimitive.ItemText>
-                  <PriorityOptionLabel
-                    label={priority.label}
-                    dotClassName={priority.dotClassName}
-                  />
-                </SelectPrimitive.ItemText>
+                <PriorityOptionLabel
+                  label={priority.label}
+                  dotClassName={priority.dotClassName}
+                />
                 <span className="pl-5 text-xs text-muted-foreground">
                   {priority.description}
                 </span>
               </div>
-            </SelectPrimitive.Item>
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
+
+      {value ? (
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          <span
+            aria-hidden
+            className={cn(
+              "mr-1.5 inline-block size-2 rounded-full align-middle",
+              selected.dotClassName
+            )}
+          />
+          {selected.description}
+        </p>
+      ) : null}
 
       {error ? (
         <p id={errorId} className="mt-1 text-xs text-destructive">

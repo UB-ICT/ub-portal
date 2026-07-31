@@ -5,6 +5,7 @@ import { uploadRequisitionQuote } from "@/lib/api/attachments"
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
 import type { RequisitionPriority, RequisitionRecord, RequisitionUserStageAction } from "@/lib/api/requisitions"
+import type { RequisitionTag } from "@/lib/api/tags"
 import { cn } from "@/lib/utils"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 import { normalizeRequisitionPriority } from "../lib/requisition-priorities"
@@ -27,6 +28,7 @@ import {
 } from "./RequisitionLineItemsTable"
 import { CurrencySelect } from "./CurrencySelect"
 import { PrioritySelect } from "./PrioritySelect"
+import { RequisitionTagPicker } from "./RequisitionTagPicker"
 import { RequisitionSupplierQuotes } from "./RequisitionSupplierQuotes"
 import { RequisitionActivityLog } from "./RequisitionActivityLog"
 import { RequisitionApprovalActions } from "./RequisitionApprovalActions"
@@ -43,7 +45,6 @@ function mapApiItemsToDrafts(
 ): RequisitionLineItemDraft[] {
   return items.map((item) => ({
     id: String(item.id),
-    chart_of_account_id: String(item.chart_of_account_id),
     line_item_number: String(item.line_item_number ?? ""),
     description: item.description,
     quantity: Number(item.quantity),
@@ -141,7 +142,9 @@ export function RequisitionForm({
   const [canEditPurchaseOrderNumber, setCanEditPurchaseOrderNumber] =
     useState(false)
   const [canCancelRequisition, setCanCancelRequisition] = useState(false)
+  const [canCloseRequisition, setCanCloseRequisition] = useState(false)
   const [activityComment, setActivityComment] = useState("")
+  const [selectedTags, setSelectedTags] = useState<RequisitionTag[]>([])
 
   const resetCreateForm = () => {
     setSupplierQuotes((current) => {
@@ -167,7 +170,9 @@ export function RequisitionForm({
     setPurchaseOrderNumber("")
     setCanEditPurchaseOrderNumber(false)
     setCanCancelRequisition(false)
+    setCanCloseRequisition(false)
     setActivityComment("")
+    setSelectedTags([])
   }
 
   const applyRequisitionState = (requisition: RequisitionRecord) => {
@@ -208,6 +213,14 @@ export function RequisitionForm({
       Boolean(requisition.can_edit_purchase_order_number)
     )
     setCanCancelRequisition(Boolean(requisition.can_cancel))
+    setCanCloseRequisition(Boolean(requisition.can_close))
+    setSelectedTags(
+      (requisition.tags ?? []).map((tag) => ({
+        id: tag.id,
+        name: tag.name,
+        cost_center_id: tag.cost_center_id ?? requisition.cost_center_id,
+      }))
+    )
     setActivityComment("")
     setFormError(null)
   }
@@ -244,6 +257,8 @@ export function RequisitionForm({
 
   const isLoading = isLoadingFormData || (mode === "edit" && isLoadingSelected)
   const isCancelledRequisition = statusLabel.toLowerCase() === "cancelled"
+  const isClosedRequisition = statusLabel.toLowerCase() === "closed"
+  const isTerminalRequisition = isCancelledRequisition || isClosedRequisition
   const isFormDisabled =
     isLoading ||
     isSaving ||
@@ -282,7 +297,7 @@ export function RequisitionForm({
     }
 
     if (!isLineItemsValid(lineItems)) {
-      return "Each line item needs a chart of account selection, quantity, and unit cost."
+      return "Each line item needs a line number, description, quantity, and unit cost."
     }
 
     return null
@@ -307,6 +322,7 @@ export function RequisitionForm({
       reminder_date: isRecurring ? reminderDate : null,
       suppliers: mapSupplierQuotesToPayload(supplierQuotes),
       items: mapLineItemsForApi(lineItems),
+      tag_ids: selectedTags.map((tag) => tag.id),
       submit: shouldSubmit,
     }
 
@@ -387,7 +403,12 @@ export function RequisitionForm({
             the approval pipeline.
           </div>
         ) : null}
-        {mode === "edit" && !isEditable && !isCancelledRequisition ? (
+        {mode === "edit" && isClosedRequisition ? (
+          <div className="rounded-lg border border-slate-300 bg-slate-100 px-4 py-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+            This requisition has been closed as discontinued / not processed.
+          </div>
+        ) : null}
+        {mode === "edit" && !isEditable && !isTerminalRequisition ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
             This requisition is locked while it is under review. It can only be
             edited again when the status is set to Cost Center Review.
@@ -457,6 +478,13 @@ export function RequisitionForm({
           />
         ) : null}
       </div>
+
+      <RequisitionTagPicker
+        costCenterId={costCenterId}
+        selectedTags={selectedTags}
+        onChange={setSelectedTags}
+        disabled={isFormDisabled}
+      />
 
       {showPurchaseOrderSection ? (
         <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
@@ -578,12 +606,13 @@ export function RequisitionForm({
 
       {mode === "edit" &&
       requisitionId &&
-      (showApprovalActions || canCancelRequisition) ? (
+      (showApprovalActions || canCancelRequisition || canCloseRequisition) ? (
         <RequisitionApprovalActions
           requisitionId={requisitionId}
           stageName={stageLabel}
           canAct={canApprove}
           canCancel={canCancelRequisition}
+          canClose={canCloseRequisition}
           userStageAction={userStageAction}
           onDecision={() => void handleApprovalDecision()}
         />

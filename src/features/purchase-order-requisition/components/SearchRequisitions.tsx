@@ -9,6 +9,7 @@ export type RequisitionSearchStatus =
   | "rejected"
   | "in-review"
   | "cancelled"
+  | "closed"
 
 export type RequisitionSearchCriteria = {
   query: string
@@ -23,6 +24,7 @@ const STATUS_OPTIONS: { value: RequisitionSearchStatus | ""; label: string }[] =
     { value: "approved", label: "Approved" },
     { value: "rejected", label: "Rejected" },
     { value: "cancelled", label: "Cancelled" },
+    { value: "closed", label: "Closed" },
   ]
 
 const INITIAL_CRITERIA: RequisitionSearchCriteria = {

@@ -1,4 +1,4 @@
-import { Ban, Check, MessageSquareWarning, X } from "lucide-react"
+import { Ban, Check, CircleSlash, MessageSquareWarning, X } from "lucide-react"
 import { useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
@@ -19,6 +19,7 @@ type RequisitionApprovalActionsProps = {
   stageName?: string | null
   canAct?: boolean
   canCancel?: boolean
+  canClose?: boolean
   userStageAction?: RequisitionUserStageAction | null
   className?: string
   onDecision?: () => void
@@ -40,6 +41,7 @@ export function RequisitionApprovalActions({
   stageName,
   canAct = false,
   canCancel = false,
+  canClose = false,
   userStageAction = null,
   className,
   onDecision,
@@ -56,6 +58,9 @@ export function RequisitionApprovalActions({
   const cancelRequisition = useRequisitionsStore(
     (state) => state.cancelRequisition
   )
+  const closeRequisition = useRequisitionsStore(
+    (state) => state.closeRequisition
+  )
   const isReviewing = useRequisitionsStore((state) => state.isReviewing)
   const error = useRequisitionsStore((state) => state.error)
   const fetchLogs = useRequisitionLogsStore((state) => state.fetchLogs)
@@ -66,6 +71,7 @@ export function RequisitionApprovalActions({
   const hasRecordedAction = Boolean(userStageAction)
   const approvalActionsDisabled = isReviewing || !canAct || hasRecordedAction
   const cancelDisabled = isReviewing || !canCancel
+  const closeDisabled = isReviewing || !canClose
 
   const handleDecision = async (action: ReviewAction) => {
     if (approvalActionsDisabled) {
@@ -122,6 +128,34 @@ export function RequisitionApprovalActions({
     onDecision?.()
   }
 
+  const handleClose = async () => {
+    if (closeDisabled) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      "Close this requisition? This marks it as discontinued / not processed and ends the workflow."
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setLocalError(null)
+
+    const requisition = await closeRequisition(requisitionId, {
+      comments: comments.trim() || null,
+    })
+
+    if (!requisition) {
+      return
+    }
+
+    setComments("")
+    await fetchLogs(requisitionId, true)
+    onDecision?.()
+  }
+
   const sectionDescription = (() => {
     if (hasRecordedAction && userStageAction) {
       return getRequisitionUserStageActionDescription(userStageAction, stageName)
@@ -135,8 +169,8 @@ export function RequisitionApprovalActions({
       return "Approve to advance the pipeline, reject to stop it, or request more information from the cost center."
     }
 
-    if (canCancel) {
-      return "This requisition is still in progress. As the assigned cost center or director, you can cancel it to stop the approval pipeline."
+    if (canClose || canCancel) {
+      return "You can cancel to withdraw this requisition from approval, or close it to mark it as discontinued / not processed."
     }
 
     return ""
@@ -151,7 +185,7 @@ export function RequisitionApprovalActions({
     >
       <div>
         <h3 className="text-sm font-semibold tracking-tight">
-          {canAct ? "Approval decision" : "Cost center action"}
+          {canAct ? "Approval decision" : "Requisition actions"}
         </h3>
         {sectionDescription ? (
           <p className="text-xs text-muted-foreground">{sectionDescription}</p>
@@ -182,7 +216,7 @@ export function RequisitionApprovalActions({
           onChange={(event) => setComments(event.target.value)}
           rows={3}
           placeholder="Add review notes for the activity log..."
-          disabled={approvalActionsDisabled && cancelDisabled}
+          disabled={approvalActionsDisabled && cancelDisabled && closeDisabled}
           className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
@@ -247,6 +281,18 @@ export function RequisitionApprovalActions({
           >
             <Ban className="size-4" data-icon="inline-start" />
             {isReviewing ? "Cancelling..." : "Cancel requisition"}
+          </UBButton>
+        ) : null}
+        {canClose ? (
+          <UBButton
+            type="button"
+            variant="outline"
+            onClick={() => void handleClose()}
+            disabled={closeDisabled}
+            className="border-slate-400 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900"
+          >
+            <CircleSlash className="size-4" data-icon="inline-start" />
+            {isReviewing ? "Closing..." : "Close requisition"}
           </UBButton>
         ) : null}
       </div>

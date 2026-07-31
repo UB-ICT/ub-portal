@@ -9,9 +9,20 @@ type ApiResponse<T> = {
 
 export type ChartOfAccount = {
   id: number
+  parent_id?: number | null
   account_no: string
   description: string
+  parent?: Pick<ChartOfAccount, "id" | "account_no" | "description"> | null
+  children?: ChartOfAccount[]
 }
+
+export type CreateChartOfAccountPayload = {
+  account_no: string
+  description: string
+  parent_id?: number | null
+}
+
+export type UpdateChartOfAccountPayload = CreateChartOfAccountPayload
 
 const BASE_PATH = "/requisitionSystem/chartOfAccounts"
 
@@ -32,6 +43,40 @@ async function request<T>(endpoint: string, options: RequestInit = {}) {
   return response.data
 }
 
-export async function fetchChartOfAccounts() {
-  return request<ChartOfAccount[]>(BASE_PATH)
+export async function fetchChartOfAccounts(search?: string) {
+  const query = search?.trim()
+    ? `?search=${encodeURIComponent(search.trim())}`
+    : ""
+
+  return request<ChartOfAccount[]>(`${BASE_PATH}${query}`)
+}
+
+export async function fetchChartOfAccount(id: number) {
+  return request<ChartOfAccount>(`${BASE_PATH}/${id}`)
+}
+
+export async function createChartOfAccount(
+  payload: CreateChartOfAccountPayload
+) {
+  return request<ChartOfAccount>(BASE_PATH, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateChartOfAccount(
+  id: number,
+  payload: UpdateChartOfAccountPayload
+) {
+  return request<ChartOfAccount>(`${BASE_PATH}/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteChartOfAccount(id: number) {
+  return apiRequest<ApiResponse<null>>(`${BASE_PATH}/${id}`, {
+    method: "DELETE",
+    token: getToken(),
+  })
 }

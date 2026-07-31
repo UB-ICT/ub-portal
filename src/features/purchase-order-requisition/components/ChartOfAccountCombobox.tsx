@@ -5,6 +5,11 @@ import { cn } from "@/lib/utils"
 import { useChartOfAccountsStore } from "@/store/chart-of-accounts-store"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 
+import {
+  filterAndSortAccounts,
+  type AccountTreeRow,
+} from "../lib/account-admin-utils"
+
 function matchesQuery(account: ChartOfAccount, query: string) {
   const needle = query.trim().toLowerCase()
 
@@ -65,7 +70,12 @@ export function ChartOfAccountCombobox({
   const inputValue = open ? query : displayText
 
   const visibleAccounts = useMemo(
-    () => chartOfAccounts.filter((account) => matchesQuery(account, query)),
+    () =>
+      filterAndSortAccounts(chartOfAccounts, {
+        query,
+        sortBy: "account_no",
+        sortDirection: "asc",
+      }).filter((account) => matchesQuery(account, query)),
     [chartOfAccounts, query]
   )
 
@@ -135,7 +145,7 @@ export function ChartOfAccountCombobox({
             </p>
           ) : (
             <ul role="listbox">
-              {visibleAccounts.map((account) => (
+              {visibleAccounts.map((account: AccountTreeRow) => (
                 <li key={account.id}>
                   <button
                     type="button"
@@ -145,9 +155,13 @@ export function ChartOfAccountCombobox({
                       "flex w-full flex-col items-start gap-0.5 rounded-lg px-2 py-1.5 text-left text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
                       String(account.id) === value && "bg-accent/60"
                     )}
+                    style={{ paddingLeft: `${0.5 + account.depth * 0.75}rem` }}
                     onClick={() => handleSelect(account)}
                   >
-                    <span className="font-medium">{account.account_no}</span>
+                    <span className="font-medium tabular-nums">
+                      {account.depth > 0 ? "└ " : ""}
+                      {account.account_no}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {account.description}
                     </span>

@@ -21,6 +21,7 @@ export type RequisitionStatus =
   | "rejected"
   | "in-review"
   | "cancelled"
+  | "closed"
 
 export type RequisitionCardProps = {
   referenceNumber: string
@@ -41,6 +42,7 @@ const STATUS_LABELS: Record<RequisitionStatus, string> = {
   rejected: "Rejected",
   "in-review": "In review",
   cancelled: "Cancelled",
+  closed: "Closed",
 }
 
 function getStatusStyles(status: RequisitionStatus) {
@@ -74,6 +76,12 @@ function getStatusStyles(status: RequisitionStatus) {
         accent: "border-l-slate-400",
         badge:
           "border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
+      }
+    case "closed":
+      return {
+        accent: "border-l-zinc-500",
+        badge:
+          "border-zinc-300 bg-zinc-100 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
       }
     default:
       return {

@@ -10,6 +10,7 @@ export const REQUISITION_LOG_ACTION_LABELS: Record<RequisitionLogAction, string>
     comment: "Comment",
     cost_center_review: "Cost Center Review",
     cancelled: "Cancelled",
+    closed: "Closed",
   }
 
 export function getRequisitionLogActionLabel(action: RequisitionLogAction) {
@@ -30,6 +31,8 @@ export function getRequisitionLogActionStyles(action: RequisitionLogAction) {
       return "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-200"
     case "cancelled":
       return "border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+    case "closed":
+      return "border-zinc-300 bg-zinc-100 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
     case "created":
       return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
     case "updated":
@@ -64,11 +67,7 @@ export function canCostCenterEditRequisition(
 
   const normalized = statusName?.toLowerCase() ?? ""
 
-  return (
-    normalized === "draft" ||
-    normalized === "cost center review" ||
-    normalized === "rejected"
-  )
+  return normalized === "draft" || normalized === "cost center review"
 }
 
 export function canAddLineItemsToRequisition(
@@ -92,9 +91,5 @@ export function canSubmitRequisition(
 
   const normalized = statusName?.toLowerCase() ?? ""
 
-  return (
-    normalized === "draft" ||
-    normalized === "cost center review" ||
-    normalized === "rejected"
-  )
+  return normalized === "draft" || normalized === "cost center review"
 }

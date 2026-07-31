@@ -3,15 +3,9 @@ import type { ReactNode } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { cn } from "@/lib/utils"
-import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
-
-import { ChartOfAccountCombobox } from "./ChartOfAccountCombobox"
 
 export type RequisitionLineItemDraft = {
   id: string
-  chart_of_account_id: string
-  // Cached from the selected chart of account for display; always kept in
-  // sync with chart_of_account_id, never edited directly by the user.
   line_item_number: string
   description: string
   quantity: number
@@ -22,7 +16,6 @@ export type RequisitionLineItemDraft = {
 export function createEmptyLineItem(): RequisitionLineItemDraft {
   return {
     id: crypto.randomUUID(),
-    chart_of_account_id: "",
     line_item_number: "",
     description: "",
     quantity: 1,
@@ -91,14 +84,6 @@ export function RequisitionLineItemsTable({
     )
   }
 
-  const selectChartOfAccount = (id: string, account: ChartOfAccount) => {
-    updateItem(id, {
-      chart_of_account_id: String(account.id),
-      line_item_number: account.account_no,
-      description: account.description,
-    })
-  }
-
   const removeItem = (id: string) => {
     onChange(items.filter((item) => item.id !== id))
   }
@@ -156,27 +141,30 @@ export function RequisitionLineItemsTable({
               items.map((item, index) => (
                 <tr key={item.id} className="border-t border-border/70">
                   <td className={getStripedCellClassName(index, stripedRows)}>
-                    <ChartOfAccountCombobox
-                      label="Line item number"
-                      hideLabel
-                      primaryField="account_no"
+                    <input
+                      type="text"
+                      aria-label="Line item number"
                       placeholder="Enter line #"
-                      value={item.chart_of_account_id}
-                      onSelect={(account) =>
-                        selectChartOfAccount(item.id, account)
+                      className={inputClassName}
+                      value={item.line_item_number}
+                      onChange={(event) =>
+                        updateItem(item.id, {
+                          line_item_number: event.target.value,
+                        })
                       }
                       disabled={disabled}
-                      inputClassName={inputClassName}
                     />
                   </td>
                   <td className={getStripedCellClassName(index, stripedRows)}>
                     <input
                       type="text"
                       aria-label="Item description"
-                      placeholder="Auto-filled from line item #"
+                      placeholder="Item description"
                       className={inputClassName}
                       value={item.description}
-                      readOnly
+                      onChange={(event) =>
+                        updateItem(item.id, { description: event.target.value })
+                      }
                       disabled={disabled}
                     />
                   </td>
@@ -295,7 +283,8 @@ export function RequisitionLineItemsTable({
 
 export function mapLineItemsForApi(items: RequisitionLineItemDraft[]) {
   return items.map((item) => ({
-    chart_of_account_id: Number(item.chart_of_account_id),
+    line_item_number: item.line_item_number.trim(),
+    description: item.description.trim(),
     quantity: item.quantity,
     unit_cost: item.unit_cost,
     comments: item.comments.trim() || undefined,
@@ -307,7 +296,8 @@ export function isLineItemsValid(items: RequisitionLineItemDraft[]) {
     items.length > 0 &&
     items.every(
       (item) =>
-        item.chart_of_account_id.trim().length > 0 &&
+        item.line_item_number.trim().length > 0 &&
+        item.description.trim().length > 0 &&
         item.quantity > 0 &&
         item.unit_cost >= 0
     )

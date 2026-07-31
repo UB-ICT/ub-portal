@@ -14,13 +14,6 @@ export function ApplicationLayout() {
   )
 
   useEffect(() => {
-    document.title = "Purchase Order Requisitions | UB Portal"
-    return () => {
-      document.title = "UB Portal"
-    }
-  }, [])
-
-  useEffect(() => {
     if (!isReady) {
       return
     }
@@ -41,8 +34,6 @@ export function ApplicationLayout() {
     <AppLayout
       userName={user.name}
       userEmail={user.email}
-      userImageSrc={user.profile_picture}
-      showSearch={false}
       onLogout={handleLogout}
     >
       <Outlet />

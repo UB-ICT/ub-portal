@@ -1,6 +1,7 @@
 import { create } from "zustand"
 
-import { fetchCostCenters, type CostCenter } from "@/lib/api/requisitions"
+import { fetchCostCenters } from "@/lib/api/cost-centers"
+import type { CostCenter } from "@/lib/api/requisitions"
 import { readStoredAccessToken } from "@/lib/auth/storage"
 
 type CostCentersState = {

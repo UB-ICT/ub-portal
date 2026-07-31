@@ -12,7 +12,7 @@ const meta = {
   component: PdfViewer,
   tags: ["autodocs"],
   parameters: componentParameters(
-    "Inline PDF preview with download and remove actions for supplier quote documents."
+    "File button that opens a dialog with PDF preview, plus download and remove actions for supplier quote documents."
   ),
   decorators: [withPanel("max-w-3xl space-y-6 p-6")],
 } satisfies Meta<typeof PdfViewer>

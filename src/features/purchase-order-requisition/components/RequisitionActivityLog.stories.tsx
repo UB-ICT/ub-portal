@@ -26,7 +26,7 @@ const mockLogs: RequisitionLogEntry[] = [
     requisition_id: 42,
     user_id: "user-2",
     action: "approved",
-    summary: "Approved at Head of Department stage.",
+    summary: "Approved at Director's Approval stage.",
     comments: null,
     created_at: "2026-06-18T08:00:00.000Z",
     updated_at: "2026-06-18T08:00:00.000Z",

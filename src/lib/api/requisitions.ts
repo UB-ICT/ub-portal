@@ -42,7 +42,8 @@ export type RequisitionSupplierPivot = {
 }
 
 export type RequisitionLineItemInput = {
-  chart_of_account_id: number
+  line_item_number: string
+  description: string
   quantity: number
   unit_cost: number
   comments?: string
@@ -50,16 +51,22 @@ export type RequisitionLineItemInput = {
 
 export type RequisitionLineItem = RequisitionLineItemInput & {
   id: number
-  // Derived server-side from chart_of_account_id; always kept in sync.
   line_item_number: string
-  description: string
   total: number | string
   requisition_id: number
+}
+
+export type PipelineStageUser = {
+  id: string
+  name: string
+  email: string
 }
 
 export type PipelineStage = {
   id: number
   name: string
+  sequence?: number
+  users?: PipelineStageUser[]
   pivot?: {
     pipeline_id: number
     stage_id: number
@@ -78,6 +85,7 @@ export type RequisitionRecord = {
   number: string
   purchase_order_number?: string | null
   cost_center_id: number
+  pipeline_id?: number | null
   date_prepared: string
   status_id: number
   currency_id: number
@@ -99,8 +107,14 @@ export type RequisitionRecord = {
   user_stage_action?: RequisitionUserStageAction | null
   can_edit_purchase_order_number?: boolean
   can_cancel?: boolean
+  can_close?: boolean
   pipeline?: Pipeline
   current_stage_sequence?: number
+  tags?: Array<{
+    id: number
+    name: string
+    cost_center_id?: number
+  }>
 }
 
 export type RequisitionSupplierInput = {
@@ -119,6 +133,7 @@ export type CreateRequisitionPayload = {
   reminder_date?: string | null
   suppliers?: RequisitionSupplierInput[]
   items: RequisitionLineItemInput[]
+  tag_ids?: number[]
   submit?: boolean
 }
 
@@ -222,6 +237,16 @@ export async function cancelRequisition(
   })
 }
 
+export async function closeRequisition(
+  id: number,
+  payload: RequisitionApprovalPayload = {}
+) {
+  return request<RequisitionRecord>(`${BASE_PATH}/requisitions/${id}/close`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
 export async function updateRequisitionPurchaseOrderNumber(
   id: number,
   payload: UpdateRequisitionPurchaseOrderPayload
@@ -244,8 +269,4 @@ export async function deleteRequisition(id: number) {
 
 export async function fetchAssignedCostCenter() {
   return request<CostCenter | null>(`${BASE_PATH}/costCenters/assigned/me`)
-}
-
-export async function fetchCostCenters() {
-  return request<CostCenter[]>(`${BASE_PATH}/costCenters`)
 }

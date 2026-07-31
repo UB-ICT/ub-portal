@@ -3,6 +3,7 @@ import { create } from "zustand"
 import {
   approveRequisition,
   cancelRequisition,
+  closeRequisition,
   createRequisition,
   deleteRequisition,
   fetchAssignedCostCenter,
@@ -59,6 +60,10 @@ type RequisitionsState = {
     payload?: RequisitionApprovalPayload
   ) => Promise<RequisitionRecord | null>
   cancelRequisition: (
+    id: number,
+    payload?: RequisitionApprovalPayload
+  ) => Promise<RequisitionRecord | null>
+  closeRequisition: (
     id: number,
     payload?: RequisitionApprovalPayload
   ) => Promise<RequisitionRecord | null>
@@ -310,6 +315,31 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
       return null
     }
   },
+  closeRequisition: async (id, payload) => {
+    set({ isReviewing: true, error: null })
+
+    try {
+      const requisition = await closeRequisition(id, payload)
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isReviewing: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isReviewing: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to close requisition.",
+      })
+      return null
+    }
+  },
   updateRequisitionPurchaseOrderNumber: async (id, payload) => {
     set({ isSavingPurchaseOrder: true, error: null })
 
@@ -429,7 +459,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
 
       try {
         const pipelines = await fetchPipelines()
-        const approvalPipeline = pipelines[0] ?? null
+        const approvalPipeline =
+          pipelines.find((pipeline) => pipeline.name === "operations") ??
+          pipelines.find((pipeline) => pipeline.name !== "budget") ??
+          pipelines[0] ??
+          null
 
         set({
           approvalPipeline,

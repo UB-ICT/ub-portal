@@ -16,7 +16,7 @@ import {
   resolveApplicationForPath,
   resolveMenuItemRoute,
 } from "@/lib/application-path"
-import { MenuIcon } from "@/lib/menu-icons"
+import { resolveMenuIcon } from "@/lib/menu-icons"
 import { readStoredAccessToken } from "@/lib/auth/storage"
 import type { UBDrawerItem } from "@/components/shared/UBDrawer"
 import { useApplicationsStore } from "@/store/applications-store"
@@ -27,16 +27,13 @@ export function mapMenuItemsToDrawerItems(
 ): UBDrawerItem[] {
   return menuItems.map((item) => {
     const normalizedPath = resolveMenuItemRoute(item.path, applicationPath)
+    const Icon = resolveMenuIcon(item.icon)
     const isExternal = /^https?:\/\//i.test(normalizedPath)
 
     return {
       id: item.id,
       label: item.label,
-      icon: createElement(MenuIcon, {
-        icon: item.icon,
-        label: item.label,
-        className: "size-4",
-      }),
+      icon: createElement(Icon, { className: "size-4" }),
       ...(isExternal ? { href: normalizedPath } : { to: normalizedPath }),
     }
   })

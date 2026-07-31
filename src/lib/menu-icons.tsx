@@ -3,6 +3,7 @@ import {
   BookOpen,
   ClipboardList,
   FileText,
+  GitBranch,
   GraduationCap,
   Grid3X3,
   LayoutGrid,
@@ -34,6 +35,8 @@ const MENU_ICON_MAP: Record<string, LucideIcon> = {
   Users,
   notebook: Notebook,
   Notebook,
+  "git-branch": GitBranch,
+  GitBranch,
   eye: Eye,
   Eye,
 }
@@ -46,6 +49,9 @@ const NAME_ICON_KEYWORDS: Array<{ keywords: string[]; icon: LucideIcon }> = [
     icon: ClipboardList,
   },
   { keywords: ["supplier", "vendor"], icon: Users },
+  { keywords: ["account", "chart of account", "ledger"], icon: Notebook },
+  { keywords: ["budget"], icon: ClipboardList },
+  { keywords: ["pipeline", "workflow", "stage"], icon: GitBranch },
   { keywords: ["form", "report", "document", "invoice"], icon: FileText },
   {
     keywords: ["student", "academic", "course", "enrollment"],

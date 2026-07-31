@@ -20,7 +20,7 @@ const meta = {
   component: SupplierQuoteRow,
   tags: ["autodocs"],
   parameters: componentParameters(
-    "Single supplier quote row with PDF upload, supplier selection, inline preview, and remove actions."
+    "Single supplier quote row with PDF upload, supplier selection, view-in-dialog preview, and remove actions."
   ),
   decorators: [withPanel("max-w-4xl space-y-6 p-6")],
   beforeEach: () => {

@@ -25,6 +25,10 @@ export function mapApiStatusToCardStatus(
     return "cancelled"
   }
 
+  if (normalized.includes("closed") || normalized === "close") {
+    return "closed"
+  }
+
   return "pending"
 }
 
