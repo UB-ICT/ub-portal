@@ -1,7 +1,9 @@
 import { Save, Send, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { uploadRequisitionQuote } from "@/lib/api/attachments"
+import { fetchOperationalBudgetLineItems } from "@/lib/api/budgets"
+import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
 import type { RequisitionPriority, RequisitionRecord, RequisitionUserStageAction } from "@/lib/api/requisitions"
@@ -45,8 +47,12 @@ function mapApiItemsToDrafts(
 ): RequisitionLineItemDraft[] {
   return items.map((item) => ({
     id: String(item.id),
-    line_item_number: String(item.line_item_number ?? ""),
-    description: item.description,
+    chart_of_account_id: item.chart_of_account_id ?? item.chart_of_account?.id ?? null,
+    account_no:
+      item.chart_of_account?.account_no ??
+      String(item.line_item_number ?? ""),
+    description:
+      item.chart_of_account?.description ?? item.description ?? "",
     quantity: Number(item.quantity),
     unit_cost: Number(item.unit_cost),
     comments: item.comments ?? "",
@@ -145,6 +151,11 @@ export function RequisitionForm({
   const [canCloseRequisition, setCanCloseRequisition] = useState(false)
   const [activityComment, setActivityComment] = useState("")
   const [selectedTags, setSelectedTags] = useState<RequisitionTag[]>([])
+  const [budgetAccounts, setBudgetAccounts] = useState<ChartOfAccount[]>([])
+  const [isLoadingBudgetAccounts, setIsLoadingBudgetAccounts] = useState(false)
+  const [budgetAccountsError, setBudgetAccountsError] = useState<string | null>(
+    null
+  )
 
   const resetCreateForm = () => {
     setSupplierQuotes((current) => {
@@ -254,6 +265,81 @@ export function RequisitionForm({
       setCostCenterId(assignedCostCenter.id)
     }
   }, [assignedCostCenter, mode])
+
+  useEffect(() => {
+    if (!costCenterId) {
+      setBudgetAccounts([])
+      setBudgetAccountsError(null)
+      return
+    }
+
+    let cancelled = false
+
+    setIsLoadingBudgetAccounts(true)
+    setBudgetAccountsError(null)
+
+    void fetchOperationalBudgetLineItems(costCenterId)
+      .then((payload) => {
+        if (cancelled) {
+          return
+        }
+
+        const accounts = (payload?.line_items ?? [])
+          .map((line) => line.chart_of_account)
+          .filter((account): account is ChartOfAccount => Boolean(account))
+
+        setBudgetAccounts(accounts)
+
+        if (!payload || accounts.length === 0) {
+          setBudgetAccountsError(
+            "No active budget line items are available for this cost center."
+          )
+        }
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return
+        }
+
+        setBudgetAccounts([])
+        setBudgetAccountsError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load active budget line items."
+        )
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingBudgetAccounts(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [costCenterId])
+
+  const lineItemAccountOptions = useMemo(() => {
+    const byId = new Map(
+      budgetAccounts.map((account) => [account.id, account] as const)
+    )
+
+    for (const item of lineItems) {
+      if (
+        item.chart_of_account_id &&
+        item.account_no &&
+        !byId.has(item.chart_of_account_id)
+      ) {
+        byId.set(item.chart_of_account_id, {
+          id: item.chart_of_account_id,
+          account_no: item.account_no,
+          description: item.description,
+        })
+      }
+    }
+
+    return Array.from(byId.values())
+  }, [budgetAccounts, lineItems])
 
   const isLoading = isLoadingFormData || (mode === "edit" && isLoadingSelected)
   const isCancelledRequisition = statusLabel.toLowerCase() === "cancelled"
@@ -552,6 +638,9 @@ export function RequisitionForm({
       <RequisitionLineItemsTable
         items={lineItems}
         onChange={setLineItems}
+        budgetAccounts={lineItemAccountOptions}
+        isLoadingBudgetAccounts={isLoadingBudgetAccounts}
+        budgetAccountsError={budgetAccountsError}
         disabled={isFormDisabled}
         allowAddItems={canAddLineItems}
         footerActions={

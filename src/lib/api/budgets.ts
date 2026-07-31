@@ -226,6 +226,20 @@ export async function fetchBudgets(params?: {
   )
 }
 
+export type OperationalBudgetLineItems = {
+  budget_id: number
+  cost_center_id: number
+  budget_year?: string | null
+  status?: string | null
+  line_items: BudgetLineItem[]
+}
+
+export async function fetchOperationalBudgetLineItems(costCenterId: number) {
+  return request<OperationalBudgetLineItems | null>(
+    `${BUDGETS_PATH}/operational?cost_center_id=${costCenterId}`
+  )
+}
+
 export async function fetchBudget(id: number) {
   return request<BudgetRecord>(`${BUDGETS_PATH}/${id}`)
 }

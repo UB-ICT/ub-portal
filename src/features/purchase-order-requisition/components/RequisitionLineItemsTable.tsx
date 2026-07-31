@@ -2,11 +2,15 @@ import { Plus, Trash2 } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
+import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { cn } from "@/lib/utils"
+
+import { ChartOfAccountCombobox } from "./ChartOfAccountCombobox"
 
 export type RequisitionLineItemDraft = {
   id: string
-  line_item_number: string
+  chart_of_account_id: number | null
+  account_no: string
   description: string
   quantity: number
   unit_cost: number
@@ -16,7 +20,8 @@ export type RequisitionLineItemDraft = {
 export function createEmptyLineItem(): RequisitionLineItemDraft {
   return {
     id: crypto.randomUUID(),
-    line_item_number: "",
+    chart_of_account_id: null,
+    account_no: "",
     description: "",
     quantity: 1,
     unit_cost: 0,
@@ -45,6 +50,9 @@ export function calculateRequisitionTotalFromLineItems(
 type RequisitionLineItemsTableProps = {
   items: RequisitionLineItemDraft[]
   onChange: (items: RequisitionLineItemDraft[]) => void
+  budgetAccounts?: ChartOfAccount[]
+  isLoadingBudgetAccounts?: boolean
+  budgetAccountsError?: string | null
   footerActions?: ReactNode
   className?: string
   disabled?: boolean
@@ -69,6 +77,9 @@ function getStripedCellClassName(index: number, stripedRows: boolean) {
 export function RequisitionLineItemsTable({
   items,
   onChange,
+  budgetAccounts = [],
+  isLoadingBudgetAccounts = false,
+  budgetAccountsError = null,
   footerActions,
   className,
   disabled = false,
@@ -101,6 +112,10 @@ export function RequisitionLineItemsTable({
     0
   )
   const inputClassName = getInputClassName(stripedRows)
+  const canSelectBudgetLine =
+    !isLoadingBudgetAccounts &&
+    !budgetAccountsError &&
+    budgetAccounts.length > 0
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -112,145 +127,160 @@ export function RequisitionLineItemsTable({
           Review.
         </p>
       ) : null}
+      {budgetAccountsError ? (
+        <p className="text-xs text-destructive">{budgetAccountsError}</p>
+      ) : null}
+      {!budgetAccountsError &&
+      !isLoadingBudgetAccounts &&
+      budgetAccounts.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No active budget line items are available for this cost center.
+          Activate a budget before adding requisition line items.
+        </p>
+      ) : null}
 
       <div className="overflow-hidden rounded-xl border border-border">
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse text-sm">
-          <thead className="bg-muted/40">
-            <tr className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              <th className="w-28 px-2 py-2 font-medium">Line Item #</th>
-              <th className="px-2 py-2 font-medium">Description</th>
-              <th className="w-20 px-2 py-2 font-medium">Qty</th>
-              <th className="w-28 px-2 py-2 font-medium">Unit cost</th>
-              <th className="w-28 px-2 py-2 font-medium">Total</th>
-              <th className="min-w-32 px-2 py-2 font-medium">Notes</th>
-              <th className="w-10 px-2 py-2" aria-label="Actions" />
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-2 py-6 text-center text-sm text-muted-foreground"
-                >
-                  No line items yet. Add at least one item to continue.
-                </td>
+            <thead className="bg-muted/40">
+              <tr className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <th className="min-w-72 px-2 py-2 font-medium">Budget line item</th>
+                <th className="w-20 px-2 py-2 font-medium">Qty</th>
+                <th className="w-28 px-2 py-2 font-medium">Unit cost</th>
+                <th className="w-28 px-2 py-2 font-medium">Total</th>
+                <th className="min-w-32 px-2 py-2 font-medium">Notes</th>
+                <th className="w-10 px-2 py-2" aria-label="Actions" />
               </tr>
-            ) : (
-              items.map((item, index) => (
-                <tr key={item.id} className="border-t border-border/70">
-                  <td className={getStripedCellClassName(index, stripedRows)}>
-                    <input
-                      type="text"
-                      aria-label="Line item number"
-                      placeholder="Enter line #"
-                      className={inputClassName}
-                      value={item.line_item_number}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          line_item_number: event.target.value,
-                        })
-                      }
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td className={getStripedCellClassName(index, stripedRows)}>
-                    <input
-                      type="text"
-                      aria-label="Item description"
-                      placeholder="Item description"
-                      className={inputClassName}
-                      value={item.description}
-                      onChange={(event) =>
-                        updateItem(item.id, { description: event.target.value })
-                      }
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td className={getStripedCellClassName(index, stripedRows)}>
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      aria-label="Quantity"
-                      className={inputClassName}
-                      value={item.quantity}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          quantity: Math.max(1, Number(event.target.value) || 1),
-                        })
-                      }
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td className={getStripedCellClassName(index, stripedRows)}>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      aria-label="Unit cost"
-                      className={inputClassName}
-                      value={item.unit_cost}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          unit_cost: Math.max(0, Number(event.target.value) || 0),
-                        })
-                      }
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td className={getStripedCellClassName(index, stripedRows)}>
-                    <div className="flex h-[34px] items-center px-1 text-sm font-medium tabular-nums text-foreground">
-                      {formatCurrency(calculateLineTotal(item))}
-                    </div>
-                  </td>
-                  <td className={getStripedCellClassName(index, stripedRows)}>
-                    <input
-                      type="text"
-                      aria-label="Notes"
-                      placeholder="Notes"
-                      className={inputClassName}
-                      value={item.comments}
-                      onChange={(event) =>
-                        updateItem(item.id, { comments: event.target.value })
-                      }
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td className={getStripedCellClassName(index, stripedRows)}>
-                    <button
-                      type="button"
-                      aria-label="Remove line item"
-                      className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
-                      onClick={() => removeItem(item.id)}
-                      disabled={disabled || items.length === 1}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-2 py-6 text-center text-sm text-muted-foreground"
+                  >
+                    No line items yet. Add at least one item to continue.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-          {items.length > 0 ? (
-            <tfoot>
-              <tr className="border-t border-border bg-muted/20">
-                <td
-                  colSpan={4}
-                  className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                >
-                  Grand total
-                </td>
-                <td
-                  colSpan={3}
-                  className="px-2 py-2 text-sm font-semibold tabular-nums text-foreground"
-                >
-                  {formatCurrency(grandTotal)}
-                </td>
-              </tr>
-            </tfoot>
-          ) : null}
+              ) : (
+                items.map((item, index) => (
+                  <tr key={item.id} className="border-t border-border/70">
+                    <td className={getStripedCellClassName(index, stripedRows)}>
+                      <ChartOfAccountCombobox
+                        label="Budget line item"
+                        hideLabel
+                        value={
+                          item.chart_of_account_id
+                            ? String(item.chart_of_account_id)
+                            : ""
+                        }
+                        primaryField="account_no"
+                        accounts={budgetAccounts}
+                        loading={isLoadingBudgetAccounts}
+                        emptyMessage="No active budget accounts match."
+                        placeholder="Select budget line item..."
+                        inputClassName={inputClassName}
+                        disabled={disabled || !canSelectBudgetLine}
+                        onSelect={(account) =>
+                          updateItem(item.id, {
+                            chart_of_account_id: account.id,
+                            account_no: account.account_no,
+                            description: account.description,
+                          })
+                        }
+                      />
+                    </td>
+                    <td className={getStripedCellClassName(index, stripedRows)}>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        aria-label="Quantity"
+                        className={inputClassName}
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(item.id, {
+                            quantity: Math.max(
+                              1,
+                              Number(event.target.value) || 1
+                            ),
+                          })
+                        }
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td className={getStripedCellClassName(index, stripedRows)}>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        aria-label="Unit cost"
+                        className={inputClassName}
+                        value={item.unit_cost}
+                        onChange={(event) =>
+                          updateItem(item.id, {
+                            unit_cost: Math.max(
+                              0,
+                              Number(event.target.value) || 0
+                            ),
+                          })
+                        }
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td className={getStripedCellClassName(index, stripedRows)}>
+                      <div className="flex h-[34px] items-center px-1 text-sm font-medium tabular-nums text-foreground">
+                        {formatCurrency(calculateLineTotal(item))}
+                      </div>
+                    </td>
+                    <td className={getStripedCellClassName(index, stripedRows)}>
+                      <input
+                        type="text"
+                        aria-label="Notes"
+                        placeholder="Notes"
+                        className={inputClassName}
+                        value={item.comments}
+                        onChange={(event) =>
+                          updateItem(item.id, {
+                            comments: event.target.value,
+                          })
+                        }
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td className={getStripedCellClassName(index, stripedRows)}>
+                      <button
+                        type="button"
+                        aria-label="Remove line item"
+                        className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                        onClick={() => removeItem(item.id)}
+                        disabled={disabled || items.length === 1}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {items.length > 0 ? (
+              <tfoot>
+                <tr className="border-t border-border bg-muted/20">
+                  <td
+                    colSpan={3}
+                    className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  >
+                    Grand total
+                  </td>
+                  <td
+                    colSpan={3}
+                    className="px-2 py-2 text-sm font-semibold tabular-nums text-foreground"
+                  >
+                    {formatCurrency(grandTotal)}
+                  </td>
+                </tr>
+              </tfoot>
+            ) : null}
           </table>
         </div>
       </div>
@@ -262,7 +292,7 @@ export function RequisitionLineItemsTable({
             variant="outline"
             size="sm"
             onClick={addItem}
-            disabled={disabled}
+            disabled={disabled || !canSelectBudgetLine}
           >
             <Plus className="size-4" data-icon="inline-start" />
             Add item
@@ -283,8 +313,7 @@ export function RequisitionLineItemsTable({
 
 export function mapLineItemsForApi(items: RequisitionLineItemDraft[]) {
   return items.map((item) => ({
-    line_item_number: item.line_item_number.trim(),
-    description: item.description.trim(),
+    chart_of_account_id: item.chart_of_account_id as number,
     quantity: item.quantity,
     unit_cost: item.unit_cost,
     comments: item.comments.trim() || undefined,
@@ -296,8 +325,7 @@ export function isLineItemsValid(items: RequisitionLineItemDraft[]) {
     items.length > 0 &&
     items.every(
       (item) =>
-        item.line_item_number.trim().length > 0 &&
-        item.description.trim().length > 0 &&
+        item.chart_of_account_id !== null &&
         item.quantity > 0 &&
         item.unit_cost >= 0
     )

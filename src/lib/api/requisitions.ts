@@ -42,8 +42,7 @@ export type RequisitionSupplierPivot = {
 }
 
 export type RequisitionLineItemInput = {
-  line_item_number: string
-  description: string
+  chart_of_account_id: number
   quantity: number
   unit_cost: number
   comments?: string
@@ -51,9 +50,16 @@ export type RequisitionLineItemInput = {
 
 export type RequisitionLineItem = RequisitionLineItemInput & {
   id: number
-  line_item_number: string
+  line_item_number?: string | null
+  description?: string | null
   total: number | string
   requisition_id: number
+  chart_of_account?: {
+    id: number
+    account_no: string
+    description: string
+    parent_id?: number | null
+  } | null
 }
 
 export type PipelineStageUser = {

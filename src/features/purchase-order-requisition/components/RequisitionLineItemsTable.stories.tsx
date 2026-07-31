@@ -5,6 +5,7 @@ import {
   componentParameters,
   withPanel,
 } from "@/components/shared/storybook"
+import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 
 import {
   createEmptyLineItem,
@@ -12,27 +13,48 @@ import {
   type RequisitionLineItemDraft,
 } from "./RequisitionLineItemsTable"
 
+const sampleAccounts: ChartOfAccount[] = [
+  {
+    id: 1,
+    account_no: "70314",
+    description: "Computer Supplies",
+  },
+  {
+    id: 2,
+    account_no: "70315",
+    description: "Other Office Equipment",
+  },
+  {
+    id: 3,
+    account_no: "70523",
+    description: "Maintenance of Computer Hardware",
+  },
+]
+
 const sampleItems: RequisitionLineItemDraft[] = [
   {
     id: "item-1",
-    line_item_number: "ICT-001",
-    description: "27-inch 4K Development Monitors",
+    chart_of_account_id: 1,
+    account_no: "70314",
+    description: "Computer Supplies",
     quantity: 5,
     unit_cost: 350,
     comments: "Dell preferred",
   },
   {
     id: "item-2",
-    line_item_number: "ICT-014",
-    description: "Mechanical Keyboards",
+    chart_of_account_id: 2,
+    account_no: "70315",
+    description: "Other Office Equipment",
     quantity: 10,
     unit_cost: 85,
     comments: "",
   },
   {
     id: "item-3",
-    line_item_number: "LAB-003",
-    description: "USB-C Docking Stations",
+    chart_of_account_id: 3,
+    account_no: "70523",
+    description: "Maintenance of Computer Hardware",
     quantity: 6,
     unit_cost: 130,
     comments: "Dual display support",
@@ -81,6 +103,7 @@ export const Default: Story = {
         {...args}
         items={items}
         onChange={setItems}
+        budgetAccounts={sampleAccounts}
       />
     )
   },
@@ -98,6 +121,7 @@ export const StripedRowsDisabled: Story = {
         {...args}
         items={items}
         onChange={setItems}
+        budgetAccounts={sampleAccounts}
       />
     )
   },
@@ -116,6 +140,7 @@ export const SubmittedNoNewItems: Story = {
         {...args}
         items={items}
         onChange={setItems}
+        budgetAccounts={sampleAccounts}
       />
     )
   },
@@ -132,6 +157,7 @@ export const Empty: Story = {
         {...args}
         items={items}
         onChange={setItems}
+        budgetAccounts={sampleAccounts}
       />
     )
   },
@@ -151,6 +177,7 @@ export const ReadOnly: Story = {
         {...args}
         items={items}
         onChange={() => undefined}
+        budgetAccounts={sampleAccounts}
       />
     )
   },

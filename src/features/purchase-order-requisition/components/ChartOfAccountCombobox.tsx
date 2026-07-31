@@ -33,6 +33,10 @@ type ChartOfAccountComboboxProps = {
   placeholder?: string
   hideLabel?: boolean
   inputClassName?: string
+  /** When set, options come from this list instead of the global chart of accounts store. */
+  accounts?: ChartOfAccount[]
+  emptyMessage?: string
+  loading?: boolean
 }
 
 export function ChartOfAccountCombobox({
@@ -45,38 +49,51 @@ export function ChartOfAccountCombobox({
   inputClassName,
   placeholder,
   hideLabel = false,
+  accounts: accountsProp,
+  emptyMessage = "No matching accounts.",
+  loading = false,
 }: ChartOfAccountComboboxProps) {
   const chartOfAccounts = useChartOfAccountsStore(
     (state) => state.chartOfAccounts
   )
-  const isLoading = useChartOfAccountsStore((state) => state.isLoading)
+  const isStoreLoading = useChartOfAccountsStore((state) => state.isLoading)
   const fetchChartOfAccounts = useChartOfAccountsStore(
     (state) => state.fetchChartOfAccounts
   )
+
+  const useExternalAccounts = accountsProp !== undefined
+  const sourceAccounts = useExternalAccounts ? accountsProp : chartOfAccounts
+  const isLoading = useExternalAccounts ? loading : isStoreLoading
 
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
 
   useEffect(() => {
-    void fetchChartOfAccounts()
-  }, [fetchChartOfAccounts])
+    if (!useExternalAccounts) {
+      void fetchChartOfAccounts()
+    }
+  }, [fetchChartOfAccounts, useExternalAccounts])
 
-  const selectedAccount = chartOfAccounts.find(
+  const selectedAccount = sourceAccounts.find(
     (account) => String(account.id) === value
   )
-  const displayText = selectedAccount ? selectedAccount[primaryField] : ""
+  const displayText = selectedAccount
+    ? primaryField === "account_no"
+      ? `${selectedAccount.account_no} — ${selectedAccount.description}`
+      : selectedAccount[primaryField]
+    : ""
   // While closed, always show the selected account's text rather than
   // whatever was last typed -- avoids syncing `query` via an effect.
   const inputValue = open ? query : displayText
 
   const visibleAccounts = useMemo(
     () =>
-      filterAndSortAccounts(chartOfAccounts, {
+      filterAndSortAccounts(sourceAccounts, {
         query,
         sortBy: "account_no",
         sortDirection: "asc",
       }).filter((account) => matchesQuery(account, query)),
-    [chartOfAccounts, query]
+    [sourceAccounts, query]
   )
 
   const inputId = useId()
@@ -115,12 +132,16 @@ export function ChartOfAccountCombobox({
               inputClassName
             )}
             placeholder={
-              isLoading ? "Loading chart of accounts..." : placeholder
+              isLoading ? "Loading accounts..." : placeholder
             }
             value={inputValue}
             disabled={disabled}
             onFocus={() => {
-              setQuery(displayText)
+              setQuery(
+                selectedAccount
+                  ? `${selectedAccount.account_no} ${selectedAccount.description}`
+                  : ""
+              )
               setOpen(true)
             }}
             onChange={(event) => {
@@ -141,7 +162,7 @@ export function ChartOfAccountCombobox({
         >
           {visibleAccounts.length === 0 ? (
             <p className="px-2 py-3 text-center text-xs text-muted-foreground">
-              {isLoading ? "Loading..." : "No matching accounts."}
+              {isLoading ? "Loading..." : emptyMessage}
             </p>
           ) : (
             <ul role="listbox">
@@ -181,3 +202,4 @@ export function ChartOfAccountCombobox({
     </div>
   )
 }
+
