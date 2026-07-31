@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { UBDrawer, UBHeader } from "@/components/shared"
+import type { UBDrawerItem } from "@/components/shared"
 
 type AppLayoutProps = {
   userName: string
@@ -10,6 +11,8 @@ type AppLayoutProps = {
   showSearch?: boolean
   onLogout: () => void
   children: ReactNode
+  appLabel?: string
+  menuItems?: UBDrawerItem[]
 }
 
 export function AppLayout({
@@ -19,12 +22,16 @@ export function AppLayout({
   showSearch,
   onLogout,
   children,
+  appLabel,
+  menuItems,
 }: AppLayoutProps) {
   return (
     <UBDrawer
       persistent
       overlay={false}
       defaultOpen
+      appLabel={appLabel}
+      items={menuItems}
       header={
         <UBHeader
           userName={userName}

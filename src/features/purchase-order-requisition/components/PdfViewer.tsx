@@ -1,4 +1,4 @@
-import { Download, FileText, X } from "lucide-react"
+import { ChevronDown, ChevronUp, Download, FileText, X } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
@@ -34,11 +34,21 @@ export function PdfViewer({
   onRemove,
   disabled = false,
 }: PdfViewerProps) {
+  // The inline preview mounts a browser-native PDF viewer inside an
+  // <iframe>. Chromium can only cleanly host one of those at a time -
+  // auto-mounting a preview for every quote row broke the layout as soon
+  // as a second or third quote was added. Rendering the iframe on demand
+  // (one at a time, opt-in) avoids that entirely.
+  const [isExpanded, setIsExpanded] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!isExpanded) {
+      return
+    }
+
     let active = true
     let objectUrl: string | null = null
 
@@ -91,12 +101,13 @@ export function PdfViewer({
 
     return () => {
       active = false
+      setPreviewUrl(null)
 
       if (objectUrl?.startsWith("blob:")) {
         URL.revokeObjectURL(objectUrl)
       }
     }
-  }, [attachmentId, file])
+  }, [attachmentId, file, isExpanded])
 
   const handleDownload = async () => {
     if (file) {
@@ -133,6 +144,20 @@ export function PdfViewer({
             type="button"
             variant="outline"
             size="sm"
+            onClick={() => setIsExpanded((current) => !current)}
+            disabled={disabled}
+          >
+            {isExpanded ? (
+              <ChevronUp className="size-4" data-icon="inline-start" />
+            ) : (
+              <ChevronDown className="size-4" data-icon="inline-start" />
+            )}
+            {isExpanded ? "Hide preview" : "Preview"}
+          </UBButton>
+          <UBButton
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={() => void handleDownload()}
             disabled={disabled || isLoading}
           >
@@ -154,25 +179,27 @@ export function PdfViewer({
         </div>
       </div>
 
-      <div className="relative min-h-72 bg-background">
-        {isLoading ? (
-          <div className="flex min-h-72 items-center justify-center text-sm text-muted-foreground">
-            Loading PDF preview...
-          </div>
-        ) : null}
-        {error ? (
-          <div className="flex min-h-72 items-center justify-center px-4 text-sm text-destructive">
-            {error}
-          </div>
-        ) : null}
-        {previewUrl && !error ? (
-          <iframe
-            title={fileName || "Quote PDF preview"}
-            src={previewUrl}
-            className="h-96 w-full border-0"
-          />
-        ) : null}
-      </div>
+      {isExpanded ? (
+        <div className="relative min-h-72 overflow-hidden bg-background">
+          {isLoading ? (
+            <div className="flex min-h-72 items-center justify-center text-sm text-muted-foreground">
+              Loading PDF preview...
+            </div>
+          ) : null}
+          {error ? (
+            <div className="flex min-h-72 items-center justify-center px-4 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+          {previewUrl && !error ? (
+            <iframe
+              title={fileName || "Quote PDF preview"}
+              src={`${previewUrl}#toolbar=0&navpanes=0`}
+              className="h-96 w-full border-0"
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }

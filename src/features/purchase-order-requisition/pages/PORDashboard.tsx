@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { fetchDashboardMetrics } from "@/lib/api/dashboard"
 import { UBCard } from "../../../components/shared/UBCard"
 import { RecentFormsTable } from "../components/RequisitionRecentForms"
+import { CostCenterStageSummaryTable } from "../components/CostCenterStageSummary"
 
 interface PORDashboardPageProps {}
 
@@ -39,6 +40,10 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   // Director/Dean approves requisitions directly and never handles supplier requests
   const showSupplierCard = backendRole !== "director-dean"
 
+  // Cost Center & Stage summary is restricted to Purchase Officers and Super Admins
+  const canViewCostCenterSummary =
+    backendRole === "purchase-officer" || backendRole === "super-admin"
+
   const formatRoleName = (role: string) => {
     return role
       .split("-")
@@ -65,11 +70,10 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   }
 
   return (
-    /* 🚀 Added h-full, min-h-screen, and overflow-y-auto to guarantee page scrolling */
-    <div className="h-full min-h-screen w-full space-y-6 overflow-y-auto p-8">
+    <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-2">
       {/* 🧭 Clean Header Banner */}
       <div className="border-b border-border pb-5">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Purchase Order Requisitions
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -143,6 +147,8 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
           </div>
         )}
       </div>
+
+      {canViewCostCenterSummary && <CostCenterStageSummaryTable />}
 
       <RecentFormsTable />
     </div>

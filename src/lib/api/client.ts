@@ -45,11 +45,14 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {}
 ) {
   const { token, headers, ...requestInit } = options
+  const isFormData = requestInit.body instanceof FormData
   const response = await fetch(buildApiUrl(endpoint), {
     ...requestInit,
     headers: {
       Accept: "application/json",
-      ...(requestInit.body ? { "Content-Type": "application/json" } : {}),
+      ...(requestInit.body && !isFormData
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },

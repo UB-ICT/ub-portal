@@ -1,32 +1,22 @@
-import {
-  BookOpen,
-  Globe,
-  Grid3X3,
-  LayoutGrid,
-  LogOut,
-  Moon,
-  Search,
-  Settings,
-  Sun,
-  User,
-  Users,
-  Wrench,
-} from "lucide-react"
+import { Grid3X3, LogOut, Moon, Search, Sun } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
 import { useTheme } from "@/components/theme-provider"
-import type { PortalApplication } from "@/lib/api/menu"
+import type { PortalApplication, PortalMenuItem } from "@/lib/api/menu"
 import type { PortalNotification } from "@/lib/api/notifications"
-import { resolveMenuIcon } from "@/lib/menu-icons"
-import { cn } from "@/lib/utils"
+import { writePostLoginRedirect } from "@/lib/auth/storage"
+import { MenuIcon } from "@/lib/menu-icons"
+import { cn, getUserInitials } from "@/lib/utils"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
 import { useApplicationsStore } from "@/store/applications-store"
 import { useNotificationsStore } from "@/store/notifications-store"
+import { useProfileMenuStore } from "@/store/profile-menu-store"
 import { UBIconTileButton } from "./UBButton"
 import { UBNotificationBell } from "./UBNotificationBell"
 
 const NOTIFICATION_POLL_INTERVAL_MS = 60_000
+const ADMIN_CONSOLE_PATH = "/admin"
 
 function formatNotificationTime(isoDate: string) {
   const date = new Date(isoDate)
@@ -61,30 +51,15 @@ type UBHeaderProps = {
   userEmail?: string
   userImageSrc?: string
   notificationCount?: number
-  showAdminActions?: boolean
   showSearch?: boolean
   applications?: PortalApplication[]
+  navigation?: PortalMenuItem[]
   onThemeToggle?: () => void
   onNotificationsClick?: () => void
   onAppsClick?: () => void
   onProfileClick?: () => void
-  onViewProfile?: () => void
-  onSettingsClick?: () => void
-  onConnectUsersClick?: () => void
   onAdminToolsClick?: () => void
-  onGoogleSettingsClick?: () => void
   onSignOutClick?: () => void
-}
-
-function getUserInitials(name: string) {
-  const initials = name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("")
-
-  return initials || "UB"
 }
 
 function isExternalPath(path: string) {
@@ -96,18 +71,14 @@ export function UBHeader({
   userEmail,
   userImageSrc,
   notificationCount: notificationCountOverride,
-  showAdminActions = false,
   showSearch = true,
   applications: applicationsOverride,
+  navigation: navigationOverride,
   onThemeToggle,
   onNotificationsClick,
   onAppsClick,
   onProfileClick,
-  onViewProfile,
-  onSettingsClick,
-  onConnectUsersClick,
   onAdminToolsClick,
-  onGoogleSettingsClick,
   onSignOutClick,
 }: UBHeaderProps) {
   const navigate = useNavigate()
@@ -129,6 +100,13 @@ export function UBHeader({
     (state) => state.loadApplication
   )
   const applications = applicationsOverride ?? storeApplications
+
+  const storeNavigation = useProfileMenuStore((state) => state.navigation)
+  const fetchProfileMenu = useProfileMenuStore((state) => state.fetchProfileMenu)
+  const navigation = navigationOverride ?? storeNavigation
+  const adminConsoleItem = navigation.find(
+    (item) => item.path === ADMIN_CONSOLE_PATH
+  )
 
   const notifications = useNotificationsStore((state) => state.notifications)
   const storeUnreadCount = useNotificationsStore((state) => state.unreadCount)
@@ -160,6 +138,12 @@ export function UBHeader({
       void fetchMyApplications()
     }
   }, [applicationsOverride, fetchMyApplications])
+
+  useEffect(() => {
+    if (!navigationOverride) {
+      void fetchProfileMenu()
+    }
+  }, [navigationOverride, fetchProfileMenu])
 
   useEffect(() => {
     if (notificationCountOverride !== undefined) {
@@ -233,6 +217,21 @@ export function UBHeader({
     setTheme(isDarkMode ? "light" : "dark")
   }
 
+  const handleAdminToolsClick = () => {
+    setIsProfileOpen(false)
+    onAdminToolsClick?.()
+
+    if (!adminConsoleItem) {
+      return
+    }
+
+    // Admin Console requires a fresh login every time, not just navigation:
+    // route back here once the user signs back in, then run the same
+    // full logout the sign-out button uses.
+    writePostLoginRedirect(adminConsoleItem.path)
+    onSignOutClick?.()
+  }
+
   const handleAppsClick = () => {
     onAppsClick?.()
     setIsAppsOpen((current) => !current)
@@ -287,7 +286,7 @@ export function UBHeader({
                   type="search"
                   aria-label="Search"
                   placeholder="Search news, apps, topics..."
-                  className="h-10 w-full rounded-full border border-input bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                  className="h-10 w-full rounded-full border border-input bg-background pr-4 pl-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 focus:outline-none"
                 />
               </label>
             </div>
@@ -298,10 +297,16 @@ export function UBHeader({
           <button
             type="button"
             onClick={handleThemeToggle}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            aria-label={
+              isDarkMode ? "Switch to light mode" : "Switch to dark mode"
+            }
           >
-            {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {isDarkMode ? (
+              <Sun className="size-4" />
+            ) : (
+              <Moon className="size-4" />
+            )}
           </button>
 
           <div className="relative" ref={notificationsMenuRef}>
@@ -341,7 +346,9 @@ export function UBHeader({
                       <button
                         key={notification.id}
                         type="button"
-                        onClick={() => handleNotificationItemClick(notification)}
+                        onClick={() =>
+                          handleNotificationItemClick(notification)
+                        }
                         className={cn(
                           "block w-full rounded-lg border border-transparent px-3 py-2 text-left text-sm transition-colors hover:border-border hover:bg-muted",
                           !notification.read_at && "bg-primary/5"
@@ -379,7 +386,7 @@ export function UBHeader({
             <button
               type="button"
               onClick={handleAppsClick}
-              className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               aria-label="Open apps"
               aria-expanded={isAppsOpen}
             >
@@ -398,19 +405,21 @@ export function UBHeader({
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
-                    {applications.map((application) => {
-                      const Icon = resolveMenuIcon(application.icon, application.label)
-
-                      return (
-                        <UBIconTileButton
-                          key={application.id}
-                          label={application.label}
-                          icon={<Icon />}
-                          className="w-full"
-                          onClick={() => handleApplicationClick(application)}
-                        />
-                      )
-                    })}
+                    {applications.map((application) => (
+                      <UBIconTileButton
+                        key={application.id}
+                        label={application.label}
+                        icon={
+                          <MenuIcon
+                            icon={application.icon}
+                            label={application.label}
+                            className="size-5"
+                          />
+                        }
+                        className="w-full"
+                        onClick={() => handleApplicationClick(application)}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -421,7 +430,7 @@ export function UBHeader({
             <button
               type="button"
               onClick={handleProfileClick}
-              className="inline-flex size-10 items-center justify-center overflow-hidden rounded-full border border-border bg-background text-sm font-semibold text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex size-10 items-center justify-center overflow-hidden rounded-full border border-border bg-background text-sm font-semibold text-primary transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               aria-label="Open profile"
               aria-expanded={isProfileOpen}
             >
@@ -433,7 +442,13 @@ export function UBHeader({
                   onError={() => setFailedImageSrc(userImageSrc ?? null)}
                 />
               ) : (
-                <span className={cn("inline-flex size-full items-center justify-center bg-primary/10")}>{getUserInitials(userName)}</span>
+                <span
+                  className={cn(
+                    "inline-flex size-full items-center justify-center bg-primary/10"
+                  )}
+                >
+                  {getUserInitials(userName)}
+                </span>
               )}
             </button>
 
@@ -453,49 +468,26 @@ export function UBHeader({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">{userName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{userEmail ?? "user@ub.edu.bz"}</p>
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {userName}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {userEmail ?? "user@ub.edu.bz"}
+                    </p>
+                    {adminConsoleItem ? (
+                      <button
+                        type="button"
+                        onClick={handleAdminToolsClick}
+                        className="mt-1 text-xs font-medium text-primary hover:underline"
+                      >
+                        {adminConsoleItem.label}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
 
                 <div className="mt-3 space-y-1">
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onViewProfile}
-                  >
-                    <User className="size-4" />
-                    View profile
-                  </button>
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onSettingsClick}
-                  >
-                    <Settings className="size-4" />
-                    Settings
-                  </button>
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onConnectUsersClick}
-                  >
-                    <Users className="size-4" />
-                    Connect with users
-                  </button>
-
-                  {showAdminActions ? (
-                    <button
-                      type="button"
-                      className={profileActionButtonClassName}
-                      onClick={onAdminToolsClick}
-                    >
-                      <LayoutGrid className="size-4" />
-                      Admin tools
-                    </button>
-                  ) : null}
-
-                  <div className="my-1 border-t" />
+                  {/* <div className="my-1 border-t" /> */}
 
                   <button
                     type="button"
@@ -505,39 +497,6 @@ export function UBHeader({
                     <LogOut className="size-4" />
                     Sign out
                   </button>
-
-                  <div className="pt-1">
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      External links
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={onGoogleSettingsClick}
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="Google settings"
-                        title="Google settings"
-                      >
-                        <Wrench className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="Campus platform"
-                        title="Campus platform"
-                      >
-                        <BookOpen className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="University website"
-                        title="University website"
-                      >
-                        <Globe className="size-4" />
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             ) : null}
@@ -547,4 +506,3 @@ export function UBHeader({
     </header>
   )
 }
-

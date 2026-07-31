@@ -45,7 +45,34 @@ type AllFormsApiResponse = {
   data: RequisitionForm[]
 }
 
+export type StageSummary = {
+  id: number
+  name: string
+}
+
+export type CostCenterStageSummaryRow = {
+  cost_center_id: number
+  cost_center_name: string
+  total: number
+  stages: Record<number, number> // stage id -> count
+}
+
+export type CostCenterStageSummary = {
+  stages: StageSummary[]
+  data: CostCenterStageSummaryRow[]
+  totals: {
+    by_stage: Record<number, number> // stage id -> count
+    grand_total: number
+  }
+}
+
+type CostCenterStageSummaryApiResponse = CostCenterStageSummary & {
+  success: boolean
+}
+
 const BASE_PATH = "requisitionSystem/requisitions/dashboard-metrics"
+const COST_CENTER_STAGE_SUMMARY_PATH =
+  "requisitionSystem/requisitions/summary-by-cost-center"
 
 function getToken(token = readStoredAccessToken()) {
   if (!token) {
@@ -67,6 +94,27 @@ export async function fetchDashboardMetrics() {
   return {
     metrics: response.metrics,
     roleContext: response.role_context,
+  }
+}
+
+/**
+ * Fetch requisition counts grouped by Cost Center & current Stage, scoped the
+ * same way as the metrics above (global roles see every cost center; everyone
+ * else sees only their own).
+ */
+export async function fetchCostCenterStageSummary() {
+  const response = await apiRequest<CostCenterStageSummaryApiResponse>(
+    COST_CENTER_STAGE_SUMMARY_PATH,
+    {
+      method: "GET",
+      token: getToken(),
+    }
+  )
+
+  return {
+    stages: response.stages,
+    data: response.data,
+    totals: response.totals,
   }
 }
 
