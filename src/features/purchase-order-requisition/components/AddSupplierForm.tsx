@@ -36,7 +36,7 @@ export function AddSupplierForm({ onCreated, onCancel }: AddSupplierFormProps) {
       contact_person: contactPerson.trim() || undefined,
       phone_number: phoneNumber.trim() || undefined,
       email: email.trim() || undefined,
-      TIN: tin.trim() || undefined,
+      TAX: tin.trim() || undefined,
       notes: notes.trim() || undefined,
     })
 
@@ -81,10 +81,10 @@ export function AddSupplierForm({ onCreated, onCancel }: AddSupplierFormProps) {
         />
       </div>
       <UBInput
-        label="TIN"
+        label="Tax ID"
         value={tin}
         onChange={(event) => setTin(event.target.value)}
-        placeholder="TIN-001"
+        placeholder="Tax ID"
       />
       <UBTextarea
         label="Notes"

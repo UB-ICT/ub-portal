@@ -49,7 +49,7 @@ export function SupplierFormDialog({
     setContactPerson(supplier?.contact_person ?? "")
     setPhoneNumber(supplier?.phone_number ?? "")
     setEmail(supplier?.email ?? "")
-    setTin(supplier?.TIN ?? "")
+    setTin(supplier?.TAX ?? supplier?.TIN ?? "")
     setNotes(supplier?.notes ?? "")
     setFormError(null)
   }, [open, supplier])
@@ -64,7 +64,7 @@ export function SupplierFormDialog({
     }
 
     if (!contactPerson.trim() || !phoneNumber.trim() || !email.trim() || !tin.trim()) {
-      setFormError("Contact person, phone, email, and TIN are required.")
+      setFormError("Contact person, phone, email, and Tax ID are required.")
       return
     }
 
@@ -73,7 +73,7 @@ export function SupplierFormDialog({
       contact_person: contactPerson.trim(),
       phone_number: phoneNumber.trim(),
       email: email.trim(),
-      TIN: tin.trim(),
+      TAX: tin.trim(),
       notes: notes.trim() || undefined,
     }
 
@@ -131,7 +131,7 @@ export function SupplierFormDialog({
               required
             />
             <UBInput
-              label="TIN"
+              label="Tax ID"
               value={tin}
               onChange={(event) => setTin(event.target.value)}
               required

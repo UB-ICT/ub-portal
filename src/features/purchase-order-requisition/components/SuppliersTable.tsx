@@ -161,8 +161,8 @@ export function SuppliersTable({
             },
           },
           {
-            header: "TIN",
-            accessor: "TIN",
+            header: "Tax ID",
+            accessor: "TAX",
             render: (value, row) => {
               const deleted = isSupplierDeleted(row)
 
