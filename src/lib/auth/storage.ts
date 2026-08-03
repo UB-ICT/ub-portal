@@ -145,7 +145,7 @@ function buildCallbackErrorMessage(errorCode: string) {
     case "user_creation_failed":
       return "We could not create your UB Portal account. Please try again."
     case "unauthorized":
-      return "Your Google account is not authorized for UB Portal."
+      return "Your Google account is not authorized for UB Portal. Ask an administrator to invite you and assign a role."
     case "callback_failed":
       return "Google sign-in could not be completed. Please try again."
     default:
