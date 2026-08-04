@@ -145,7 +145,7 @@ export function RequisitionPurchaseOrderSection({
         <h3 className="text-sm font-semibold tracking-tight">Purchase order</h3>
         <p className="text-xs text-muted-foreground">
           {canEdit
-            ? "Set the PO number, upload the PO PDF, and email it to the preferred supplier at the purchase approval step."
+            ? "Set the PO number, upload the PO PDF, and email it to the preferred supplier after the requisition is approved."
             : "Purchase order details for this requisition."}
         </p>
       </div>
