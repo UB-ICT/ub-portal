@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router-dom"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { LoginPage } from "@/pages/LoginPage"
 import { NotFoundPage } from "@/pages/NotFoundPage"
+import { AdminLayout } from "@/routes/AdminLayout"
 import { ApplicationLayout } from "@/routes/ApplicationLayout"
 import { PortalLayout } from "@/routes/PortalLayout"
 import { ProtectedRoute } from "@/routes/ProtectedRoute"
@@ -13,6 +14,10 @@ import { PORAccountsPage } from "@/features/purchase-order-requisition/pages/POR
 import { PORBudgetsPage } from "@/features/purchase-order-requisition/pages/PORBudgets"
 import { PORPipelinesPage } from "@/features/purchase-order-requisition/pages/PORPipelines"
 import { PORRequisitionsPage } from "@/features/purchase-order-requisition/pages/PORRequisitions"
+import { AdminApplicationsPage } from "@/features/identitiy-cloud/pages/AdminApplications"
+import { AdminDashboard } from "@/features/identitiy-cloud/pages/AdminDashboard"
+import { AdminRolesPage } from "@/features/identitiy-cloud/pages/AdminRoles"
+import { AdminUsersPage } from "@/features/identitiy-cloud/pages/AdminUsers"
 
 export const router = createBrowserRouter([
   {
@@ -62,6 +67,28 @@ export const router = createBrowserRouter([
               {
                 path: "pipelines",
                 element: <PORPipelinesPage />,
+              },
+            ],
+          },
+          {
+            path: "admin",
+            element: <AdminLayout />,
+            children: [
+              {
+                index: true,
+                element: <AdminDashboard />,
+              },
+              {
+                path: "users",
+                element: <AdminUsersPage />,
+              },
+              {
+                path: "roles",
+                element: <AdminRolesPage />,
+              },
+              {
+                path: "applications",
+                element: <AdminApplicationsPage />,
               },
             ],
           },
