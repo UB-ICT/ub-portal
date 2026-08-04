@@ -5,10 +5,17 @@ import { PortalShellLayout } from "@/components/layout/PortalShellLayout"
 import { StatusScreen } from "@/components/layout/StatusScreen"
 import { useProtectedPortalSession } from "@/hooks/useProtectedPortalSession"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
+import { useProfileMenuStore } from "@/store/profile-menu-store"
+
+const ADMIN_CONSOLE_PATH = "/admin"
 
 export function PortalLayout() {
   const { user, handleLogout, isReady } = useProtectedPortalSession()
   const resetApplicationMenu = useApplicationMenuStore((state) => state.reset)
+  const navigation = useProfileMenuStore((state) => state.navigation)
+  const fetchProfileMenu = useProfileMenuStore(
+    (state) => state.fetchProfileMenu
+  )
 
   useEffect(() => {
     if (!isReady) {
@@ -16,7 +23,12 @@ export function PortalLayout() {
     }
 
     resetApplicationMenu()
-  }, [isReady, resetApplicationMenu])
+    void fetchProfileMenu()
+  }, [isReady, resetApplicationMenu, fetchProfileMenu])
+
+  const showAdminActions = navigation.some(
+    (item) => item.path === ADMIN_CONSOLE_PATH
+  )
 
   if (!isReady || !user) {
     return (
@@ -31,6 +43,7 @@ export function PortalLayout() {
     <PortalShellLayout
       userName={user.name}
       userEmail={user.email}
+      showAdminActions={showAdminActions}
       onLogout={handleLogout}
     >
       <Outlet />

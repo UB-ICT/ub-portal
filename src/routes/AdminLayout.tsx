@@ -85,12 +85,17 @@ export const AdminLayout = () => {
     )
   }
 
+  const showAdminActions = navigation.some(
+    (item) => item.path === ADMIN_CONSOLE_PATH
+  )
+
   return (
     <AppLayout
       userName={user.name}
       userEmail={user.email}
       userImageSrc={user.profile_picture}
       showSearch={false}
+      showAdminActions={showAdminActions}
       onLogout={handleLogout}
       appLabel={appLabel}
       menuItems={menuItems}

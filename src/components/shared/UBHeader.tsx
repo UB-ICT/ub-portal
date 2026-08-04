@@ -1,17 +1,4 @@
-import {
-  BookOpen,
-  Globe,
-  Grid3X3,
-  LayoutGrid,
-  LogOut,
-  Moon,
-  Search,
-  Settings,
-  Sun,
-  User,
-  Users,
-  Wrench,
-} from "lucide-react"
+import { Grid3X3, LogOut, Moon, Search, Sun } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -36,11 +23,7 @@ type UBHeaderProps = {
   onNotificationsClick?: () => void
   onAppsClick?: () => void
   onProfileClick?: () => void
-  onViewProfile?: () => void
-  onSettingsClick?: () => void
-  onConnectUsersClick?: () => void
   onAdminToolsClick?: () => void
-  onGoogleSettingsClick?: () => void
   onSignOutClick?: () => void
 }
 
@@ -71,11 +54,7 @@ export function UBHeader({
   onNotificationsClick,
   onAppsClick,
   onProfileClick,
-  onViewProfile,
-  onSettingsClick,
-  onConnectUsersClick,
   onAdminToolsClick,
-  onGoogleSettingsClick,
   onSignOutClick,
 }: UBHeaderProps) {
   const navigate = useNavigate()
@@ -166,6 +145,16 @@ export function UBHeader({
     onProfileClick?.()
     setIsProfileOpen((current) => !current)
     setIsAppsOpen(false)
+  }
+
+  const handleAdminConsoleClick = () => {
+    if (onAdminToolsClick) {
+      onAdminToolsClick()
+      return
+    }
+
+    setIsProfileOpen(false)
+    navigate("/admin")
   }
 
   const profileActionButtonClassName =
@@ -286,43 +275,19 @@ export function UBHeader({
                   </div>
                 </div>
 
-                <div className="mt-3 space-y-1">
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onViewProfile}
-                  >
-                    <User className="size-4" />
-                    View profile
-                  </button>
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onSettingsClick}
-                  >
-                    <Settings className="size-4" />
-                    Settings
-                  </button>
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onConnectUsersClick}
-                  >
-                    <Users className="size-4" />
-                    Connect with users
-                  </button>
-
-                  {showAdminActions ? (
+                {showAdminActions ? (
+                  <div className="mt-2 flex flex-col items-center gap-0.5 pb-1 text-center">
                     <button
                       type="button"
-                      className={profileActionButtonClassName}
-                      onClick={onAdminToolsClick}
+                      onClick={handleAdminConsoleClick}
+                      className="text-sm font-medium text-primary hover:underline"
                     >
-                      <LayoutGrid className="size-4" />
-                      Admin tools
+                      Admin console
                     </button>
-                  ) : null}
+                  </div>
+                ) : null}
 
+                <div className="mt-3 space-y-1">
                   <div className="my-1 border-t" />
 
                   <button
@@ -333,39 +298,6 @@ export function UBHeader({
                     <LogOut className="size-4" />
                     Sign out
                   </button>
-
-                  <div className="pt-1">
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      External links
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={onGoogleSettingsClick}
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="Google settings"
-                        title="Google settings"
-                      >
-                        <Wrench className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="Campus platform"
-                        title="Campus platform"
-                      >
-                        <BookOpen className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="University website"
-                        title="University website"
-                      >
-                        <Globe className="size-4" />
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             ) : null}

@@ -5,12 +5,19 @@ import { AppLayout } from "@/components/layout/AppLayout"
 import { StatusScreen } from "@/components/layout/StatusScreen"
 import { useProtectedPortalSession } from "@/hooks/useProtectedPortalSession"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
+import { useProfileMenuStore } from "@/store/profile-menu-store"
+
+const ADMIN_CONSOLE_PATH = "/admin"
 
 export function ApplicationLayout() {
   const location = useLocation()
   const { user, handleLogout, isReady } = useProtectedPortalSession()
   const ensureMenuForPath = useApplicationMenuStore(
     (state) => state.ensureMenuForPath
+  )
+  const navigation = useProfileMenuStore((state) => state.navigation)
+  const fetchProfileMenu = useProfileMenuStore(
+    (state) => state.fetchProfileMenu
   )
 
   useEffect(() => {
@@ -19,7 +26,12 @@ export function ApplicationLayout() {
     }
 
     void ensureMenuForPath(location.pathname)
-  }, [ensureMenuForPath, isReady, location.pathname])
+    void fetchProfileMenu()
+  }, [ensureMenuForPath, isReady, location.pathname, fetchProfileMenu])
+
+  const showAdminActions = navigation.some(
+    (item) => item.path === ADMIN_CONSOLE_PATH
+  )
 
   if (!isReady || !user) {
     return (
@@ -34,6 +46,7 @@ export function ApplicationLayout() {
     <AppLayout
       userName={user.name}
       userEmail={user.email}
+      showAdminActions={showAdminActions}
       onLogout={handleLogout}
     >
       <Outlet />
