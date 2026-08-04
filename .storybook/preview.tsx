@@ -27,7 +27,7 @@ const preview: Preview = {
     },
     a11y: {
       disable: false,
-      element: "#storybook-root",
+      context: "#storybook-root",
     },
     docs: {
       toc: true,

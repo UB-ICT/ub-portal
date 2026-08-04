@@ -1,17 +1,4 @@
-import {
-  BookOpen,
-  Globe,
-  Grid3X3,
-  LayoutGrid,
-  LogOut,
-  Moon,
-  Search,
-  Settings,
-  Sun,
-  User,
-  Users,
-  Wrench,
-} from "lucide-react"
+import { Grid3X3, LogOut, Moon, Search, Sun } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -21,7 +8,7 @@ import { resolveMenuIcon } from "@/lib/menu-icons"
 import { cn } from "@/lib/utils"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
 import { useApplicationsStore } from "@/store/applications-store"
-import { UBIconTileButton } from "./UBButton"
+import { UBButton, UBIconTileButton } from "./UBButton"
 import { UBNotificationBell } from "./UBNotificationBell"
 
 type UBHeaderProps = {
@@ -36,11 +23,7 @@ type UBHeaderProps = {
   onNotificationsClick?: () => void
   onAppsClick?: () => void
   onProfileClick?: () => void
-  onViewProfile?: () => void
-  onSettingsClick?: () => void
-  onConnectUsersClick?: () => void
   onAdminToolsClick?: () => void
-  onGoogleSettingsClick?: () => void
   onSignOutClick?: () => void
 }
 
@@ -71,11 +54,7 @@ export function UBHeader({
   onNotificationsClick,
   onAppsClick,
   onProfileClick,
-  onViewProfile,
-  onSettingsClick,
-  onConnectUsersClick,
   onAdminToolsClick,
-  onGoogleSettingsClick,
   onSignOutClick,
 }: UBHeaderProps) {
   const navigate = useNavigate()
@@ -168,8 +147,15 @@ export function UBHeader({
     setIsAppsOpen(false)
   }
 
-  const profileActionButtonClassName =
-    "inline-flex w-full items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-left text-sm text-foreground transition-colors hover:border-border hover:bg-muted"
+  const handleAdminConsoleClick = () => {
+    if (onAdminToolsClick) {
+      onAdminToolsClick()
+      return
+    }
+
+    setIsProfileOpen(false)
+    navigate("/admin")
+  }
 
   return (
     <header className="relative z-50 border-b bg-background/90 pb-2 backdrop-blur">
@@ -191,14 +177,16 @@ export function UBHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <UBButton
             type="button"
+            variant="outline"
+            size="icon"
             onClick={handleThemeToggle}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+            className="size-9 rounded-full"
           >
             {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          </button>
+          </UBButton>
 
           <UBNotificationBell
             notificationCount={notificationCount}
@@ -206,15 +194,17 @@ export function UBHeader({
           />
 
           <div className="relative" ref={appsMenuRef}>
-            <button
+            <UBButton
               type="button"
+              variant="outline"
+              size="icon"
               onClick={handleAppsClick}
-              className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Open apps"
               aria-expanded={isAppsOpen}
+              className="size-9 rounded-full"
             >
               <Grid3X3 className="size-4" />
-            </button>
+            </UBButton>
 
             {isAppsOpen ? (
               <div className="absolute top-11 right-0 z-50 w-64 rounded-xl border bg-popover p-3 shadow-lg">
@@ -248,12 +238,14 @@ export function UBHeader({
           </div>
 
           <div className="relative" ref={profileMenuRef}>
-            <button
+            <UBButton
               type="button"
+              variant="outline"
+              size="icon"
               onClick={handleProfileClick}
-              className="inline-flex size-10 items-center justify-center overflow-hidden rounded-full border border-border bg-background text-sm font-semibold text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Open profile"
               aria-expanded={isProfileOpen}
+              className="size-10 overflow-hidden rounded-full text-sm font-semibold text-primary"
             >
               {userImageSrc ? (
                 <img
@@ -264,7 +256,7 @@ export function UBHeader({
               ) : (
                 <span className={cn("inline-flex size-full items-center justify-center bg-primary/10")}>{getUserInitials(userName)}</span>
               )}
-            </button>
+            </UBButton>
 
             {isProfileOpen ? (
               <div className="absolute top-11 right-0 z-50 w-72 rounded-xl border bg-popover p-3 shadow-lg">
@@ -286,86 +278,31 @@ export function UBHeader({
                   </div>
                 </div>
 
-                <div className="mt-3 space-y-1">
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onViewProfile}
-                  >
-                    <User className="size-4" />
-                    View profile
-                  </button>
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onSettingsClick}
-                  >
-                    <Settings className="size-4" />
-                    Settings
-                  </button>
-                  <button
-                    type="button"
-                    className={profileActionButtonClassName}
-                    onClick={onConnectUsersClick}
-                  >
-                    <Users className="size-4" />
-                    Connect with users
-                  </button>
-
-                  {showAdminActions ? (
-                    <button
+                {showAdminActions ? (
+                  <div className="mt-2 flex flex-col items-center gap-0.5 pb-1 text-center">
+                    <UBButton
                       type="button"
-                      className={profileActionButtonClassName}
-                      onClick={onAdminToolsClick}
+                      variant="link"
+                      onClick={handleAdminConsoleClick}
+                      className="h-auto w-auto p-0 text-sm font-medium"
                     >
-                      <LayoutGrid className="size-4" />
-                      Admin tools
-                    </button>
-                  ) : null}
+                      Admin console
+                    </UBButton>
+                  </div>
+                ) : null}
 
+                <div className="mt-3 space-y-1">
                   <div className="my-1 border-t" />
 
-                  <button
+                  <UBButton
                     type="button"
-                    className={profileActionButtonClassName}
+                    variant="ghost"
                     onClick={onSignOutClick}
+                    className="h-auto w-full justify-start gap-2 rounded-lg border border-transparent px-3 py-2 text-sm font-normal text-foreground hover:border-border"
                   >
                     <LogOut className="size-4" />
                     Sign out
-                  </button>
-
-                  <div className="pt-1">
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      External links
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={onGoogleSettingsClick}
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="Google settings"
-                        title="Google settings"
-                      >
-                        <Wrench className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="Campus platform"
-                        title="Campus platform"
-                      >
-                        <BookOpen className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:bg-muted"
-                        aria-label="University website"
-                        title="University website"
-                      >
-                        <Globe className="size-4" />
-                      </button>
-                    </div>
-                  </div>
+                  </UBButton>
                 </div>
               </div>
             ) : null}

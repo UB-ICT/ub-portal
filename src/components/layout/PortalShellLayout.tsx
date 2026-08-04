@@ -5,6 +5,7 @@ import { UBHeader } from "@/components/shared"
 type PortalShellLayoutProps = {
   userName: string
   userEmail: string
+  showAdminActions?: boolean
   onLogout: () => void
   children: ReactNode
 }
@@ -12,6 +13,7 @@ type PortalShellLayoutProps = {
 export function PortalShellLayout({
   userName,
   userEmail,
+  showAdminActions,
   onLogout,
   children,
 }: PortalShellLayoutProps) {
@@ -20,6 +22,7 @@ export function PortalShellLayout({
       <UBHeader
         userName={userName}
         userEmail={userEmail}
+        showAdminActions={showAdminActions}
         onSignOutClick={onLogout}
       />
       <main className="flex-1 p-4 lg:p-8">{children}</main>
