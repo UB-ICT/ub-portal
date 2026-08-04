@@ -4,6 +4,7 @@ import { Navigate, useSearchParams } from "react-router-dom"
 import { AuthLayout } from "@/components/layout/AuthLayout"
 import { UBButton } from "@/components/shared"
 import { useStartGoogleLoginMutation } from "@/lib/api/auth"
+import { DEFAULT_PORTAL_APP_PATH } from "@/lib/auth/default-app"
 import { hasStoredAccessToken } from "@/lib/auth/storage"
 
 function GoogleMark() {
@@ -40,7 +41,7 @@ export function LoginPage() {
   const message = searchParams.get("message")
 
   if (hasStoredAccessToken()) {
-    return <Navigate to="/" replace />
+    return <Navigate to={DEFAULT_PORTAL_APP_PATH} replace />
   }
 
   return (

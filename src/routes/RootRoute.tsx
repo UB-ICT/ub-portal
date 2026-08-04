@@ -5,6 +5,7 @@ import {
   consumePostLoginRedirect,
   syncAuthCallbackFromSearch,
 } from "@/lib/auth/storage"
+import { DEFAULT_PORTAL_APP_PATH } from "@/lib/auth/default-app"
 
 export function RootRoute() {
   const location = useLocation()
@@ -39,11 +40,16 @@ export function RootRoute() {
     }
 
     const redirectTarget = consumePostLoginRedirect()
+    const shouldUseDefaultApp =
+      !redirectTarget &&
+      (location.pathname === "/" || location.pathname === "")
 
     navigate(
       redirectTarget
         ? { pathname: redirectTarget }
-        : { pathname: location.pathname, hash: location.hash },
+        : shouldUseDefaultApp
+          ? { pathname: DEFAULT_PORTAL_APP_PATH }
+          : { pathname: location.pathname, hash: location.hash },
       { replace: true }
     )
   }, [location.hash, location.pathname, location.search, navigate])

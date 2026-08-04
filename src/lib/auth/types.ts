@@ -23,6 +23,13 @@ export type PortalUser = {
   google_id?: string | null
   user_status_id?: number | string | null
   profile_picture?: string | null
+  default_application_id?: string | null
+  default_application?: {
+    id: string
+    label: string
+    path: string
+    icon?: string | null
+  } | null
   mailing_groups?: string[]
   menus?: PortalMenu[]
   forms?: unknown[]
