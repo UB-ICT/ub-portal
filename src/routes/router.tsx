@@ -87,7 +87,7 @@ export const router = createBrowserRouter([
                 element: <AdminRolesPage />,
               },
               {
-                path: "applications",
+                path: "apps",
                 element: <AdminApplicationsPage />,
               },
             ],
