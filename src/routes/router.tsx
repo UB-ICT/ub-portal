@@ -12,10 +12,12 @@ import { PORDashboardPage } from "@/features/purchase-order-requisition/pages/PO
 import { PORSuppliersPage } from "@/features/purchase-order-requisition/pages/PORSuppliers"
 import { PORAccountsPage } from "@/features/purchase-order-requisition/pages/PORAccounts"
 import { PORBudgetsPage } from "@/features/purchase-order-requisition/pages/PORBudgets"
+import { PORCostCentersPage } from "@/features/purchase-order-requisition/pages/PORCostCenters"
 import { PORPipelinesPage } from "@/features/purchase-order-requisition/pages/PORPipelines"
 import { PORRequisitionsPage } from "@/features/purchase-order-requisition/pages/PORRequisitions"
 import { AdminApplicationsPage } from "@/features/identitiy-cloud/pages/AdminApplications"
 import { AdminDashboard } from "@/features/identitiy-cloud/pages/AdminDashboard"
+import { AdminMenusPage } from "@/features/identitiy-cloud/pages/AdminMenus"
 import { AdminRolesPage } from "@/features/identitiy-cloud/pages/AdminRoles"
 import { AdminUsersPage } from "@/features/identitiy-cloud/pages/AdminUsers"
 
@@ -61,6 +63,10 @@ export const router = createBrowserRouter([
                 element: <PORAccountsPage />,
               },
               {
+                path: "cost-centers",
+                element: <PORCostCentersPage />,
+              },
+              {
                 path: "budgets",
                 element: <PORBudgetsPage />,
               },
@@ -85,6 +91,10 @@ export const router = createBrowserRouter([
               {
                 path: "roles",
                 element: <AdminRolesPage />,
+              },
+              {
+                path: "menu",
+                element: <AdminMenusPage />,
               },
               {
                 path: "apps",

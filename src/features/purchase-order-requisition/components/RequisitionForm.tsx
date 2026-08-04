@@ -9,7 +9,10 @@ import { UBInput } from "@/components/shared/UBInput"
 import type { RequisitionPriority, RequisitionRecord, RequisitionUserStageAction } from "@/lib/api/requisitions"
 import type { RequisitionTag } from "@/lib/api/tags"
 import { cn } from "@/lib/utils"
+import { fetchGstRate } from "@/lib/api/requisition-settings"
 import { useRequisitionsStore } from "@/store/requisitions-store"
+import type { DiscountType } from "../lib/line-pricing"
+import { DEFAULT_GST_RATE_PERCENT } from "../lib/line-pricing"
 import { normalizeRequisitionPriority } from "../lib/requisition-priorities"
 import {
   createEmptySupplierQuote,
@@ -32,6 +35,7 @@ import { CurrencySelect } from "./CurrencySelect"
 import { PrioritySelect } from "./PrioritySelect"
 import { RequisitionTagPicker } from "./RequisitionTagPicker"
 import { RequisitionSupplierQuotes } from "./RequisitionSupplierQuotes"
+import { RequisitionPurchaseOrderSection } from "./RequisitionPurchaseOrderSection"
 import { RequisitionActivityLog } from "./RequisitionActivityLog"
 import { RequisitionApprovalActions } from "./RequisitionApprovalActions"
 import { toDateInputValue } from "../lib/requisition-mappers"
@@ -55,6 +59,7 @@ function mapApiItemsToDrafts(
       item.chart_of_account?.description ?? item.description ?? "",
     quantity: Number(item.quantity),
     unit_cost: Number(item.unit_cost),
+    gst_applicable: Boolean(item.gst_applicable),
     comments: item.comments ?? "",
   }))
 }
@@ -114,12 +119,6 @@ export function RequisitionForm({
   const updateRequisition = useRequisitionsStore(
     (state) => state.updateRequisition
   )
-  const updateRequisitionPurchaseOrderNumber = useRequisitionsStore(
-    (state) => state.updateRequisitionPurchaseOrderNumber
-  )
-  const isSavingPurchaseOrder = useRequisitionsStore(
-    (state) => state.isSavingPurchaseOrder
-  )
   const fetchLogs = useRequisitionLogsStore((state) => state.fetchLogs)
 
   const [referenceNumber, setReferenceNumber] = useState("")
@@ -128,9 +127,10 @@ export function RequisitionForm({
   const [statusLabel, setStatusLabel] = useState("")
   const [stageLabel, setStageLabel] = useState("")
   const [currencyId, setCurrencyId] = useState("")
-  const [priority, setPriority] = useState<RequisitionPriority>("routine")
+  const [priority, setPriority] = useState<RequisitionPriority>("standard")
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("")
   const [isRecurring, setIsRecurring] = useState(false)
+  const [requiresDownpayment, setRequiresDownpayment] = useState(false)
   const [reminderDate, setReminderDate] = useState("")
   const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuoteDraft[]>([
     createEmptySupplierQuote(),
@@ -138,6 +138,9 @@ export function RequisitionForm({
   const [lineItems, setLineItems] = useState<RequisitionLineItemDraft[]>([
     createEmptyLineItem(),
   ])
+  const [discountType, setDiscountType] = useState<DiscountType>("none")
+  const [discountValue, setDiscountValue] = useState(0)
+  const [gstRatePercent, setGstRatePercent] = useState(DEFAULT_GST_RATE_PERCENT)
   const [formError, setFormError] = useState<string | null>(null)
   const [isEditable, setIsEditable] = useState(true)
   const [showApprovalActions, setShowApprovalActions] = useState(false)
@@ -145,8 +148,19 @@ export function RequisitionForm({
   const [userStageAction, setUserStageAction] =
     useState<RequisitionUserStageAction | null>(null)
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("")
+  const [purchaseOrderFileName, setPurchaseOrderFileName] = useState<
+    string | null
+  >(null)
+  const [purchaseOrderEmailedAt, setPurchaseOrderEmailedAt] = useState<
+    string | null
+  >(null)
+  const [preferredSupplierEmail, setPreferredSupplierEmail] = useState<
+    string | null
+  >(null)
   const [canEditPurchaseOrderNumber, setCanEditPurchaseOrderNumber] =
     useState(false)
+  const [canUploadPurchaseOrder, setCanUploadPurchaseOrder] = useState(false)
+  const [canEmailPurchaseOrder, setCanEmailPurchaseOrder] = useState(false)
   const [canCancelRequisition, setCanCancelRequisition] = useState(false)
   const [canCloseRequisition, setCanCloseRequisition] = useState(false)
   const [activityComment, setActivityComment] = useState("")
@@ -168,18 +182,26 @@ export function RequisitionForm({
     setStatusLabel("")
     setStageLabel("")
     setCurrencyId("")
-    setPriority("routine")
+    setPriority("standard")
     setExpectedDeliveryDate("")
     setIsRecurring(false)
+    setRequiresDownpayment(false)
     setReminderDate("")
     setLineItems([createEmptyLineItem()])
+    setDiscountType("none")
+    setDiscountValue(0)
     setFormError(null)
     setIsEditable(true)
     setShowApprovalActions(false)
     setCanApprove(false)
     setUserStageAction(null)
     setPurchaseOrderNumber("")
+    setPurchaseOrderFileName(null)
+    setPurchaseOrderEmailedAt(null)
+    setPreferredSupplierEmail(null)
     setCanEditPurchaseOrderNumber(false)
+    setCanUploadPurchaseOrder(false)
+    setCanEmailPurchaseOrder(false)
     setCanCancelRequisition(false)
     setCanCloseRequisition(false)
     setActivityComment("")
@@ -200,6 +222,7 @@ export function RequisitionForm({
         : ""
     )
     setIsRecurring(Boolean(requisition.is_recurring))
+    setRequiresDownpayment(Boolean(requisition.requires_downpayment))
     setReminderDate(
       requisition.reminder_date
         ? toDateInputValue(requisition.reminder_date)
@@ -210,6 +233,10 @@ export function RequisitionForm({
         ? mapApiItemsToDrafts(requisition.items)
         : [createEmptyLineItem()]
     )
+    setDiscountType(
+      (requisition.discount_type as DiscountType | null | undefined) ?? "none"
+    )
+    setDiscountValue(Number(requisition.discount_value ?? 0))
     setIsEditable(
       canCostCenterEditRequisition(
         requisition.status?.name,
@@ -220,9 +247,14 @@ export function RequisitionForm({
     setShowApprovalActions(Boolean(requisition.show_approval_actions))
     setUserStageAction(requisition.user_stage_action ?? null)
     setPurchaseOrderNumber(requisition.purchase_order_number ?? "")
+    setPurchaseOrderFileName(requisition.purchase_order_file_name ?? null)
+    setPurchaseOrderEmailedAt(requisition.purchase_order_emailed_at ?? null)
+    setPreferredSupplierEmail(requisition.preferred_supplier_email ?? null)
     setCanEditPurchaseOrderNumber(
       Boolean(requisition.can_edit_purchase_order_number)
     )
+    setCanUploadPurchaseOrder(Boolean(requisition.can_upload_purchase_order))
+    setCanEmailPurchaseOrder(Boolean(requisition.can_email_purchase_order))
     setCanCancelRequisition(Boolean(requisition.can_cancel))
     setCanCloseRequisition(Boolean(requisition.can_close))
     setSelectedTags(
@@ -238,6 +270,7 @@ export function RequisitionForm({
 
   useEffect(() => {
     void fetchFormData()
+    void fetchGstRate().then(setGstRatePercent)
   }, [fetchFormData])
 
   useEffect(() => {
@@ -352,11 +385,23 @@ export function RequisitionForm({
     (mode === "edit" && !isEditable)
   const canAddLineItems = canAddLineItemsToRequisition(statusLabel, mode)
   const showSubmitAction = canSubmitRequisition(statusLabel, mode)
-  const requisitionTotal = calculateRequisitionTotalFromLineItems(lineItems)
+  const requisitionTotal = calculateRequisitionTotalFromLineItems(
+    lineItems,
+    discountType,
+    discountValue,
+    gstRatePercent
+  )
   const actionButtonsDisabled =
     isLoading || isSaving || isReviewing || (mode === "edit" && !isEditable)
   const isApprovedRequisition = statusLabel.toLowerCase() === "approved"
-  const showPurchaseOrderSection = mode === "edit" && isApprovedRequisition
+  const showPurchaseOrderSection =
+    mode === "edit" &&
+    (canEditPurchaseOrderNumber ||
+      canUploadPurchaseOrder ||
+      canEmailPurchaseOrder ||
+      Boolean(purchaseOrderNumber) ||
+      Boolean(purchaseOrderFileName) ||
+      isApprovedRequisition)
 
   const validateForm = (shouldSubmit: boolean) => {
     if (!costCenterId) {
@@ -405,9 +450,12 @@ export function RequisitionForm({
       priority,
       expected_delivery_date: expectedDeliveryDate || null,
       is_recurring: isRecurring,
+      requires_downpayment: requiresDownpayment,
       reminder_date: isRecurring ? reminderDate : null,
       suppliers: mapSupplierQuotesToPayload(supplierQuotes),
       items: mapLineItemsForApi(lineItems),
+      discount_type: discountType,
+      discount_value: discountType === "none" ? 0 : discountValue,
       tag_ids: selectedTags.map((tag) => tag.id),
       submit: shouldSubmit,
     }
@@ -457,19 +505,12 @@ export function RequisitionForm({
     }
   }
 
-  const handleSavePurchaseOrderNumber = async () => {
-    if (!requisitionId || !canEditPurchaseOrderNumber) {
+  const handlePurchaseOrderUpdated = async () => {
+    if (!requisitionId) {
       return
     }
 
-    setFormError(null)
-
-    const requisition = await updateRequisitionPurchaseOrderNumber(
-      requisitionId,
-      {
-        purchase_order_number: purchaseOrderNumber.trim() || null,
-      }
-    )
+    const requisition = await fetchRequisitionById(requisitionId)
 
     if (!requisition) {
       return
@@ -553,6 +594,20 @@ export function RequisitionForm({
             <span>Recurring requisition</span>
           </label>
         </div>
+        <div className="flex flex-col justify-end">
+          <label className="mb-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={requiresDownpayment}
+              onChange={(event) =>
+                setRequiresDownpayment(event.target.checked)
+              }
+              disabled={isFormDisabled}
+              className="size-4 rounded border-input"
+            />
+            <span>50% downpayment required</span>
+          </label>
+        </div>
         {isRecurring ? (
           <UBInput
             label="Reminder date"
@@ -572,39 +627,19 @@ export function RequisitionForm({
         disabled={isFormDisabled}
       />
 
-      {showPurchaseOrderSection ? (
-        <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="flex-1">
-              <UBInput
-                label="Purchase order number"
-                value={purchaseOrderNumber}
-                onChange={(event) => setPurchaseOrderNumber(event.target.value)}
-                placeholder={
-                  canEditPurchaseOrderNumber
-                    ? "Enter the purchase order number"
-                    : "Not assigned"
-                }
-                readOnly={!canEditPurchaseOrderNumber}
-                disabled={!canEditPurchaseOrderNumber || isSavingPurchaseOrder}
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                {canEditPurchaseOrderNumber
-                  ? "Assign the purchase order number after this requisition has been fully approved."
-                  : "The purchase order number can only be assigned by a purchase officer after approval."}
-              </p>
-            </div>
-            {canEditPurchaseOrderNumber ? (
-              <UBButton
-                type="button"
-                onClick={() => void handleSavePurchaseOrderNumber()}
-                disabled={isSavingPurchaseOrder}
-              >
-                {isSavingPurchaseOrder ? "Saving..." : "Save PO number"}
-              </UBButton>
-            ) : null}
-          </div>
-        </div>
+      {showPurchaseOrderSection && requisitionId ? (
+        <RequisitionPurchaseOrderSection
+          requisitionId={requisitionId}
+          purchaseOrderNumber={purchaseOrderNumber}
+          onPurchaseOrderNumberChange={setPurchaseOrderNumber}
+          canEdit={canEditPurchaseOrderNumber}
+          canUpload={canUploadPurchaseOrder}
+          canEmail={canEmailPurchaseOrder}
+          fileName={purchaseOrderFileName}
+          emailedAt={purchaseOrderEmailedAt}
+          preferredSupplierEmail={preferredSupplierEmail}
+          onUpdated={handlePurchaseOrderUpdated}
+        />
       ) : null}
 
       <RequisitionSupplierQuotes
@@ -638,6 +673,11 @@ export function RequisitionForm({
       <RequisitionLineItemsTable
         items={lineItems}
         onChange={setLineItems}
+        discountType={discountType}
+        discountValue={discountValue}
+        onDiscountTypeChange={setDiscountType}
+        onDiscountValueChange={setDiscountValue}
+        gstRatePercent={gstRatePercent}
         budgetAccounts={lineItemAccountOptions}
         isLoadingBudgetAccounts={isLoadingBudgetAccounts}
         budgetAccountsError={budgetAccountsError}

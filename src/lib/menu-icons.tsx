@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 import {
   BookOpen,
+  Building2,
   ClipboardList,
   FileText,
   GitBranch,
@@ -35,6 +36,9 @@ const MENU_ICON_MAP: Record<string, LucideIcon> = {
   Users,
   notebook: Notebook,
   Notebook,
+  "building-office": Building2,
+  "building-2": Building2,
+  Building2,
   "git-branch": GitBranch,
   GitBranch,
   eye: Eye,
@@ -50,6 +54,7 @@ const NAME_ICON_KEYWORDS: Array<{ keywords: string[]; icon: LucideIcon }> = [
   },
   { keywords: ["supplier", "vendor"], icon: Users },
   { keywords: ["account", "chart of account", "ledger"], icon: Notebook },
+  { keywords: ["cost center", "cost-center", "department"], icon: Building2 },
   { keywords: ["budget"], icon: ClipboardList },
   { keywords: ["pipeline", "workflow", "stage"], icon: GitBranch },
   { keywords: ["form", "report", "document", "invoice"], icon: FileText },

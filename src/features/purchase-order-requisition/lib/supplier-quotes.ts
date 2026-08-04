@@ -49,10 +49,10 @@ export function getSupplierQuoteRequirementMessage(requisitionTotal: number) {
   const requiredCount = getRequiredQuoteCount(requisitionTotal)
 
   if (requiredCount === 1) {
-    return "Requisitions under $1,000 require one supplier quote with a PDF."
+    return "Requisitions under $1,000 require one supplier quote with a PDF. If you add more than one quote, select a preferred supplier."
   }
 
-  return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more require at least ${requiredCount} supplier quotes and one recommended supplier.`
+  return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more require at least ${requiredCount} supplier quotes and one preferred supplier.`
 }
 
 export function applyRecommendedSupplierDefaults(
@@ -90,10 +90,10 @@ export function validateSupplierQuotes(
   }
 
   if (
-    requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD &&
+    completeQuotes.length > 1 &&
     completeQuotes.filter((quote) => quote.isRecommended).length !== 1
   ) {
-    return "Select exactly one recommended supplier quote."
+    return "Select exactly one preferred supplier when multiple supplier quotes are submitted."
   }
 
   return null

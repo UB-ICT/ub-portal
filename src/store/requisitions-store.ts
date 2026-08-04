@@ -13,6 +13,8 @@ import {
   requestRequisitionReview,
   updateRequisition,
   updateRequisitionPurchaseOrderNumber,
+  uploadRequisitionPurchaseOrder,
+  emailRequisitionPurchaseOrder,
   type CostCenter,
   type CreateRequisitionPayload,
   type Pipeline,
@@ -36,6 +38,7 @@ type RequisitionsState = {
   isSaving: boolean
   isReviewing: boolean
   isSavingPurchaseOrder: boolean
+  isEmailingPurchaseOrder: boolean
   error: string | null
   
   fetchRequisitions: (force?: boolean) => Promise<RequisitionRecord[]>
@@ -71,6 +74,15 @@ type RequisitionsState = {
     id: number,
     payload: UpdateRequisitionPurchaseOrderPayload
   ) => Promise<RequisitionRecord | null>
+  uploadRequisitionPurchaseOrder: (
+    id: number,
+    file: File,
+    purchaseOrderNumber?: string | null
+  ) => Promise<RequisitionRecord | null>
+  emailRequisitionPurchaseOrder: (
+    id: number,
+    payload?: { message?: string | null }
+  ) => Promise<RequisitionRecord | null>
   deleteRequisition: (id: number) => Promise<boolean>
   fetchFormData: (force?: boolean) => Promise<void>
   fetchApprovalPipeline: (force?: boolean) => Promise<Pipeline | null>
@@ -90,6 +102,7 @@ const initialState = {
   isSaving: false,
   isReviewing: false,
   isSavingPurchaseOrder: false,
+  isEmailingPurchaseOrder: false,
   error: null as string | null,
 }
 
@@ -361,6 +374,60 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
           error instanceof Error
             ? error.message
             : "Failed to update purchase order number.",
+      })
+      return null
+    }
+  },
+  uploadRequisitionPurchaseOrder: async (id, file, purchaseOrderNumber) => {
+    set({ isSavingPurchaseOrder: true, error: null })
+
+    try {
+      const requisition = await uploadRequisitionPurchaseOrder(
+        id,
+        file,
+        purchaseOrderNumber
+      )
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isSavingPurchaseOrder: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isSavingPurchaseOrder: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload purchase order.",
+      })
+      return null
+    }
+  },
+  emailRequisitionPurchaseOrder: async (id, payload = {}) => {
+    set({ isEmailingPurchaseOrder: true, error: null })
+
+    try {
+      const requisition = await emailRequisitionPurchaseOrder(id, payload)
+      set((state) => ({
+        requisitions: state.requisitions.map((item) =>
+          item.id === id ? requisition : item
+        ),
+        selectedRequisition: requisition,
+        isEmailingPurchaseOrder: false,
+        error: null,
+      }))
+      return requisition
+    } catch (error) {
+      set({
+        isEmailingPurchaseOrder: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to email purchase order.",
       })
       return null
     }

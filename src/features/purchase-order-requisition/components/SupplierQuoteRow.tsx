@@ -118,7 +118,7 @@ export function SupplierQuoteRow({
                   disabled={disabled}
                   className="size-4 rounded border-input"
                 />
-                <span>Recommended</span>
+                <span>Preferred</span>
               </label>
             ) : null}
           </div>

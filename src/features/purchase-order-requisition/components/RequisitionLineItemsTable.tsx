@@ -1,10 +1,16 @@
 import { Plus, Trash2 } from "lucide-react"
-import type { ReactNode } from "react"
+import { useMemo, type ReactNode } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
+import { UBInput, UBNativeSelect } from "@/components/shared/UBInput"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { cn } from "@/lib/utils"
 
+import {
+  calculateLinePricing,
+  DEFAULT_GST_RATE_PERCENT,
+  type DiscountType,
+} from "../lib/line-pricing"
 import { ChartOfAccountCombobox } from "./ChartOfAccountCombobox"
 
 export type RequisitionLineItemDraft = {
@@ -14,6 +20,7 @@ export type RequisitionLineItemDraft = {
   description: string
   quantity: number
   unit_cost: number
+  gst_applicable: boolean
   comments: string
 }
 
@@ -25,6 +32,7 @@ export function createEmptyLineItem(): RequisitionLineItemDraft {
     description: "",
     quantity: 1,
     unit_cost: 0,
+    gst_applicable: false,
     comments: "",
   }
 }
@@ -37,19 +45,33 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
+/** @deprecated Prefer calculateLinePricing — kept for callers expecting qty×cost. */
 export function calculateLineTotal(item: RequisitionLineItemDraft) {
   return item.quantity * item.unit_cost
 }
 
 export function calculateRequisitionTotalFromLineItems(
-  items: RequisitionLineItemDraft[]
+  items: RequisitionLineItemDraft[],
+  discountType: DiscountType = "none",
+  discountValue = 0,
+  gstRatePercent = DEFAULT_GST_RATE_PERCENT
 ) {
-  return items.reduce((sum, item) => sum + calculateLineTotal(item), 0)
+  return calculateLinePricing(
+    items,
+    discountType,
+    discountValue,
+    gstRatePercent
+  ).total
 }
 
 type RequisitionLineItemsTableProps = {
   items: RequisitionLineItemDraft[]
   onChange: (items: RequisitionLineItemDraft[]) => void
+  discountType: DiscountType
+  discountValue: number
+  onDiscountTypeChange: (type: DiscountType) => void
+  onDiscountValueChange: (value: number) => void
+  gstRatePercent?: number
   budgetAccounts?: ChartOfAccount[]
   isLoadingBudgetAccounts?: boolean
   budgetAccountsError?: string | null
@@ -77,6 +99,11 @@ function getStripedCellClassName(index: number, stripedRows: boolean) {
 export function RequisitionLineItemsTable({
   items,
   onChange,
+  discountType,
+  discountValue,
+  onDiscountTypeChange,
+  onDiscountValueChange,
+  gstRatePercent = DEFAULT_GST_RATE_PERCENT,
   budgetAccounts = [],
   isLoadingBudgetAccounts = false,
   budgetAccountsError = null,
@@ -86,6 +113,12 @@ export function RequisitionLineItemsTable({
   allowAddItems = true,
   stripedRows = true,
 }: RequisitionLineItemsTableProps) {
+  const pricing = useMemo(
+    () =>
+      calculateLinePricing(items, discountType, discountValue, gstRatePercent),
+    [items, discountType, discountValue, gstRatePercent]
+  )
+
   const updateItem = (
     id: string,
     patch: Partial<RequisitionLineItemDraft>
@@ -107,10 +140,6 @@ export function RequisitionLineItemsTable({
     onChange([...items, createEmptyLineItem()])
   }
 
-  const grandTotal = items.reduce(
-    (sum, item) => sum + calculateLineTotal(item),
-    0
-  )
   const inputClassName = getInputClassName(stripedRows)
   const canSelectBudgetLine =
     !isLoadingBudgetAccounts &&
@@ -138,6 +167,9 @@ export function RequisitionLineItemsTable({
           Activate a budget before adding requisition line items.
         </p>
       ) : null}
+      <p className="text-xs text-muted-foreground">
+        GST rate: {gstRatePercent}% (applied after discount on checked lines)
+      </p>
 
       <div className="overflow-hidden rounded-xl border border-border">
         <div className="overflow-x-auto">
@@ -147,6 +179,10 @@ export function RequisitionLineItemsTable({
                 <th className="min-w-72 px-2 py-2 font-medium">Budget line item</th>
                 <th className="w-20 px-2 py-2 font-medium">Qty</th>
                 <th className="w-28 px-2 py-2 font-medium">Unit cost</th>
+                <th className="w-28 px-2 py-2 font-medium">Subtotal</th>
+                <th className="w-28 px-2 py-2 font-medium">Discount</th>
+                <th className="w-16 px-2 py-2 font-medium">GST</th>
+                <th className="w-28 px-2 py-2 font-medium">GST amt</th>
                 <th className="w-28 px-2 py-2 font-medium">Total</th>
                 <th className="min-w-32 px-2 py-2 font-medium">Notes</th>
                 <th className="w-10 px-2 py-2" aria-label="Actions" />
@@ -156,154 +192,229 @@ export function RequisitionLineItemsTable({
               {items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={10}
                     className="px-2 py-6 text-center text-sm text-muted-foreground"
                   >
                     No line items yet. Add at least one item to continue.
                   </td>
                 </tr>
               ) : (
-                items.map((item, index) => (
-                  <tr key={item.id} className="border-t border-border/70">
-                    <td className={getStripedCellClassName(index, stripedRows)}>
-                      <ChartOfAccountCombobox
-                        label="Budget line item"
-                        hideLabel
-                        value={
-                          item.chart_of_account_id
-                            ? String(item.chart_of_account_id)
-                            : ""
-                        }
-                        primaryField="account_no"
-                        accounts={budgetAccounts}
-                        loading={isLoadingBudgetAccounts}
-                        emptyMessage="No active budget accounts match."
-                        placeholder="Select budget line item..."
-                        inputClassName={inputClassName}
-                        disabled={disabled || !canSelectBudgetLine}
-                        onSelect={(account) =>
-                          updateItem(item.id, {
-                            chart_of_account_id: account.id,
-                            account_no: account.account_no,
-                            description: account.description,
-                          })
-                        }
-                      />
-                    </td>
-                    <td className={getStripedCellClassName(index, stripedRows)}>
-                      <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        aria-label="Quantity"
-                        className={inputClassName}
-                        value={item.quantity}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            quantity: Math.max(
-                              1,
-                              Number(event.target.value) || 1
-                            ),
-                          })
-                        }
-                        disabled={disabled}
-                      />
-                    </td>
-                    <td className={getStripedCellClassName(index, stripedRows)}>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        aria-label="Unit cost"
-                        className={inputClassName}
-                        value={item.unit_cost}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            unit_cost: Math.max(
-                              0,
-                              Number(event.target.value) || 0
-                            ),
-                          })
-                        }
-                        disabled={disabled}
-                      />
-                    </td>
-                    <td className={getStripedCellClassName(index, stripedRows)}>
-                      <div className="flex h-[34px] items-center px-1 text-sm font-medium tabular-nums text-foreground">
-                        {formatCurrency(calculateLineTotal(item))}
-                      </div>
-                    </td>
-                    <td className={getStripedCellClassName(index, stripedRows)}>
-                      <input
-                        type="text"
-                        aria-label="Notes"
-                        placeholder="Notes"
-                        className={inputClassName}
-                        value={item.comments}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            comments: event.target.value,
-                          })
-                        }
-                        disabled={disabled}
-                      />
-                    </td>
-                    <td className={getStripedCellClassName(index, stripedRows)}>
-                      <button
-                        type="button"
-                        aria-label="Remove line item"
-                        className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
-                        onClick={() => removeItem(item.id)}
-                        disabled={disabled || items.length === 1}
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                items.map((item, index) => {
+                  const priced = pricing.items[index]
+
+                  return (
+                    <tr key={item.id} className="border-t border-border/70">
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <ChartOfAccountCombobox
+                          label="Budget line item"
+                          hideLabel
+                          value={
+                            item.chart_of_account_id
+                              ? String(item.chart_of_account_id)
+                              : ""
+                          }
+                          primaryField="account_no"
+                          accounts={budgetAccounts}
+                          loading={isLoadingBudgetAccounts}
+                          emptyMessage="No active budget accounts match."
+                          placeholder="Select budget line item..."
+                          inputClassName={inputClassName}
+                          disabled={disabled || !canSelectBudgetLine}
+                          onSelect={(account) =>
+                            updateItem(item.id, {
+                              chart_of_account_id: account.id,
+                              account_no: account.account_no,
+                              description: account.description,
+                            })
+                          }
+                        />
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <input
+                          type="number"
+                          step={1}
+                          aria-label="Quantity"
+                          className={inputClassName}
+                          value={Number.isNaN(item.quantity) ? "-" : item.quantity}
+                          onChange={(event) => {
+                            const raw = event.target.value
+                            updateItem(item.id, {
+                              quantity: raw === "" ? 0 : Number(raw),
+                            })
+                          }}
+                          disabled={disabled}
+                        />
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          aria-label="Unit cost"
+                          className={inputClassName}
+                          value={item.unit_cost}
+                          onChange={(event) =>
+                            updateItem(item.id, {
+                              unit_cost: Math.max(
+                                0,
+                                Number(event.target.value) || 0
+                              ),
+                            })
+                          }
+                          disabled={disabled}
+                        />
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <span className="block px-1 py-1.5 tabular-nums">
+                          {formatCurrency(priced?.subtotal ?? 0)}
+                        </span>
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <span className="block px-1 py-1.5 tabular-nums text-muted-foreground">
+                          {formatCurrency(priced?.discount_amount ?? 0)}
+                        </span>
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <label className="flex items-center justify-center gap-2 py-1.5">
+                          <input
+                            type="checkbox"
+                            className="size-4 rounded border-border"
+                            checked={item.gst_applicable}
+                            onChange={(event) =>
+                              updateItem(item.id, {
+                                gst_applicable: event.target.checked,
+                              })
+                            }
+                            disabled={disabled}
+                            aria-label="Apply GST"
+                          />
+                        </label>
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <span className="block px-1 py-1.5 tabular-nums">
+                          {formatCurrency(priced?.gst_amount ?? 0)}
+                        </span>
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <span className="block px-1 py-1.5 font-medium tabular-nums">
+                          {formatCurrency(priced?.total ?? 0)}
+                        </span>
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <input
+                          type="text"
+                          aria-label="Notes"
+                          className={inputClassName}
+                          value={item.comments}
+                          onChange={(event) =>
+                            updateItem(item.id, {
+                              comments: event.target.value,
+                            })
+                          }
+                          disabled={disabled}
+                          placeholder="Optional"
+                        />
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <UBButton
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Remove line item"
+                          disabled={disabled || items.length === 1}
+                          onClick={() => removeItem(item.id)}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </UBButton>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
-            {items.length > 0 ? (
-              <tfoot>
-                <tr className="border-t border-border bg-muted/20">
-                  <td
-                    colSpan={3}
-                    className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                  >
-                    Grand total
-                  </td>
-                  <td
-                    colSpan={3}
-                    className="px-2 py-2 text-sm font-semibold tabular-nums text-foreground"
-                  >
-                    {formatCurrency(grandTotal)}
-                  </td>
-                </tr>
-              </tfoot>
-            ) : null}
           </table>
         </div>
-      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-        {allowAddItems ? (
-          <UBButton
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addItem}
-            disabled={disabled || !canSelectBudgetLine}
-          >
-            <Plus className="size-4" data-icon="inline-start" />
-            Add item
-          </UBButton>
-        ) : (
-          <span />
-        )}
+        {items.length > 0 ? (
+          <div className="space-y-3 border-t border-border bg-muted/20 px-3 py-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <UBNativeSelect
+                label="Invoice discount"
+                options={[
+                  { value: "none", label: "None" },
+                  { value: "percent", label: "Percent (%)" },
+                  { value: "amount", label: "Fixed amount" },
+                ]}
+                value={discountType}
+                onChange={(event) =>
+                  onDiscountTypeChange(event.target.value as DiscountType)
+                }
+                disabled={disabled}
+              />
+              <UBInput
+                label={
+                  discountType === "percent"
+                    ? "Discount %"
+                    : discountType === "amount"
+                      ? "Discount amount"
+                      : "Discount value"
+                }
+                type="number"
+                min={0}
+                step="0.01"
+                value={discountType === "none" ? 0 : discountValue}
+                onChange={(event) =>
+                  onDiscountValueChange(
+                    Math.max(0, Number(event.target.value) || 0)
+                  )
+                }
+                disabled={disabled || discountType === "none"}
+              />
+            </div>
 
-        {footerActions ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {footerActions}
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="space-y-1 text-sm">
+                <p className="text-muted-foreground">
+                  Subtotal:{" "}
+                  <span className="font-medium text-foreground tabular-nums">
+                    {formatCurrency(pricing.lines_subtotal)}
+                  </span>
+                </p>
+                <p className="text-muted-foreground">
+                  Discount:{" "}
+                  <span className="font-medium text-foreground tabular-nums">
+                    −{formatCurrency(pricing.discount_amount)}
+                  </span>
+                </p>
+                <p className="text-muted-foreground">
+                  GST:{" "}
+                  <span className="font-medium text-foreground tabular-nums">
+                    {formatCurrency(pricing.gst_total)}
+                  </span>
+                </p>
+                <p className="text-base font-semibold text-foreground">
+                  Grand total:{" "}
+                  <span className="tabular-nums">
+                    {formatCurrency(pricing.total)}
+                  </span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {allowAddItems ? (
+                  <UBButton
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addItem}
+                    disabled={disabled || !canSelectBudgetLine}
+                  >
+                    <Plus className="size-4" data-icon="inline-start" />
+                    Add line
+                  </UBButton>
+                ) : null}
+                {footerActions}
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
@@ -316,6 +427,7 @@ export function mapLineItemsForApi(items: RequisitionLineItemDraft[]) {
     chart_of_account_id: item.chart_of_account_id as number,
     quantity: item.quantity,
     unit_cost: item.unit_cost,
+    gst_applicable: item.gst_applicable,
     comments: item.comments.trim() || undefined,
   }))
 }
@@ -326,7 +438,8 @@ export function isLineItemsValid(items: RequisitionLineItemDraft[]) {
     items.every(
       (item) =>
         item.chart_of_account_id !== null &&
-        item.quantity > 0 &&
+        Number.isFinite(item.quantity) &&
+        item.quantity !== 0 &&
         item.unit_cost >= 0
     )
   )

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { useState } from "react"
+import { useState, type ComponentProps } from "react"
 
 import {
   componentParameters,
@@ -7,6 +7,7 @@ import {
 } from "@/components/shared/storybook"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 
+import type { DiscountType } from "../lib/line-pricing"
 import {
   createEmptyLineItem,
   RequisitionLineItemsTable,
@@ -39,6 +40,7 @@ const sampleItems: RequisitionLineItemDraft[] = [
     description: "Computer Supplies",
     quantity: 5,
     unit_cost: 350,
+    gst_applicable: true,
     comments: "Dell preferred",
   },
   {
@@ -48,6 +50,7 @@ const sampleItems: RequisitionLineItemDraft[] = [
     description: "Other Office Equipment",
     quantity: 10,
     unit_cost: 85,
+    gst_applicable: false,
     comments: "",
   },
   {
@@ -57,18 +60,52 @@ const sampleItems: RequisitionLineItemDraft[] = [
     description: "Maintenance of Computer Hardware",
     quantity: 6,
     unit_cost: 130,
+    gst_applicable: true,
     comments: "Dual display support",
   },
 ]
+
+function StoryTable(
+  props: Omit<
+    ComponentProps<typeof RequisitionLineItemsTable>,
+    | "items"
+    | "onChange"
+    | "discountType"
+    | "discountValue"
+    | "onDiscountTypeChange"
+    | "onDiscountValueChange"
+    | "budgetAccounts"
+  > & {
+    initialItems?: RequisitionLineItemDraft[]
+  }
+) {
+  const { initialItems = sampleItems, ...args } = props
+  const [items, setItems] = useState(initialItems)
+  const [discountType, setDiscountType] = useState<DiscountType>("percent")
+  const [discountValue, setDiscountValue] = useState(10)
+
+  return (
+    <RequisitionLineItemsTable
+      {...args}
+      items={items}
+      onChange={setItems}
+      discountType={discountType}
+      discountValue={discountValue}
+      onDiscountTypeChange={setDiscountType}
+      onDiscountValueChange={setDiscountValue}
+      budgetAccounts={sampleAccounts}
+    />
+  )
+}
 
 const meta = {
   title: "Purchase Order Requisition/RequisitionLineItemsTable",
   component: RequisitionLineItemsTable,
   tags: ["autodocs"],
   parameters: componentParameters(
-    "Editable line items table for requisitions with optional alternating row backgrounds."
+    "Editable line items with optional GST, distributed invoice discount, and totals."
   ),
-  decorators: [withPanel("max-w-5xl space-y-6 p-6")],
+  decorators: [withPanel("max-w-6xl space-y-6 p-6")],
   argTypes: {
     stripedRows: {
       control: "boolean",
@@ -95,36 +132,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  render: (args) => {
-    const [items, setItems] = useState(sampleItems)
-
-    return (
-      <RequisitionLineItemsTable
-        {...args}
-        items={items}
-        onChange={setItems}
-        budgetAccounts={sampleAccounts}
-      />
-    )
-  },
+  render: (args) => <StoryTable {...args} />,
 }
 
 export const StripedRowsDisabled: Story = {
   args: {
     stripedRows: false,
   },
-  render: (args) => {
-    const [items, setItems] = useState(sampleItems)
-
-    return (
-      <RequisitionLineItemsTable
-        {...args}
-        items={items}
-        onChange={setItems}
-        budgetAccounts={sampleAccounts}
-      />
-    )
-  },
+  render: (args) => <StoryTable {...args} />,
 }
 
 export const SubmittedNoNewItems: Story = {
@@ -132,35 +147,13 @@ export const SubmittedNoNewItems: Story = {
     allowAddItems: false,
     stripedRows: true,
   },
-  render: (args) => {
-    const [items, setItems] = useState(sampleItems)
-
-    return (
-      <RequisitionLineItemsTable
-        {...args}
-        items={items}
-        onChange={setItems}
-        budgetAccounts={sampleAccounts}
-      />
-    )
-  },
+  render: (args) => <StoryTable {...args} />,
 }
 
 export const Empty: Story = {
-  render: (args) => {
-    const [items, setItems] = useState<RequisitionLineItemDraft[]>([
-      createEmptyLineItem(),
-    ])
-
-    return (
-      <RequisitionLineItemsTable
-        {...args}
-        items={items}
-        onChange={setItems}
-        budgetAccounts={sampleAccounts}
-      />
-    )
-  },
+  render: (args) => (
+    <StoryTable {...args} initialItems={[createEmptyLineItem()]} />
+  ),
 }
 
 export const ReadOnly: Story = {
@@ -169,16 +162,5 @@ export const ReadOnly: Story = {
     allowAddItems: false,
     stripedRows: true,
   },
-  render: (args) => {
-    const [items] = useState(sampleItems)
-
-    return (
-      <RequisitionLineItemsTable
-        {...args}
-        items={items}
-        onChange={() => undefined}
-        budgetAccounts={sampleAccounts}
-      />
-    )
-  },
+  render: (args) => <StoryTable {...args} />,
 }

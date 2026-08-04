@@ -11,9 +11,17 @@ type ApiListResponse<T> = {
   message?: string
 }
 
+export type CostCenterUser = {
+  id: string
+  name: string
+  email: string
+}
+
 export type CostCenter = {
   id: number
   name: string
+  number: string | null
+  users?: CostCenterUser[]
 }
 
 export type RequisitionStatusRecord = {
@@ -45,6 +53,7 @@ export type RequisitionLineItemInput = {
   chart_of_account_id: number
   quantity: number
   unit_cost: number
+  gst_applicable?: boolean
   comments?: string
 }
 
@@ -52,6 +61,9 @@ export type RequisitionLineItem = RequisitionLineItemInput & {
   id: number
   line_item_number?: string | null
   description?: string | null
+  subtotal?: number | string
+  discount_amount?: number | string
+  gst_amount?: number | string
   total: number | string
   requisition_id: number
   chart_of_account?: {
@@ -90,16 +102,24 @@ export type RequisitionRecord = {
   id: number
   number: string
   purchase_order_number?: string | null
+  purchase_order_file_name?: string | null
+  purchase_order_emailed_at?: string | null
+  has_purchase_order_file?: boolean
+  preferred_supplier_email?: string | null
   cost_center_id: number
   pipeline_id?: number | null
   date_prepared: string
   status_id: number
   currency_id: number
   total: number | string
+  discount_type?: "none" | "percent" | "amount" | null
+  discount_value?: number | string | null
+  discount_amount?: number | string | null
   stage_id: number
   priority: RequisitionPriority
   expected_delivery_date: string | null
   is_recurring: boolean
+  requires_downpayment?: boolean
   reminder_date: string | null
   items?: RequisitionLineItem[]
   suppliers?: RequisitionSupplierPivot[]
@@ -112,6 +132,8 @@ export type RequisitionRecord = {
   show_approval_actions?: boolean
   user_stage_action?: RequisitionUserStageAction | null
   can_edit_purchase_order_number?: boolean
+  can_upload_purchase_order?: boolean
+  can_email_purchase_order?: boolean
   can_cancel?: boolean
   can_close?: boolean
   pipeline?: Pipeline
@@ -136,7 +158,10 @@ export type CreateRequisitionPayload = {
   priority: RequisitionPriority
   expected_delivery_date?: string | null
   is_recurring: boolean
+  requires_downpayment?: boolean
   reminder_date?: string | null
+  discount_type?: "none" | "percent" | "amount"
+  discount_value?: number
   suppliers?: RequisitionSupplierInput[]
   items: RequisitionLineItemInput[]
   tag_ids?: number[]
@@ -261,6 +286,47 @@ export async function updateRequisitionPurchaseOrderNumber(
     `${BASE_PATH}/requisitions/${id}/purchase-order-number`,
     {
       method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  )
+}
+
+export async function uploadRequisitionPurchaseOrder(
+  id: number,
+  file: File,
+  purchaseOrderNumber?: string | null
+) {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  if (purchaseOrderNumber !== undefined && purchaseOrderNumber !== null) {
+    formData.append("purchase_order_number", purchaseOrderNumber)
+  }
+
+  const response = await apiRequest<ApiListResponse<RequisitionRecord>>(
+    `${BASE_PATH}/requisitions/${id}/purchase-order`,
+    {
+      method: "POST",
+      token: getToken(),
+      body: formData,
+    }
+  )
+
+  return response.data
+}
+
+export function getRequisitionPurchaseOrderDownloadUrl(id: number) {
+  return `${BASE_PATH}/requisitions/${id}/purchase-order/download`
+}
+
+export async function emailRequisitionPurchaseOrder(
+  id: number,
+  payload: { message?: string | null } = {}
+) {
+  return request<RequisitionRecord>(
+    `${BASE_PATH}/requisitions/${id}/purchase-order/email`,
+    {
+      method: "POST",
       body: JSON.stringify(payload),
     }
   )

@@ -1,8 +1,4 @@
-export type RequisitionPriority =
-  | "routine"
-  | "standard"
-  | "urgent"
-  | "critical"
+export type RequisitionPriority = "standard" | "urgent" | "critical"
 
 export type RequisitionPriorityConfig = {
   value: RequisitionPriority
@@ -13,14 +9,6 @@ export type RequisitionPriorityConfig = {
 }
 
 export const REQUISITION_PRIORITIES: RequisitionPriorityConfig[] = [
-  {
-    value: "routine",
-    label: "Routine",
-    description: "Normal request with no urgency",
-    dotClassName: "bg-slate-400",
-    badgeClassName:
-      "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
-  },
   {
     value: "standard",
     label: "Standard",
@@ -49,7 +37,8 @@ export const REQUISITION_PRIORITIES: RequisitionPriorityConfig[] = [
 ]
 
 const LEGACY_PRIORITY_MAP: Record<string, RequisitionPriority> = {
-  low: "routine",
+  low: "standard",
+  routine: "standard",
   medium: "standard",
   high: "urgent",
 }
@@ -58,7 +47,7 @@ export function normalizeRequisitionPriority(
   value?: string | null
 ): RequisitionPriority {
   if (!value) {
-    return "routine"
+    return "standard"
   }
 
   const normalized = value.toLowerCase()
@@ -71,7 +60,7 @@ export function normalizeRequisitionPriority(
     (priority) => priority.value === normalized
   )
 
-  return match?.value ?? "routine"
+  return match?.value ?? "standard"
 }
 
 export function getRequisitionPriorityConfig(
