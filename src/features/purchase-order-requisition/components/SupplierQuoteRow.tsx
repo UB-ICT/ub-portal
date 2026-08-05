@@ -163,53 +163,68 @@ export function SupplierQuoteRow({
 
           <div className="w-full md:col-span-2 xl:col-span-4">
             <label
-              htmlFor={inputId}
+              htmlFor={disabled ? undefined : inputId}
               className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground"
             >
               Quote PDF
             </label>
-            <label
-              htmlFor={inputId}
-              className={cn(
-                "flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-muted/20",
-                disabled && "cursor-not-allowed opacity-50",
-                hasDocument && "border-solid"
-              )}
-            >
-              <Upload className="size-4 shrink-0 text-primary/80" />
-              {hasDocument
-                ? quote.fileName || "Uploaded quote"
-                : "Upload PDF quote"}
-            </label>
-            <input
-              id={inputId}
-              type="file"
-              accept={PDF_ACCEPT}
-              className="sr-only"
-              disabled={disabled}
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null
-                handleFileChange(file)
-                event.target.value = ""
-              }}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              PDF files only, up to 10 MB.
-            </p>
+            {disabled ? (
+              <div
+                className={cn(
+                  "flex min-h-10 items-center gap-2 rounded-lg border border-solid border-input bg-muted/20 px-3 py-2 text-sm",
+                  !hasDocument && "text-muted-foreground"
+                )}
+              >
+                <Upload className="size-4 shrink-0 text-primary/80" aria-hidden />
+                {hasDocument
+                  ? quote.fileName || "Uploaded quote"
+                  : "No PDF attached"}
+              </div>
+            ) : (
+              <>
+                <label
+                  htmlFor={inputId}
+                  className={cn(
+                    "flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-muted/20",
+                    hasDocument && "border-solid"
+                  )}
+                >
+                  <Upload className="size-4 shrink-0 text-primary/80" />
+                  {hasDocument
+                    ? quote.fileName || "Uploaded quote"
+                    : "Upload PDF quote"}
+                </label>
+                <input
+                  id={inputId}
+                  type="file"
+                  accept={PDF_ACCEPT}
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    handleFileChange(file)
+                    event.target.value = ""
+                  }}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  PDF files only, up to 10 MB.
+                </p>
+              </>
+            )}
           </div>
         </div>
 
-        <UBButton
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          disabled={disabled}
-          aria-label="Remove supplier quote"
-          className="shrink-0"
-        >
-          <X className="size-4" />
-        </UBButton>
+        {!disabled ? (
+          <UBButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            aria-label="Remove supplier quote"
+            className="shrink-0"
+          >
+            <X className="size-4" />
+          </UBButton>
+        ) : null}
       </div>
 
       {uploadError ? (
@@ -221,7 +236,7 @@ export function SupplierQuoteRow({
           file={quote.file}
           attachmentId={quote.attachmentId}
           fileName={quote.fileName}
-          onRemove={handleRemoveFile}
+          onRemove={disabled ? undefined : handleRemoveFile}
           disabled={disabled}
         />
       ) : null}

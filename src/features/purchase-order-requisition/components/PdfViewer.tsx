@@ -146,11 +146,11 @@ export function PdfViewer({
           size="sm"
           className="min-w-0 flex-1 justify-start"
           onClick={() => setOpen(true)}
-          disabled={disabled}
         >
           <FileText className="size-4 shrink-0" data-icon="inline-start" />
           <span className="truncate">{displayName}</span>
           <Eye className="ml-auto size-4 shrink-0 opacity-70" />
+          <span className="sr-only">View PDF</span>
         </UBButton>
         <div className="flex shrink-0 items-center gap-1">
           <UBButton
@@ -158,18 +158,16 @@ export function PdfViewer({
             variant="outline"
             size="sm"
             onClick={() => void handleDownload()}
-            disabled={disabled}
           >
             <Download className="size-4" data-icon="inline-start" />
             Download
           </UBButton>
-          {onRemove ? (
+          {onRemove && !disabled ? (
             <UBButton
               type="button"
               variant="ghost"
               size="sm"
               onClick={onRemove}
-              disabled={disabled}
               aria-label="Remove quote file"
             >
               <X className="size-4" />

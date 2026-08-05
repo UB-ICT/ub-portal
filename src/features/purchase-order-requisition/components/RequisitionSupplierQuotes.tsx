@@ -87,13 +87,15 @@ export function RequisitionSupplierQuotes({
 
     void fetchAttachments(requisitionId).then((attachments) => {
       hasLoadedAttachments.current = true
-      emitChange(
-        attachments.length > 0
-          ? mapAttachmentsToQuotes(attachments)
-          : [createEmptySupplierQuote()]
-      )
+      if (attachments.length > 0) {
+        emitChange(mapAttachmentsToQuotes(attachments))
+        return
+      }
+
+      // Read-only viewers should not get an empty upload row.
+      emitChange(disabled ? [] : [createEmptySupplierQuote()])
     })
-  }, [fetchAttachments, onChange, requisitionId])
+  }, [disabled, fetchAttachments, onChange, requisitionId])
 
   const updateQuote = (clientId: string, nextQuote: SupplierQuoteDraft) => {
     if (nextQuote.isRecommended) {
@@ -140,6 +142,12 @@ export function RequisitionSupplierQuotes({
     completeQuoteCount > 1
   const showWaiverReason = needsQuoteWaiverReason(quotes, requisitionTotal)
 
+  const visibleQuotes = disabled
+    ? quotes.filter(
+        (quote) => quote.attachmentId || quote.file || quote.fileName
+      )
+    : quotes
+
   return (
     <section className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between gap-3">
@@ -148,42 +156,52 @@ export function RequisitionSupplierQuotes({
             Supplier quotes
           </h3>
           <p className="text-xs text-muted-foreground">
-            {getSupplierQuoteRequirementMessage(requisitionTotal)}
+            {disabled
+              ? "Review the attached quotation PDFs. Use View to open a preview or Download to save a copy."
+              : getSupplierQuoteRequirementMessage(requisitionTotal)}
           </p>
-          {showRecommendedToggle ? (
+          {disabled && visibleQuotes.length > 0 ? (
+            <p className="mt-1 text-xs font-medium text-primary">
+              Quotation documents below are available to view and download.
+            </p>
+          ) : null}
+          {!disabled && showRecommendedToggle ? (
             <p className="mt-1 text-xs font-medium text-emerald-700">
               Select one preferred supplier. The preferred quote is highlighted
               in green.
             </p>
           ) : null}
         </div>
-        <UBButton
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addQuote}
-          disabled={disabled || isLoading}
-        >
-          <Plus className="size-4" data-icon="inline-start" />
-          Add quote
-        </UBButton>
+        {!disabled ? (
+          <UBButton
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addQuote}
+            disabled={isLoading}
+          >
+            <Plus className="size-4" data-icon="inline-start" />
+            Add quote
+          </UBButton>
+        ) : null}
       </div>
 
-      {quotes.length === 0 ? (
+      {visibleQuotes.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border/80 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-          No supplier quotes added yet. Use &quot;Add quote&quot; to upload a PDF
-          and select a supplier.
+          {disabled
+            ? "No supplier quotes are attached to this requisition."
+            : 'No supplier quotes added yet. Use "Add quote" to upload a PDF and select a supplier.'}
         </div>
       ) : (
         <div className="space-y-3">
-          {quotes.map((quote) => (
+          {visibleQuotes.map((quote) => (
             <SupplierQuoteRow
               key={quote.clientId}
               quote={quote}
               onChange={(nextQuote) => updateQuote(quote.clientId, nextQuote)}
               onRemove={() => void removeQuote(quote)}
               disabled={disabled || isLoading}
-              showRecommendedToggle={showRecommendedToggle}
+              showRecommendedToggle={!disabled && showRecommendedToggle}
               excludeSupplierIds={usedSupplierIds.filter(
                 (supplierId) => supplierId !== quote.supplierId
               )}
@@ -192,7 +210,7 @@ export function RequisitionSupplierQuotes({
         </div>
       )}
 
-      {showWaiverReason ? (
+      {showWaiverReason || (disabled && quoteWaiverReason.trim() !== "") ? (
         <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900 dark:bg-amber-950/40">
           <label
             htmlFor="quote-waiver-reason"
@@ -211,11 +229,13 @@ export function RequisitionSupplierQuotes({
             placeholder="Explain why fewer than three supplier quotes are being submitted..."
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <p className="text-xs text-amber-800 dark:text-amber-200">
-            Required for requisitions of $
-            {SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more when
-            fewer than three quotes are attached.
-          </p>
+          {!disabled ? (
+            <p className="text-xs text-amber-800 dark:text-amber-200">
+              Required for requisitions of $
+              {SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more when
+              fewer than three quotes are attached.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
