@@ -12,16 +12,16 @@ import {
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import type { RequisitionPriority } from "@/features/purchase-order-requisition/lib/requisition-priorities"
+import {
+  getRequisitionStatusStyles,
+  REQUISITION_STATUS_LABELS,
+  type RequisitionStatus,
+} from "@/features/purchase-order-requisition/lib/requisition-status"
 
 import { PriorityBadge } from "./PriorityBadge"
+import { RequisitionNumberBadge } from "./RequisitionNumberBadge"
 
-export type RequisitionStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "in-review"
-  | "cancelled"
-  | "closed"
+export type { RequisitionStatus }
 
 export type RequisitionCardProps = {
   referenceNumber: string
@@ -34,61 +34,6 @@ export type RequisitionCardProps = {
   selected?: boolean
   className?: string
   onClick?: () => void
-}
-
-const STATUS_LABELS: Record<RequisitionStatus, string> = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-  "in-review": "In review",
-  cancelled: "Cancelled",
-  closed: "Closed",
-}
-
-function getStatusStyles(status: RequisitionStatus) {
-  switch (status) {
-    case "approved":
-      return {
-        accent: "border-l-green-500",
-        badge:
-          "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200",
-      }
-    case "pending":
-      return {
-        accent: "border-l-amber-500",
-        badge:
-          "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200",
-      }
-    case "in-review":
-      return {
-        accent: "border-l-blue-500",
-        badge:
-          "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200",
-      }
-    case "rejected":
-      return {
-        accent: "border-l-red-500",
-        badge:
-          "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200",
-      }
-    case "cancelled":
-      return {
-        accent: "border-l-slate-400",
-        badge:
-          "border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
-      }
-    case "closed":
-      return {
-        accent: "border-l-zinc-500",
-        badge:
-          "border-zinc-300 bg-zinc-100 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
-      }
-    default:
-      return {
-        accent: "border-l-border",
-        badge: "",
-      }
-  }
 }
 
 function formatDate(dateString: string) {
@@ -146,7 +91,7 @@ export function RequisitionCard({
   onClick,
 }: RequisitionCardProps) {
   const isInteractive = Boolean(onClick)
-  const statusStyles = getStatusStyles(status)
+  const statusStyles = getRequisitionStatusStyles(status)
 
   return (
     <Card
@@ -173,8 +118,8 @@ export function RequisitionCard({
       }
     >
       <CardHeader className="gap-2 border-b bg-muted/15 p-3 [.border-b]:pb-3">
-        <CardTitle className="font-mono text-base font-semibold leading-tight tracking-tight">
-          {referenceNumber}
+        <CardTitle className="leading-tight">
+          <RequisitionNumberBadge number={referenceNumber} status={status} />
         </CardTitle>
         <CardDescription className="inline-flex items-center gap-1.5 text-sm">
           <CalendarDays className="size-4 shrink-0" />
@@ -195,7 +140,7 @@ export function RequisitionCard({
                 statusStyles.badge
               )}
             >
-              {STATUS_LABELS[status]}
+              {REQUISITION_STATUS_LABELS[status]}
             </Badge>
             {priority ? <PriorityBadge priority={priority} /> : null}
           </div>

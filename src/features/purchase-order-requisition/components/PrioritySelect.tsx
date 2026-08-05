@@ -70,7 +70,13 @@ export function PrioritySelect({
           aria-describedby={error ? errorId : undefined}
           className={cn(error && "border-destructive focus:ring-destructive/20")}
         >
-          <SelectValue placeholder="Select priority" />
+          {/* Explicit trigger label — avoid mirroring multi-line item content. */}
+          <SelectValue placeholder="Select priority">
+            <PriorityOptionLabel
+              label={selected.label}
+              dotClassName={selected.dotClassName}
+            />
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {REQUISITION_PRIORITIES.map((priority) => (
@@ -78,8 +84,9 @@ export function PrioritySelect({
               key={priority.value}
               value={priority.value}
               textValue={priority.label}
+              className="items-start py-2"
             >
-              <div className="flex flex-col gap-0.5 py-0.5">
+              <div className="flex flex-col gap-0.5">
                 <PriorityOptionLabel
                   label={priority.label}
                   dotClassName={priority.dotClassName}
@@ -92,19 +99,6 @@ export function PrioritySelect({
           ))}
         </SelectContent>
       </Select>
-
-      {value ? (
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          <span
-            aria-hidden
-            className={cn(
-              "mr-1.5 inline-block size-2 rounded-full align-middle",
-              selected.dotClassName
-            )}
-          />
-          {selected.description}
-        </p>
-      ) : null}
 
       {error ? (
         <p id={errorId} className="mt-1 text-xs text-destructive">

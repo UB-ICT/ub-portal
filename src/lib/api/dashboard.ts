@@ -16,10 +16,12 @@ export type DashboardMetrics = {
 
 export type RequisitionForm = {
   id: number
-  number: string // e.g., REQ-2026-041
+  number: string // e.g., 000000001
+  requisition_number?: string
   supplier_name: string // e.g., Belize Office Box
   date_prepared: string // e.g., 2026-06-24
   total: number // e.g., 2340.00
+  status_name?: string | null
   current_stage_name: string // e.g., Director review, Budget review
 
   // 👤 Requester (or unmapped role) view: totals across the whole pipeline.

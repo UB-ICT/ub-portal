@@ -9,20 +9,12 @@ import {
   SearchRequisitions,
   type RequisitionSearchCriteria,
 } from "./SearchRequisitions"
+import { REQUISITION_STATUS_LABELS } from "../lib/requisition-status"
 import type { RequisitionListItem } from "./ListRequisitions"
 
 const EMPTY_CRITERIA: RequisitionSearchCriteria = {
   query: "",
   status: "",
-}
-
-const STATUS_LABELS: Record<RequisitionListItem["status"], string> = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-  "in-review": "In review",
-  cancelled: "Cancelled",
-  closed: "Closed",
 }
 
 function getRequisitionSearchText(requisition: RequisitionListItem) {
@@ -45,7 +37,7 @@ function getRequisitionSearchText(requisition: RequisitionListItem) {
     requisition.date,
     formattedDate,
     requisition.status,
-    STATUS_LABELS[requisition.status],
+    REQUISITION_STATUS_LABELS[requisition.status],
     String(requisition.amount),
     formattedAmount,
   ]

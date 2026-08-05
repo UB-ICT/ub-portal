@@ -101,6 +101,7 @@ export type Pipeline = {
 export type RequisitionRecord = {
   id: number
   number: string
+  requisition_number?: string
   purchase_order_number?: string | null
   purchase_order_file_name?: string | null
   purchase_order_emailed_at?: string | null

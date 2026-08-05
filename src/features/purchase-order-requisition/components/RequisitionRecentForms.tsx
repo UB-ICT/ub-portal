@@ -4,6 +4,9 @@ import { Clock, ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchAllForms } from "@/lib/api/dashboard"
 import { useNavigate } from "react-router-dom"
 
+import { mapApiStatusToCardStatus } from "../lib/requisition-mappers"
+import { RequisitionNumberBadge } from "./RequisitionNumberBadge"
+
 // Workflow roles (director-dean, budget-officer, etc.) get a single "time at my stage"
 // figure; the requester view gets separate processing/approval totals. The shape of the
 // rows tells us which one the backend sent for the current user's role.
@@ -133,8 +136,13 @@ export const RecentFormsTable: React.FC = () => {
                   key={form.id}
                   className="group transition-colors hover:bg-muted/30"
                 >
-                  <td className="cursor-pointer py-4 font-semibold text-purple-700 group-hover:underline">
-                    {form.number}
+                  <td className="cursor-pointer py-4">
+                    <RequisitionNumberBadge
+                      number={form.number}
+                      status={mapApiStatusToCardStatus(
+                        form.status_name ?? form.current_stage_name
+                      )}
+                    />
                   </td>
                   <td className="py-4 text-foreground/90">
                     {form.supplier_name || "-"}

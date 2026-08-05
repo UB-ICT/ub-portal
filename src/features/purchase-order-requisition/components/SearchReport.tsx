@@ -152,7 +152,7 @@ export function SearchReport({
         />
         <UBInput
           label="Requisition number"
-          placeholder="REQ-2026-0001"
+          placeholder="000000001"
           value={values.number}
           onChange={(event) => update({ number: event.target.value })}
         />

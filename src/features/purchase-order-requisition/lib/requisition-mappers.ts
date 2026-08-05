@@ -1,7 +1,7 @@
 import type { RequisitionRecord } from "@/lib/api/requisitions"
 import { normalizeRequisitionPriority } from "@/features/purchase-order-requisition/lib/requisition-priorities"
+import type { RequisitionStatus } from "@/features/purchase-order-requisition/lib/requisition-status"
 
-import type { RequisitionStatus } from "../components/RequisitionCard"
 import type { RequisitionListItem } from "../components/ListRequisitions"
 
 export function mapApiStatusToCardStatus(
@@ -29,6 +29,7 @@ export function mapApiStatusToCardStatus(
     return "closed"
   }
 
+  // Draft and Pending share the amber "pending" treatment for the number badge.
   return "pending"
 }
 
@@ -42,7 +43,7 @@ export function mapRequisitionRecordToListItem(
 
   return {
     id: requisition.id,
-    referenceNumber: requisition.number,
+    referenceNumber: requisition.requisition_number ?? requisition.number,
     supplier: primarySupplier?.name ?? "",
     department: requisition.cost_center?.name ?? "",
     date: toDateInputValue(requisition.date_prepared),

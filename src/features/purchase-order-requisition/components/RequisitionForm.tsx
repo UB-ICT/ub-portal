@@ -39,7 +39,8 @@ import { RequisitionSupplierQuotes } from "./RequisitionSupplierQuotes"
 import { RequisitionPurchaseOrderSection } from "./RequisitionPurchaseOrderSection"
 import { RequisitionActivityLog } from "./RequisitionActivityLog"
 import { RequisitionApprovalActions } from "./RequisitionApprovalActions"
-import { toDateInputValue } from "../lib/requisition-mappers"
+import { RequisitionNumberBadge } from "./RequisitionNumberBadge"
+import { mapApiStatusToCardStatus, toDateInputValue } from "../lib/requisition-mappers"
 import {
   canAddLineItemsToRequisition,
   canCostCenterEditRequisition,
@@ -214,7 +215,7 @@ export function RequisitionForm({
   }
 
   const applyRequisitionState = (requisition: RequisitionRecord) => {
-    setReferenceNumber(requisition.number)
+    setReferenceNumber(requisition.requisition_number ?? requisition.number)
     setCostCenterLabel(requisition.cost_center?.name ?? "")
     setCostCenterId(requisition.cost_center_id)
     setStatusLabel(requisition.status?.name ?? "")
@@ -469,7 +470,6 @@ export function RequisitionForm({
       mode === "edit" && requisitionId
         ? await updateRequisition(requisitionId, {
             ...payload,
-            number: referenceNumber,
             activity_comment: activityComment.trim() || null,
           })
         : await createRequisition(payload)
@@ -547,11 +547,24 @@ export function RequisitionForm({
           </div>
         ) : null}
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {mode === "edit" ? (
-          <>
-            <UBInput label="Reference" value={referenceNumber} readOnly disabled />
-            <UBInput label="Status" value={statusLabel || "—"} readOnly disabled />
-          </>
+        {referenceNumber ? (
+          <div className="flex flex-col justify-end md:col-span-2 xl:col-span-4">
+            <span className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              Requisition number
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <RequisitionNumberBadge
+                number={referenceNumber}
+                status={mapApiStatusToCardStatus(statusLabel)}
+                className="h-10 px-3 text-sm"
+              />
+              {statusLabel ? (
+                <span className="text-sm text-muted-foreground">
+                  Status: {statusLabel}
+                </span>
+              ) : null}
+            </div>
+          </div>
         ) : null}
         <UBInput
           label="Cost center"

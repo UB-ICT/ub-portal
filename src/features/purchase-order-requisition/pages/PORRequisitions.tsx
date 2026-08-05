@@ -3,8 +3,10 @@ import { Navigate } from "react-router-dom"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { RequisitionForm } from "@/features/purchase-order-requisition/components/RequisitionForm"
+import { RequisitionNumberBadge } from "@/features/purchase-order-requisition/components/RequisitionNumberBadge"
 import { RequisitionPane } from "@/features/purchase-order-requisition/components/RequisitionPane"
 import { mapPipelineToTimelineSteps } from "@/features/purchase-order-requisition/lib/pipeline-utils"
+import { mapApiStatusToCardStatus } from "@/features/purchase-order-requisition/lib/requisition-mappers"
 import { UBTimeline } from "@/components/shared/UBTimeline"
 import type { RequisitionRecord } from "@/lib/api/requisitions"
 import { useRequisitionsStore } from "@/store/requisitions-store"
@@ -102,11 +104,27 @@ export function PORRequisitionsPage() {
             <h2 className="text-base font-semibold tracking-tight text-foreground">
               {panelMode === "edit" ? "Update requisition" : "New requisition"}
             </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {panelMode === "edit"
-                ? "Edit the selected requisition and save your changes."
-                : "Fill in the details below to create a new requisition."}
-            </p>
+            {panelMode === "edit" && activeRequisition?.number ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <RequisitionNumberBadge
+                  number={
+                    activeRequisition.requisition_number ??
+                    activeRequisition.number
+                  }
+                  status={mapApiStatusToCardStatus(
+                    activeRequisition.status?.name
+                  )}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Edit the selected requisition and save your changes.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Fill in the details below to create a new requisition. A unique
+                requisition number is assigned on save.
+              </p>
+            )}
           </div>
 
           <div className="shrink-0 border-b bg-muted/30 p-4">

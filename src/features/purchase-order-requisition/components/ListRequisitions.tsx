@@ -12,7 +12,7 @@ export type RequisitionListItem = RequisitionCardProps & {
 export const MOCK_REQUISITIONS: RequisitionListItem[] = [
   {
     id: 1,
-    referenceNumber: "REQ-2026-001",
+    referenceNumber: "000000001",
     supplier: "Acme Office Supplies",
     department: "Finance",
     date: "2026-06-01",
@@ -22,7 +22,7 @@ export const MOCK_REQUISITIONS: RequisitionListItem[] = [
   },
   {
     id: 2,
-    referenceNumber: "REQ-2026-002",
+    referenceNumber: "000000002",
     supplier: "Belize Tech Solutions",
     department: "Information Technology",
     date: "2026-05-28",
@@ -32,7 +32,7 @@ export const MOCK_REQUISITIONS: RequisitionListItem[] = [
   },
   {
     id: 3,
-    referenceNumber: "REQ-2026-003",
+    referenceNumber: "000000003",
     supplier: "Caribbean Furniture Co.",
     department: "Facilities",
     date: "2026-05-25",
@@ -42,7 +42,7 @@ export const MOCK_REQUISITIONS: RequisitionListItem[] = [
   },
   {
     id: 4,
-    referenceNumber: "REQ-2026-004",
+    referenceNumber: "000000004",
     supplier: "Maintenance Pro Ltd.",
     department: "Human Resources",
     date: "2026-05-20",
@@ -52,7 +52,7 @@ export const MOCK_REQUISITIONS: RequisitionListItem[] = [
   },
   {
     id: 5,
-    referenceNumber: "REQ-2026-005",
+    referenceNumber: "000000005",
     supplier: "Acme Office Supplies",
     department: "Academic Affairs",
     date: "2026-05-18",
@@ -62,7 +62,7 @@ export const MOCK_REQUISITIONS: RequisitionListItem[] = [
   },
   {
     id: 6,
-    referenceNumber: "REQ-2026-006",
+    referenceNumber: "000000006",
     supplier: "Belize Tech Solutions",
     department: "Finance",
     date: "2026-05-12",
