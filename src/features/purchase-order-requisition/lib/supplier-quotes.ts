@@ -120,14 +120,13 @@ export function mapSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {
 export function mapSupplierQuoteToUploadMeta(
   quote: SupplierQuoteDraft
 ): SupplierQuoteUploadMeta {
-  const [normalizedQuote] = applyRecommendedSupplierDefaults([quote])
-
+  // Do not call applyRecommendedSupplierDefaults on a single quote — that
+  // would force every uploaded file to is_recommended=true and wipe the
+  // user's preferred-supplier choice when multiple quotes are synced.
   return {
-    is_recommended: normalizedQuote.isRecommended,
-    quoted_total: normalizedQuote.quotedTotal
-      ? Number(normalizedQuote.quotedTotal)
-      : null,
-    quote_reference_number: normalizedQuote.quoteReferenceNumber.trim() || null,
+    is_recommended: quote.isRecommended,
+    quoted_total: quote.quotedTotal ? Number(quote.quotedTotal) : null,
+    quote_reference_number: quote.quoteReferenceNumber.trim() || null,
   }
 }
 

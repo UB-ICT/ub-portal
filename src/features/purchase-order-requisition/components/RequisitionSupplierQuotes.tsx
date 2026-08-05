@@ -131,6 +131,7 @@ export function RequisitionSupplierQuotes({
   const completeQuoteCount = getCompleteSupplierQuotes(quotes).length
   const showRecommendedToggle =
     requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD ||
+    quotes.length > 1 ||
     completeQuoteCount > 1
 
   return (
@@ -143,6 +144,12 @@ export function RequisitionSupplierQuotes({
           <p className="text-xs text-muted-foreground">
             {getSupplierQuoteRequirementMessage(requisitionTotal)}
           </p>
+          {showRecommendedToggle ? (
+            <p className="mt-1 text-xs font-medium text-emerald-700">
+              Select one preferred supplier. The preferred quote is highlighted
+              in green.
+            </p>
+          ) : null}
         </div>
         <UBButton
           type="button"

@@ -1,4 +1,4 @@
-import { Upload, X } from "lucide-react"
+import { Check, Upload, X } from "lucide-react"
 import { useId } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
@@ -71,11 +71,34 @@ export function SupplierQuoteRow({
   }
 
   const hasDocument = Boolean(quote.file || quote.attachmentId)
+  const isPreferred = quote.isRecommended
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+    <div
+      className={cn(
+        "space-y-3 rounded-xl border p-4 shadow-sm transition-colors",
+        isPreferred
+          ? "border-emerald-500/70 bg-emerald-50/70 ring-1 ring-emerald-500/30"
+          : "border-border/70 bg-card"
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="md:col-span-2 xl:col-span-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {isPreferred ? (
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  <Check className="size-3.5" aria-hidden />
+                  Preferred supplier
+                </span>
+              ) : showRecommendedToggle ? (
+                <span className="text-xs text-muted-foreground">
+                  Not preferred
+                </span>
+              ) : null}
+            </div>
+          </div>
+
           <SupplierQuoteSelect
             value={quote.supplierId}
             onValueChange={(supplierId) => onChange({ ...quote, supplierId })}
@@ -108,18 +131,33 @@ export function SupplierQuoteRow({
 
           <div className="flex flex-col justify-end">
             {showRecommendedToggle ? (
-              <label className="mb-2 flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={quote.isRecommended}
-                  onChange={(event) =>
-                    onChange({ ...quote, isRecommended: event.target.checked })
+              <button
+                type="button"
+                role="radio"
+                aria-checked={isPreferred}
+                disabled={disabled}
+                onClick={() => {
+                  if (!isPreferred) {
+                    onChange({ ...quote, isRecommended: true })
                   }
-                  disabled={disabled}
-                  className="size-4 rounded border-input"
-                />
-                <span>Preferred</span>
-              </label>
+                }}
+                className={cn(
+                  "mb-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors",
+                  isPreferred
+                    ? "border-emerald-600 bg-emerald-600 text-white"
+                    : "border-input bg-background text-foreground hover:border-emerald-500/50 hover:bg-emerald-50/60",
+                  disabled && "cursor-not-allowed opacity-50"
+                )}
+              >
+                {isPreferred ? (
+                  <>
+                    <Check className="size-4 shrink-0" aria-hidden />
+                    Preferred
+                  </>
+                ) : (
+                  "Mark as preferred"
+                )}
+              </button>
             ) : null}
           </div>
 

@@ -15,6 +15,7 @@ import type { DiscountType } from "../lib/line-pricing"
 import { DEFAULT_GST_RATE_PERCENT } from "../lib/line-pricing"
 import { normalizeRequisitionPriority } from "../lib/requisition-priorities"
 import {
+  applyRecommendedSupplierDefaults,
   createEmptySupplierQuote,
   mapSupplierQuoteToUploadMeta,
   mapSupplierQuotesToPayload,
@@ -68,7 +69,11 @@ async function syncPendingQuoteUploads(
   requisitionId: number,
   quotes: SupplierQuoteDraft[]
 ) {
-  for (const quote of quotes) {
+  // Normalize preferred flags across the full quote list first, then upload
+  // each file with that quote's actual isRecommended value.
+  const normalizedQuotes = applyRecommendedSupplierDefaults(quotes)
+
+  for (const quote of normalizedQuotes) {
     if (quote.file && quote.supplierId) {
       await uploadRequisitionQuote(
         requisitionId,
