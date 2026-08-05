@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { fetchDashboardMetrics } from "@/lib/api/dashboard"
 import { UBCard } from "../../../components/shared/UBCard"
 import { RecentFormsTable } from "../components/RequisitionRecentForms"
-import { CostCenterStageSummaryTable } from "../components/CostCenterStageSummary"
+import { CostCenterStageSummaryCard } from "../components/CostCenterStageSummary"
 
 interface PORDashboardPageProps {}
 
@@ -39,10 +39,6 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
 
   // Director/Dean approves requisitions directly and never handles supplier requests
   const showSupplierCard = backendRole !== "director-dean"
-
-  // Cost Center & Stage summary is restricted to Purchase Officers and Super Admins
-  const canViewCostCenterSummary =
-    backendRole === "purchase-officer" || backendRole === "super-admin"
 
   const formatRoleName = (role: string) => {
     return role
@@ -148,7 +144,7 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
         )}
       </div>
 
-      {canViewCostCenterSummary && <CostCenterStageSummaryTable />}
+      <CostCenterStageSummaryCard />
 
       <RecentFormsTable />
     </div>

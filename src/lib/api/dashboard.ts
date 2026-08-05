@@ -66,6 +66,9 @@ export type CostCenterStageSummary = {
     by_stage: Record<number, number> // stage id -> count
     grand_total: number
   }
+  // "assigned": rows limited to the caller's own cost center(s) (requester,
+  // director-dean). "all": every cost center in the system (every other role).
+  scope: "assigned" | "all"
 }
 
 type CostCenterStageSummaryApiResponse = CostCenterStageSummary & {
@@ -117,6 +120,7 @@ export async function fetchCostCenterStageSummary() {
     stages: response.stages,
     data: response.data,
     totals: response.totals,
+    scope: response.scope,
   }
 }
 
