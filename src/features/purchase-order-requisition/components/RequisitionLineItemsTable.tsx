@@ -137,7 +137,16 @@ export function RequisitionLineItemsTable({
       return
     }
 
-    onChange([...items, createEmptyLineItem()])
+    const previous = items[items.length - 1]
+    const next = createEmptyLineItem()
+
+    if (previous?.chart_of_account_id) {
+      next.chart_of_account_id = previous.chart_of_account_id
+      next.account_no = previous.account_no
+      next.description = previous.description
+    }
+
+    onChange([...items, next])
   }
 
   const inputClassName = getInputClassName(stripedRows)
@@ -177,6 +186,7 @@ export function RequisitionLineItemsTable({
             <thead className="bg-muted/40">
               <tr className="text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <th className="min-w-72 px-2 py-2 font-medium">Budget line item</th>
+                <th className="min-w-32 px-2 py-2 font-medium">Notes</th>
                 <th className="w-20 px-2 py-2 font-medium">Qty</th>
                 <th className="w-28 px-2 py-2 font-medium">Unit cost</th>
                 <th className="w-28 px-2 py-2 font-medium">Subtotal</th>
@@ -184,7 +194,6 @@ export function RequisitionLineItemsTable({
                 <th className="w-16 px-2 py-2 font-medium">GST</th>
                 <th className="w-28 px-2 py-2 font-medium">GST amt</th>
                 <th className="w-28 px-2 py-2 font-medium">Total</th>
-                <th className="min-w-32 px-2 py-2 font-medium">Notes</th>
                 <th className="w-10 px-2 py-2" aria-label="Actions" />
               </tr>
             </thead>
@@ -227,6 +236,21 @@ export function RequisitionLineItemsTable({
                               description: account.description,
                             })
                           }
+                        />
+                      </td>
+                      <td className={getStripedCellClassName(index, stripedRows)}>
+                        <input
+                          type="text"
+                          aria-label="Notes"
+                          className={inputClassName}
+                          value={item.comments}
+                          onChange={(event) =>
+                            updateItem(item.id, {
+                              comments: event.target.value,
+                            })
+                          }
+                          disabled={disabled}
+                          placeholder="Optional"
                         />
                       </td>
                       <td className={getStripedCellClassName(index, stripedRows)}>
@@ -299,21 +323,6 @@ export function RequisitionLineItemsTable({
                         <span className="block px-1 py-1.5 font-medium tabular-nums">
                           {formatCurrency(priced?.total ?? 0)}
                         </span>
-                      </td>
-                      <td className={getStripedCellClassName(index, stripedRows)}>
-                        <input
-                          type="text"
-                          aria-label="Notes"
-                          className={inputClassName}
-                          value={item.comments}
-                          onChange={(event) =>
-                            updateItem(item.id, {
-                              comments: event.target.value,
-                            })
-                          }
-                          disabled={disabled}
-                          placeholder="Optional"
-                        />
                       </td>
                       <td className={getStripedCellClassName(index, stripedRows)}>
                         <UBButton

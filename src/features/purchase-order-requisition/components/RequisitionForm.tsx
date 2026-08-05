@@ -1,5 +1,6 @@
 import { Save, Send, X } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useBlocker } from "react-router-dom"
 
 import { uploadRequisitionQuote } from "@/lib/api/attachments"
 import { fetchOperationalBudgetLineItems } from "@/lib/api/budgets"
@@ -88,11 +89,17 @@ async function syncPendingQuoteUploads(
 
 export type RequisitionFormMode = "create" | "edit"
 
+export type RequisitionFormAutosave = () => Promise<boolean>
+
 type RequisitionFormProps = {
   mode: RequisitionFormMode
   requisitionId?: number
   className?: string
   onSuccess?: (requisition: RequisitionRecord) => void
+  /** Fired after a background draft save (navigate-away / panel switch). */
+  onDraftSaved?: (requisition: RequisitionRecord) => void
+  /** Lets the parent trigger the same full-draft save before in-page navigation. */
+  onRegisterAutosave?: (autosave: RequisitionFormAutosave | null) => void
   onCancel?: () => void
 }
 
@@ -101,6 +108,8 @@ export function RequisitionForm({
   requisitionId,
   className,
   onSuccess,
+  onDraftSaved,
+  onRegisterAutosave,
   onCancel,
 }: RequisitionFormProps) {
   const assignedCostCenter = useRequisitionsStore(
@@ -138,6 +147,7 @@ export function RequisitionForm({
   const [isRecurring, setIsRecurring] = useState(false)
   const [requiresDownpayment, setRequiresDownpayment] = useState(false)
   const [reminderDate, setReminderDate] = useState("")
+  const [quoteWaiverReason, setQuoteWaiverReason] = useState("")
   const [supplierQuotes, setSupplierQuotes] = useState<SupplierQuoteDraft[]>([
     createEmptySupplierQuote(),
   ])
@@ -176,8 +186,28 @@ export function RequisitionForm({
   const [budgetAccountsError, setBudgetAccountsError] = useState<string | null>(
     null
   )
+  const [isDirty, setIsDirty] = useState(false)
+  const skipDirtyTrackingRef = useRef(true)
+  const isDirtyRef = useRef(false)
+  const autosaveInFlightRef = useRef<Promise<boolean> | null>(null)
+
+  const beginQuietUpdate = () => {
+    skipDirtyTrackingRef.current = true
+  }
+
+  const endQuietUpdate = () => {
+    isDirtyRef.current = false
+    setIsDirty(false)
+    // Keep dirty tracking suppressed until after hydrate effects flush.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        skipDirtyTrackingRef.current = false
+      })
+    })
+  }
 
   const resetCreateForm = () => {
+    beginQuietUpdate()
     setSupplierQuotes((current) => {
       revokeSupplierQuotePreviews(current)
       return [createEmptySupplierQuote()]
@@ -193,6 +223,7 @@ export function RequisitionForm({
     setIsRecurring(false)
     setRequiresDownpayment(false)
     setReminderDate("")
+    setQuoteWaiverReason("")
     setLineItems([createEmptyLineItem()])
     setDiscountType("none")
     setDiscountValue(0)
@@ -212,9 +243,11 @@ export function RequisitionForm({
     setCanCloseRequisition(false)
     setActivityComment("")
     setSelectedTags([])
+    endQuietUpdate()
   }
 
   const applyRequisitionState = (requisition: RequisitionRecord) => {
+    beginQuietUpdate()
     setReferenceNumber(requisition.requisition_number ?? requisition.number)
     setCostCenterLabel(requisition.cost_center?.name ?? "")
     setCostCenterId(requisition.cost_center_id)
@@ -229,6 +262,7 @@ export function RequisitionForm({
     )
     setIsRecurring(Boolean(requisition.is_recurring))
     setRequiresDownpayment(Boolean(requisition.requires_downpayment))
+    setQuoteWaiverReason(requisition.quote_waiver_reason ?? "")
     setReminderDate(
       requisition.reminder_date
         ? toDateInputValue(requisition.reminder_date)
@@ -272,6 +306,7 @@ export function RequisitionForm({
     )
     setActivityComment("")
     setFormError(null)
+    endQuietUpdate()
   }
 
   useEffect(() => {
@@ -421,7 +456,8 @@ export function RequisitionForm({
     if (shouldSubmit) {
       const supplierQuoteError = validateSupplierQuotes(
         supplierQuotes,
-        requisitionTotal
+        requisitionTotal,
+        quoteWaiverReason
       )
 
       if (supplierQuoteError) {
@@ -440,14 +476,18 @@ export function RequisitionForm({
     return null
   }
 
-  const persistRequisition = async (shouldSubmit: boolean) => {
+  const persistRequisition = async (
+    shouldSubmit: boolean,
+    options?: { source?: "explicit" | "autosave" }
+  ): Promise<RequisitionRecord | null> => {
+    const source = options?.source ?? "explicit"
     setFormError(null)
 
     const validationError = validateForm(shouldSubmit)
 
     if (validationError) {
       setFormError(validationError)
-      return
+      return null
     }
 
     const payload = {
@@ -457,6 +497,7 @@ export function RequisitionForm({
       expected_delivery_date: expectedDeliveryDate || null,
       is_recurring: isRecurring,
       requires_downpayment: requiresDownpayment,
+      quote_waiver_reason: quoteWaiverReason.trim() || null,
       reminder_date: isRecurring ? reminderDate : null,
       suppliers: mapSupplierQuotesToPayload(supplierQuotes),
       items: mapLineItemsForApi(lineItems),
@@ -470,12 +511,13 @@ export function RequisitionForm({
       mode === "edit" && requisitionId
         ? await updateRequisition(requisitionId, {
             ...payload,
-            activity_comment: activityComment.trim() || null,
+            activity_comment:
+              source === "explicit" ? activityComment.trim() || null : null,
           })
         : await createRequisition(payload)
 
     if (!requisition) {
-      return
+      return null
     }
 
     try {
@@ -486,17 +528,167 @@ export function RequisitionForm({
           ? uploadError.message
           : "Requisition saved, but one or more quote uploads failed."
       )
-      return
+      return null
     }
 
-    if (mode === "edit") {
+    isDirtyRef.current = false
+    setIsDirty(false)
+
+    if (source === "explicit" && mode === "edit") {
       applyRequisitionState(requisition)
       setActivityComment("")
       await fetchLogs(requisition.id, true)
+    } else if (source === "autosave" && mode === "edit") {
+      beginQuietUpdate()
+      setReferenceNumber(requisition.requisition_number ?? requisition.number)
+      setStatusLabel(requisition.status?.name ?? "")
+      setStageLabel(requisition.stage?.name ?? "")
+      endQuietUpdate()
     }
 
-    onSuccess?.(requisition)
+    if (source === "autosave") {
+      onDraftSaved?.(requisition)
+    } else {
+      onSuccess?.(requisition)
+    }
+
+    return requisition
   }
+
+  const autosaveDraft = useCallback(async () => {
+    if (!isDirtyRef.current || !isEditable) {
+      return true
+    }
+
+    const hasMeaningfulDraft =
+      Boolean(currencyId) ||
+      isLineItemsValid(lineItems) ||
+      mapSupplierQuotesToPayload(supplierQuotes).length > 0 ||
+      selectedTags.length > 0 ||
+      Boolean(expectedDeliveryDate) ||
+      isRecurring ||
+      requiresDownpayment ||
+      quoteWaiverReason.trim() !== ""
+
+    // Empty / untouched create forms should not block navigation.
+    if (!hasMeaningfulDraft) {
+      isDirtyRef.current = false
+      setIsDirty(false)
+      return true
+    }
+
+    if (autosaveInFlightRef.current) {
+      return autosaveInFlightRef.current
+    }
+
+    const run = (async () => {
+      const saved = await persistRequisition(false, { source: "autosave" })
+      return saved !== null
+    })()
+
+    autosaveInFlightRef.current = run
+
+    try {
+      return await run
+    } finally {
+      autosaveInFlightRef.current = null
+    }
+  }, [
+    activityComment,
+    costCenterId,
+    createRequisition,
+    currencyId,
+    discountType,
+    discountValue,
+    expectedDeliveryDate,
+    fetchLogs,
+    isEditable,
+    isRecurring,
+    lineItems,
+    mode,
+    onDraftSaved,
+    priority,
+    quoteWaiverReason,
+    reminderDate,
+    requiresDownpayment,
+    requisitionId,
+    selectedTags,
+    supplierQuotes,
+    updateRequisition,
+  ])
+
+  useEffect(() => {
+    onRegisterAutosave?.(autosaveDraft)
+    return () => onRegisterAutosave?.(null)
+  }, [autosaveDraft, onRegisterAutosave])
+
+  useEffect(() => {
+    if (skipDirtyTrackingRef.current) {
+      return
+    }
+    isDirtyRef.current = true
+    setIsDirty(true)
+  }, [
+    activityComment,
+    currencyId,
+    discountType,
+    discountValue,
+    expectedDeliveryDate,
+    isRecurring,
+    lineItems,
+    priority,
+    quoteWaiverReason,
+    reminderDate,
+    requiresDownpayment,
+    selectedTags,
+    supplierQuotes,
+  ])
+
+  const shouldBlockNavigation = isDirty && isEditable && !isSaving
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      shouldBlockNavigation &&
+      currentLocation.pathname !== nextLocation.pathname
+  )
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") {
+      return
+    }
+
+    let cancelled = false
+
+    void (async () => {
+      const saved = await autosaveDraft()
+      if (cancelled) {
+        return
+      }
+
+      if (saved) {
+        blocker.proceed?.()
+      } else {
+        blocker.reset?.()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [autosaveDraft, blocker])
+
+  useEffect(() => {
+    if (!shouldBlockNavigation) {
+      return
+    }
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ""
+    }
+
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [shouldBlockNavigation])
 
   const handleApprovalDecision = async () => {
     if (!requisitionId) {
@@ -663,6 +855,8 @@ export function RequisitionForm({
       <RequisitionSupplierQuotes
         quotes={supplierQuotes}
         onChange={setSupplierQuotes}
+        quoteWaiverReason={quoteWaiverReason}
+        onQuoteWaiverReasonChange={setQuoteWaiverReason}
         requisitionId={mode === "edit" ? requisitionId : undefined}
         requisitionTotal={requisitionTotal}
         disabled={isFormDisabled}

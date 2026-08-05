@@ -121,6 +121,7 @@ export type RequisitionRecord = {
   expected_delivery_date: string | null
   is_recurring: boolean
   requires_downpayment?: boolean
+  quote_waiver_reason?: string | null
   reminder_date: string | null
   items?: RequisitionLineItem[]
   suppliers?: RequisitionSupplierPivot[]
@@ -160,6 +161,7 @@ export type CreateRequisitionPayload = {
   expected_delivery_date?: string | null
   is_recurring: boolean
   requires_downpayment?: boolean
+  quote_waiver_reason?: string | null
   reminder_date?: string | null
   discount_type?: "none" | "percent" | "amount"
   discount_value?: number

@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Navigate } from "react-router-dom"
 
 import { UBButton } from "@/components/shared/UBButton"
-import { RequisitionForm } from "@/features/purchase-order-requisition/components/RequisitionForm"
+import {
+  RequisitionForm,
+  type RequisitionFormAutosave,
+} from "@/features/purchase-order-requisition/components/RequisitionForm"
 import { RequisitionNumberBadge } from "@/features/purchase-order-requisition/components/RequisitionNumberBadge"
 import { RequisitionPane } from "@/features/purchase-order-requisition/components/RequisitionPane"
 import { mapPipelineToTimelineSteps } from "@/features/purchase-order-requisition/lib/pipeline-utils"
@@ -31,6 +34,7 @@ function resolveActiveRequisition(
 export function PORRequisitionsPage() {
   const [panelMode, setPanelMode] = useState<PanelMode>("create")
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
+  const autosaveRef = useRef<RequisitionFormAutosave | null>(null)
 
   const requisitions = useRequisitionsStore((state) => state.requisitions)
   const selectedRequisition = useRequisitionsStore(
@@ -55,14 +59,29 @@ export function PORRequisitionsPage() {
     void fetchApprovalPipeline()
   }, [fetchApprovalPipeline])
 
+  const runAfterAutosave = useCallback(async (action: () => void) => {
+    const autosave = autosaveRef.current
+    if (autosave) {
+      const saved = await autosave()
+      if (!saved) {
+        return
+      }
+    }
+    action()
+  }, [])
+
   const handleSelectRequisition = (id: number) => {
-    setSelectedRequisitionId(id)
-    setPanelMode("edit")
+    void runAfterAutosave(() => {
+      setSelectedRequisitionId(id)
+      setPanelMode("edit")
+    })
   }
 
   const handleNewRequisition = () => {
-    setSelectedRequisitionId(null)
-    setPanelMode("create")
+    void runAfterAutosave(() => {
+      setSelectedRequisitionId(null)
+      setPanelMode("create")
+    })
   }
 
   const handleFormSuccess = async (requisition: RequisitionRecord) => {
@@ -71,8 +90,22 @@ export function PORRequisitionsPage() {
     setPanelMode("edit")
   }
 
+  const handleDraftSaved = async (_requisition: RequisitionRecord) => {
+    await fetchRequisitions(true)
+  }
+
+  const handleRegisterAutosave = useCallback(
+    (autosave: RequisitionFormAutosave | null) => {
+      autosaveRef.current = autosave
+    },
+    []
+  )
+
   const handleCancel = () => {
-    handleNewRequisition()
+    void runAfterAutosave(() => {
+      setSelectedRequisitionId(null)
+      setPanelMode("create")
+    })
   }
 
   const pipeline = activeRequisition?.pipeline ?? approvalPipeline
@@ -87,6 +120,7 @@ export function PORRequisitionsPage() {
       <header className="flex shrink-0 items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           Search requisitions on the left and create or update on the right.
+          Unsaved changes are saved as a draft when you leave this form.
         </p>
         <UBButton size="sm" onClick={handleNewRequisition}>
           New requisition
@@ -154,6 +188,8 @@ export function PORRequisitionsPage() {
               mode={panelMode}
               requisitionId={selectedRequisitionId ?? undefined}
               onSuccess={handleFormSuccess}
+              onDraftSaved={handleDraftSaved}
+              onRegisterAutosave={handleRegisterAutosave}
               onCancel={handleCancel}
             />
           </div>

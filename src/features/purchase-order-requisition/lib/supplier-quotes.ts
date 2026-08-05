@@ -45,6 +45,17 @@ export function getRequiredQuoteCount(requisitionTotal: number) {
   return requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD ? 3 : 1
 }
 
+export function needsQuoteWaiverReason(
+  quotes: SupplierQuoteDraft[],
+  requisitionTotal: number
+) {
+  return (
+    requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD &&
+    getCompleteSupplierQuotes(quotes).length <
+      getRequiredQuoteCount(requisitionTotal)
+  )
+}
+
 export function getSupplierQuoteRequirementMessage(requisitionTotal: number) {
   const requiredCount = getRequiredQuoteCount(requisitionTotal)
 
@@ -52,7 +63,7 @@ export function getSupplierQuoteRequirementMessage(requisitionTotal: number) {
     return "Requisitions under $1,000 require one supplier quote with a PDF. If you add more than one quote, select a preferred supplier."
   }
 
-  return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more require at least ${requiredCount} supplier quotes and one preferred supplier.`
+  return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more normally require at least ${requiredCount} supplier quotes and one preferred supplier. If fewer quotes are used, provide a reason.`
 }
 
 export function applyRecommendedSupplierDefaults(
@@ -76,17 +87,23 @@ export function applyRecommendedSupplierDefaults(
 
 export function validateSupplierQuotes(
   quotes: SupplierQuoteDraft[],
-  requisitionTotal: number
+  requisitionTotal: number,
+  quoteWaiverReason = ""
 ): string | null {
   const completeQuotes = getCompleteSupplierQuotes(quotes)
   const requiredCount = getRequiredQuoteCount(requisitionTotal)
+  const hasWaiver = quoteWaiverReason.trim() !== ""
 
-  if (completeQuotes.length < requiredCount) {
+  if (completeQuotes.length < 1) {
+    return "Add at least one supplier quote with a PDF file and supplier selected."
+  }
+
+  if (completeQuotes.length < requiredCount && !hasWaiver) {
     if (requiredCount === 1) {
       return "Add at least one supplier quote with a PDF file and supplier selected."
     }
 
-    return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more require at least ${requiredCount} supplier quotes with PDF files and suppliers selected.`
+    return `Requisitions of $${SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more require at least ${requiredCount} supplier quotes, or provide a reason for fewer quotes.`
   }
 
   if (
@@ -101,9 +118,12 @@ export function validateSupplierQuotes(
 
 export function isSupplierQuotesValid(
   quotes: SupplierQuoteDraft[],
-  requisitionTotal: number
+  requisitionTotal: number,
+  quoteWaiverReason = ""
 ) {
-  return validateSupplierQuotes(quotes, requisitionTotal) === null
+  return (
+    validateSupplierQuotes(quotes, requisitionTotal, quoteWaiverReason) === null
+  )
 }
 
 export function mapSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {

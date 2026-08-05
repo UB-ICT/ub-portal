@@ -10,6 +10,7 @@ import {
   createEmptySupplierQuote,
   getCompleteSupplierQuotes,
   getSupplierQuoteRequirementMessage,
+  needsQuoteWaiverReason,
   revokeSupplierQuotePreview,
   SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD,
   type SupplierQuoteDraft,
@@ -19,6 +20,8 @@ import { SupplierQuoteRow } from "./SupplierQuoteRow"
 type RequisitionSupplierQuotesProps = {
   quotes: SupplierQuoteDraft[]
   onChange: (quotes: SupplierQuoteDraft[]) => void
+  quoteWaiverReason?: string
+  onQuoteWaiverReasonChange?: (reason: string) => void
   requisitionId?: number
   requisitionTotal?: number
   disabled?: boolean
@@ -52,6 +55,8 @@ function mapAttachmentsToQuotes(
 export function RequisitionSupplierQuotes({
   quotes,
   onChange,
+  quoteWaiverReason = "",
+  onQuoteWaiverReasonChange,
   requisitionId,
   requisitionTotal = 0,
   disabled = false,
@@ -133,6 +138,7 @@ export function RequisitionSupplierQuotes({
     requisitionTotal >= SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD ||
     quotes.length > 1 ||
     completeQuoteCount > 1
+  const showWaiverReason = needsQuoteWaiverReason(quotes, requisitionTotal)
 
   return (
     <section className={cn("space-y-3", className)}>
@@ -185,6 +191,33 @@ export function RequisitionSupplierQuotes({
           ))}
         </div>
       )}
+
+      {showWaiverReason ? (
+        <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+          <label
+            htmlFor="quote-waiver-reason"
+            className="text-xs font-medium uppercase tracking-widest text-amber-900 dark:text-amber-100"
+          >
+            Reason for fewer than 3 quotes
+          </label>
+          <textarea
+            id="quote-waiver-reason"
+            value={quoteWaiverReason}
+            onChange={(event) =>
+              onQuoteWaiverReasonChange?.(event.target.value)
+            }
+            rows={3}
+            disabled={disabled || isLoading}
+            placeholder="Explain why fewer than three supplier quotes are being submitted..."
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          <p className="text-xs text-amber-800 dark:text-amber-200">
+            Required for requisitions of $
+            {SUPPLIER_QUOTE_HIGH_VALUE_THRESHOLD.toLocaleString()} or more when
+            fewer than three quotes are attached.
+          </p>
+        </div>
+      ) : null}
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {storeError ? (
