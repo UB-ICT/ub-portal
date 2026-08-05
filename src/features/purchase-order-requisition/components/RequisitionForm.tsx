@@ -26,7 +26,6 @@ import {
   createEmptySupplierQuote,
   mapSupplierQuoteToUploadMeta,
   mapSupplierQuotesToPayload,
-  revokeSupplierQuotePreviews,
   validateSupplierQuotes,
   type SupplierQuoteDraft,
 } from "../lib/supplier-quotes"
@@ -77,21 +76,40 @@ function mapApiItemsToDrafts(
 async function syncPendingQuoteUploads(
   requisitionId: number,
   quotes: SupplierQuoteDraft[]
-) {
+): Promise<SupplierQuoteDraft[]> {
   // Normalize preferred flags across the full quote list first, then upload
-  // each file with that quote's actual isRecommended value.
+  // each new file once. Clear the local File afterward so later autosaves
+  // do not upload the same PDF again.
   const normalizedQuotes = applyRecommendedSupplierDefaults(quotes)
+  const nextQuotes: SupplierQuoteDraft[] = []
 
   for (const quote of normalizedQuotes) {
     if (quote.file && quote.supplierId) {
-      await uploadRequisitionQuote(
+      const attachment = await uploadRequisitionQuote(
         requisitionId,
         Number(quote.supplierId),
         quote.file,
         mapSupplierQuoteToUploadMeta(quote)
       )
+
+      if (quote.previewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(quote.previewUrl)
+      }
+
+      nextQuotes.push({
+        ...quote,
+        attachmentId: attachment.id,
+        fileName: attachment.file_name || quote.fileName,
+        file: null,
+        previewUrl: null,
+      })
+      continue
     }
+
+    nextQuotes.push(quote)
   }
+
+  return nextQuotes
 }
 
 export type RequisitionFormMode = "create" | "edit"
@@ -214,46 +232,6 @@ export function RequisitionForm({
         skipDirtyTrackingRef.current = false
       })
     })
-  }
-
-  const resetCreateForm = () => {
-    beginQuietUpdate()
-    setSupplierQuotes((current) => {
-      revokeSupplierQuotePreviews(current)
-      return [createEmptySupplierQuote()]
-    })
-    setReferenceNumber("")
-    setCostCenterLabel(assignedCostCenter?.name ?? "")
-    setCostCenterId(assignedCostCenter?.id ?? null)
-    setStatusLabel("")
-    setStageLabel("")
-    setCurrencyId("")
-    setPriority("standard")
-    setExpectedDeliveryDate("")
-    setIsRecurring(false)
-    setRequiresDownpayment(false)
-    setReminderDate("")
-    setQuoteWaiverReason("")
-    setLineItems([createEmptyLineItem()])
-    setDiscountType("none")
-    setDiscountValue(0)
-    setFormError(null)
-    setIsEditable(true)
-    setShowApprovalActions(false)
-    setCanApprove(false)
-    setUserStageAction(null)
-    setPurchaseOrderNumber("")
-    setPurchaseOrderFileName(null)
-    setPurchaseOrderEmailedAt(null)
-    setPreferredSupplierEmail(null)
-    setCanEditPurchaseOrderNumber(false)
-    setCanUploadPurchaseOrder(false)
-    setCanEmailPurchaseOrder(false)
-    setCanCancelRequisition(false)
-    setCanCloseRequisition(false)
-    setActivityComment("")
-    setSelectedTags([])
-    endQuietUpdate()
   }
 
   const applyRequisitionState = (requisition: RequisitionRecord) => {
@@ -625,7 +603,13 @@ export function RequisitionForm({
     }
 
     try {
-      await syncPendingQuoteUploads(requisition.id, supplierQuotes)
+      const syncedQuotes = await syncPendingQuoteUploads(
+        requisition.id,
+        supplierQuotes
+      )
+      beginQuietUpdate()
+      setSupplierQuotes(syncedQuotes)
+      endQuietUpdate()
     } catch (uploadError) {
       setFormError(
         uploadError instanceof Error

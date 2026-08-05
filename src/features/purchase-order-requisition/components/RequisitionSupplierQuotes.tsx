@@ -71,6 +71,8 @@ export function RequisitionSupplierQuotes({
   const storeError = useRequisitionQuotesStore((state) => state.error)
 
   const hasLoadedAttachments = useRef(false)
+  const quotesRef = useRef(quotes)
+  quotesRef.current = quotes
 
   const emitChange = (nextQuotes: SupplierQuoteDraft[]) => {
     onChange(applyRecommendedSupplierDefaults(nextQuotes))
@@ -87,8 +89,23 @@ export function RequisitionSupplierQuotes({
 
     void fetchAttachments(requisitionId).then((attachments) => {
       hasLoadedAttachments.current = true
+
+      // Keep any quotes that still have a local File pending upload so a
+      // background attachment refresh cannot drop in-progress selections.
+      const pendingLocalQuotes = quotesRef.current.filter(
+        (quote) => quote.file && quote.supplierId && !quote.attachmentId
+      )
+
       if (attachments.length > 0) {
-        emitChange(mapAttachmentsToQuotes(attachments))
+        emitChange([
+          ...mapAttachmentsToQuotes(attachments),
+          ...pendingLocalQuotes,
+        ])
+        return
+      }
+
+      if (pendingLocalQuotes.length > 0) {
+        emitChange(pendingLocalQuotes)
         return
       }
 
