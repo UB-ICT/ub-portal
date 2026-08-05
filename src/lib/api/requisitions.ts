@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api/client"
+import { buildApiUrl } from "@/lib/config"
 import { readStoredAccessToken } from "@/lib/auth/storage"
 import type { RequisitionAttachment } from "@/lib/api/attachments"
 import type { RequisitionPriority } from "@/features/purchase-order-requisition/lib/requisition-priorities"
@@ -156,7 +157,7 @@ export type RequisitionSupplierInput = {
 
 export type CreateRequisitionPayload = {
   cost_center_id: number
-  currency_id: number
+  currency_id: number | null
   priority: RequisitionPriority
   expected_delivery_date?: string | null
   is_recurring: boolean
@@ -225,6 +226,38 @@ export async function updateRequisition(
   return request<RequisitionRecord>(`${BASE_PATH}/requisitions/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Best-effort draft flush for page unload. Uses fetch keepalive so the
+ * browser can finish the request after the document is torn down.
+ */
+export function flushRequisitionDraftKeepalive(
+  payload: CreateRequisitionPayload | UpdateRequisitionPayload,
+  requisitionId?: number | null
+) {
+  const token = readStoredAccessToken()
+  if (!token) {
+    return
+  }
+
+  const path =
+    requisitionId != null
+      ? `${BASE_PATH}/requisitions/${requisitionId}`
+      : `${BASE_PATH}/requisitions`
+
+  void fetch(buildApiUrl(path), {
+    method: requisitionId != null ? "PUT" : "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  }).catch(() => {
+    // Unload flush is best-effort.
   })
 }
 

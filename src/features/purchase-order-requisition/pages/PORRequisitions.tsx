@@ -34,6 +34,7 @@ function resolveActiveRequisition(
 export function PORRequisitionsPage() {
   const [panelMode, setPanelMode] = useState<PanelMode>("create")
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
+  const [formInstanceKey, setFormInstanceKey] = useState(() => `new-${Date.now()}`)
   const autosaveRef = useRef<RequisitionFormAutosave | null>(null)
 
   const requisitions = useRequisitionsStore((state) => state.requisitions)
@@ -74,6 +75,7 @@ export function PORRequisitionsPage() {
     void runAfterAutosave(() => {
       setSelectedRequisitionId(id)
       setPanelMode("edit")
+      setFormInstanceKey(`r-${id}`)
     })
   }
 
@@ -81,6 +83,7 @@ export function PORRequisitionsPage() {
     void runAfterAutosave(() => {
       setSelectedRequisitionId(null)
       setPanelMode("create")
+      setFormInstanceKey(`new-${Date.now()}`)
     })
   }
 
@@ -88,10 +91,14 @@ export function PORRequisitionsPage() {
     await fetchRequisitions(true)
     setSelectedRequisitionId(requisition.id)
     setPanelMode("edit")
+    setFormInstanceKey(`r-${requisition.id}`)
   }
 
-  const handleDraftSaved = async (_requisition: RequisitionRecord) => {
+  const handleDraftSaved = async (requisition: RequisitionRecord) => {
     await fetchRequisitions(true)
+    // Keep formInstanceKey stable so the in-progress form is not remounted.
+    setSelectedRequisitionId(requisition.id)
+    setPanelMode("edit")
   }
 
   const handleRegisterAutosave = useCallback(
@@ -105,6 +112,7 @@ export function PORRequisitionsPage() {
     void runAfterAutosave(() => {
       setSelectedRequisitionId(null)
       setPanelMode("create")
+      setFormInstanceKey(`new-${Date.now()}`)
     })
   }
 
@@ -120,7 +128,8 @@ export function PORRequisitionsPage() {
       <header className="flex shrink-0 items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           Search requisitions on the left and create or update on the right.
-          Unsaved changes are saved as a draft when you leave this form.
+          Progress is saved as a draft automatically while you work, and when
+          you leave this page or refresh.
         </p>
         <UBButton size="sm" onClick={handleNewRequisition}>
           New requisition
@@ -184,7 +193,7 @@ export function PORRequisitionsPage() {
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">
             <RequisitionForm
-              key={panelMode === "create" ? "create" : `edit-${selectedRequisitionId}`}
+              key={formInstanceKey}
               mode={panelMode}
               requisitionId={selectedRequisitionId ?? undefined}
               onSuccess={handleFormSuccess}

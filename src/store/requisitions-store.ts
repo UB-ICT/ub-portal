@@ -44,11 +44,13 @@ type RequisitionsState = {
   fetchRequisitions: (force?: boolean) => Promise<RequisitionRecord[]>
   fetchRequisitionById: (id: number) => Promise<RequisitionRecord | null>
   createRequisition: (
-    payload: CreateRequisitionPayload
+    payload: CreateRequisitionPayload,
+    options?: { silent?: boolean }
   ) => Promise<RequisitionRecord | null>
   updateRequisition: (
     id: number,
-    payload: UpdateRequisitionPayload
+    payload: UpdateRequisitionPayload,
+    options?: { silent?: boolean }
   ) => Promise<RequisitionRecord | null>
   approveRequisition: (
     id: number,
@@ -181,30 +183,36 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
       return null
     }
   },
-  createRequisition: async (payload) => {
-    set({ isSaving: true, error: null })
+  createRequisition: async (payload, options) => {
+    const silent = Boolean(options?.silent)
+    if (!silent) {
+      set({ isSaving: true, error: null })
+    }
 
     try {
       const requisition = await createRequisition(payload)
       set((state) => ({
-        requisitions: [requisition, ...state.requisitions],
-        isSaving: false,
+        requisitions: [requisition, ...state.requisitions.filter((item) => item.id !== requisition.id)],
+        isSaving: silent ? state.isSaving : false,
         error: null,
       }))
       return requisition
     } catch (error) {
-      set({
-        isSaving: false,
+      set((state) => ({
+        isSaving: silent ? state.isSaving : false,
         error:
           error instanceof Error
             ? error.message
             : "Failed to create requisition.",
-      })
+      }))
       return null
     }
   },
-  updateRequisition: async (id, payload) => {
-    set({ isSaving: true, error: null })
+  updateRequisition: async (id, payload, options) => {
+    const silent = Boolean(options?.silent)
+    if (!silent) {
+      set({ isSaving: true, error: null })
+    }
 
     try {
       const requisition = await updateRequisition(id, payload)
@@ -213,18 +221,18 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
           item.id === id ? requisition : item
         ),
         selectedRequisition: requisition,
-        isSaving: false,
+        isSaving: silent ? state.isSaving : false,
         error: null,
       }))
       return requisition
     } catch (error) {
-      set({
-        isSaving: false,
+      set((state) => ({
+        isSaving: silent ? state.isSaving : false,
         error:
           error instanceof Error
             ? error.message
             : "Failed to update requisition.",
-      })
+      }))
       return null
     }
   },

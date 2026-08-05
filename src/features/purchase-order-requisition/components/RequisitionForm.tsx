@@ -8,6 +8,7 @@ import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
 import type { RequisitionPriority, RequisitionRecord, RequisitionUserStageAction } from "@/lib/api/requisitions"
+import { flushRequisitionDraftKeepalive } from "@/lib/api/requisitions"
 import type { RequisitionTag } from "@/lib/api/tags"
 import { cn } from "@/lib/utils"
 import { fetchGstRate } from "@/lib/api/requisition-settings"
@@ -15,6 +16,11 @@ import { useRequisitionsStore } from "@/store/requisitions-store"
 import type { DiscountType } from "../lib/line-pricing"
 import { DEFAULT_GST_RATE_PERCENT } from "../lib/line-pricing"
 import { normalizeRequisitionPriority } from "../lib/requisition-priorities"
+import {
+  clearRequisitionDraftSnapshot,
+  readRequisitionDraftSnapshot,
+  writeRequisitionDraftSnapshot,
+} from "../lib/requisition-draft-storage"
 import {
   applyRecommendedSupplierDefaults,
   createEmptySupplierQuote,
@@ -29,6 +35,7 @@ import {
   createEmptyLineItem,
   calculateRequisitionTotalFromLineItems,
   isLineItemsValid,
+  mapCompleteLineItemsForApi,
   mapLineItemsForApi,
   RequisitionLineItemsTable,
   type RequisitionLineItemDraft,
@@ -190,6 +197,9 @@ export function RequisitionForm({
   const skipDirtyTrackingRef = useRef(true)
   const isDirtyRef = useRef(false)
   const autosaveInFlightRef = useRef<Promise<boolean> | null>(null)
+  const skipNextServerHydrationRef = useRef(false)
+  const persistedRequisitionIdRef = useRef<number | null>(requisitionId ?? null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const beginQuietUpdate = () => {
     skipDirtyTrackingRef.current = true
@@ -315,30 +325,72 @@ export function RequisitionForm({
   }, [fetchFormData])
 
   useEffect(() => {
-    if (mode === "create") {
-      resetCreateForm()
-      return
-    }
+    persistedRequisitionIdRef.current = requisitionId ?? null
+  }, [requisitionId])
 
-    if (!requisitionId) {
-      return
-    }
-
-    void fetchRequisitionById(requisitionId).then((requisition) => {
-      if (!requisition) {
+  useEffect(() => {
+    if (requisitionId) {
+      if (skipNextServerHydrationRef.current) {
+        skipNextServerHydrationRef.current = false
         return
       }
 
-      applyRequisitionState(requisition)
-    })
-  }, [mode, requisitionId, fetchRequisitionById])
+      void fetchRequisitionById(requisitionId).then((requisition) => {
+        if (!requisition) {
+          return
+        }
+
+        applyRequisitionState(requisition)
+        clearRequisitionDraftSnapshot(requisition.id)
+      })
+      return
+    }
+
+    // Fresh create: restore any in-progress local draft from a prior refresh.
+    const snapshot = readRequisitionDraftSnapshot(null)
+    if (!snapshot) {
+      beginQuietUpdate()
+      endQuietUpdate()
+      return
+    }
+
+    beginQuietUpdate()
+    setCurrencyId(snapshot.currencyId)
+    setPriority(snapshot.priority)
+    setExpectedDeliveryDate(snapshot.expectedDeliveryDate)
+    setIsRecurring(snapshot.isRecurring)
+    setRequiresDownpayment(snapshot.requiresDownpayment)
+    setReminderDate(snapshot.reminderDate)
+    setQuoteWaiverReason(snapshot.quoteWaiverReason)
+    setDiscountType(snapshot.discountType)
+    setDiscountValue(snapshot.discountValue)
+    setActivityComment(snapshot.activityComment)
+    setSelectedTags(snapshot.selectedTags)
+    setLineItems(
+      snapshot.lineItems.length > 0
+        ? snapshot.lineItems
+        : [createEmptyLineItem()]
+    )
+    setSupplierQuotes(
+      snapshot.supplierQuotes.length > 0
+        ? snapshot.supplierQuotes.map((quote) => ({
+            ...quote,
+            file: null,
+            previewUrl: null,
+          }))
+        : [createEmptySupplierQuote()]
+    )
+    endQuietUpdate()
+    isDirtyRef.current = true
+    setIsDirty(true)
+  }, [requisitionId, fetchRequisitionById])
 
   useEffect(() => {
-    if (mode === "create" && assignedCostCenter) {
+    if (!requisitionId && assignedCostCenter) {
       setCostCenterLabel(assignedCostCenter.name)
       setCostCenterId(assignedCostCenter.id)
     }
-  }, [assignedCostCenter, mode])
+  }, [assignedCostCenter, requisitionId])
 
   useEffect(() => {
     if (!costCenterId) {
@@ -449,7 +501,7 @@ export function RequisitionForm({
       return "No cost center is available for this requisition."
     }
 
-    if (!currencyId) {
+    if (shouldSubmit && !currencyId) {
       return "Please select a currency."
     }
 
@@ -469,12 +521,67 @@ export function RequisitionForm({
       return "Please set a reminder date for recurring requisitions."
     }
 
-    if (!isLineItemsValid(lineItems)) {
+    if (shouldSubmit && !isLineItemsValid(lineItems)) {
       return "Each line item needs a line number, description, quantity, and unit cost."
     }
 
     return null
   }
+
+  const buildDraftPayload = (shouldSubmit: boolean) => {
+    const items = shouldSubmit
+      ? mapLineItemsForApi(lineItems)
+      : mapCompleteLineItemsForApi(lineItems)
+
+    return {
+      cost_center_id: costCenterId as number,
+      currency_id: currencyId ? Number(currencyId) : null,
+      priority,
+      expected_delivery_date: expectedDeliveryDate || null,
+      is_recurring: isRecurring,
+      requires_downpayment: requiresDownpayment,
+      quote_waiver_reason: quoteWaiverReason.trim() || null,
+      reminder_date: isRecurring ? reminderDate : null,
+      suppliers: shouldSubmit
+        ? mapSupplierQuotesToPayload(supplierQuotes)
+        : mapSupplierQuotesToPayload(supplierQuotes),
+      items,
+      discount_type: discountType,
+      discount_value: discountType === "none" ? 0 : discountValue,
+      tag_ids: selectedTags.map((tag) => tag.id),
+      submit: shouldSubmit,
+    }
+  }
+
+  const writeLocalDraftSnapshot = () => {
+    writeRequisitionDraftSnapshot(persistedRequisitionIdRef.current, {
+      currencyId,
+      priority,
+      expectedDeliveryDate,
+      isRecurring,
+      requiresDownpayment,
+      reminderDate,
+      quoteWaiverReason,
+      discountType,
+      discountValue,
+      activityComment,
+      selectedTagIds: selectedTags.map((tag) => tag.id),
+      selectedTags,
+      lineItems,
+      supplierQuotes,
+    })
+  }
+
+  const hasMeaningfulDraftProgress = () =>
+    Boolean(currencyId) ||
+    mapCompleteLineItemsForApi(lineItems).length > 0 ||
+    mapSupplierQuotesToPayload(supplierQuotes).length > 0 ||
+    selectedTags.length > 0 ||
+    Boolean(expectedDeliveryDate) ||
+    isRecurring ||
+    requiresDownpayment ||
+    quoteWaiverReason.trim() !== "" ||
+    Boolean(persistedRequisitionIdRef.current)
 
   const persistRequisition = async (
     shouldSubmit: boolean,
@@ -486,35 +593,32 @@ export function RequisitionForm({
     const validationError = validateForm(shouldSubmit)
 
     if (validationError) {
-      setFormError(validationError)
+      if (source !== "autosave") {
+        setFormError(validationError)
+      }
       return null
     }
 
-    const payload = {
-      cost_center_id: costCenterId as number,
-      currency_id: Number(currencyId),
-      priority,
-      expected_delivery_date: expectedDeliveryDate || null,
-      is_recurring: isRecurring,
-      requires_downpayment: requiresDownpayment,
-      quote_waiver_reason: quoteWaiverReason.trim() || null,
-      reminder_date: isRecurring ? reminderDate : null,
-      suppliers: mapSupplierQuotesToPayload(supplierQuotes),
-      items: mapLineItemsForApi(lineItems),
-      discount_type: discountType,
-      discount_value: discountType === "none" ? 0 : discountValue,
-      tag_ids: selectedTags.map((tag) => tag.id),
-      submit: shouldSubmit,
+    if (!costCenterId) {
+      return null
     }
 
+    const payload = buildDraftPayload(shouldSubmit)
+    const silent = source === "autosave"
+    const existingId = persistedRequisitionIdRef.current
+
     const requisition =
-      mode === "edit" && requisitionId
-        ? await updateRequisition(requisitionId, {
-            ...payload,
-            activity_comment:
-              source === "explicit" ? activityComment.trim() || null : null,
-          })
-        : await createRequisition(payload)
+      existingId != null
+        ? await updateRequisition(
+            existingId,
+            {
+              ...payload,
+              activity_comment:
+                source === "explicit" ? activityComment.trim() || null : null,
+            },
+            { silent }
+          )
+        : await createRequisition(payload, { silent })
 
     if (!requisition) {
       return null
@@ -528,22 +632,31 @@ export function RequisitionForm({
           ? uploadError.message
           : "Requisition saved, but one or more quote uploads failed."
       )
+      // Still keep the requisition id so later saves update the same draft.
+      persistedRequisitionIdRef.current = requisition.id
       return null
     }
 
     isDirtyRef.current = false
     setIsDirty(false)
+    persistedRequisitionIdRef.current = requisition.id
+    clearRequisitionDraftSnapshot(requisition.id)
+    clearRequisitionDraftSnapshot(null)
 
-    if (source === "explicit" && mode === "edit") {
+    if (source === "explicit" && existingId != null) {
       applyRequisitionState(requisition)
       setActivityComment("")
       await fetchLogs(requisition.id, true)
-    } else if (source === "autosave" && mode === "edit") {
+    } else if (source === "autosave") {
       beginQuietUpdate()
       setReferenceNumber(requisition.requisition_number ?? requisition.number)
       setStatusLabel(requisition.status?.name ?? "")
       setStageLabel(requisition.stage?.name ?? "")
       endQuietUpdate()
+
+      if (existingId == null) {
+        skipNextServerHydrationRef.current = true
+      }
     }
 
     if (source === "autosave") {
@@ -560,20 +673,13 @@ export function RequisitionForm({
       return true
     }
 
-    const hasMeaningfulDraft =
-      Boolean(currencyId) ||
-      isLineItemsValid(lineItems) ||
-      mapSupplierQuotesToPayload(supplierQuotes).length > 0 ||
-      selectedTags.length > 0 ||
-      Boolean(expectedDeliveryDate) ||
-      isRecurring ||
-      requiresDownpayment ||
-      quoteWaiverReason.trim() !== ""
+    writeLocalDraftSnapshot()
 
     // Empty / untouched create forms should not block navigation.
-    if (!hasMeaningfulDraft) {
+    if (!hasMeaningfulDraftProgress()) {
       isDirtyRef.current = false
       setIsDirty(false)
+      clearRequisitionDraftSnapshot(persistedRequisitionIdRef.current)
       return true
     }
 
@@ -605,13 +711,11 @@ export function RequisitionForm({
     isEditable,
     isRecurring,
     lineItems,
-    mode,
     onDraftSaved,
     priority,
     quoteWaiverReason,
     reminderDate,
     requiresDownpayment,
-    requisitionId,
     selectedTags,
     supplierQuotes,
     updateRequisition,
@@ -628,6 +732,7 @@ export function RequisitionForm({
     }
     isDirtyRef.current = true
     setIsDirty(true)
+    writeLocalDraftSnapshot()
   }, [
     activityComment,
     currencyId,
@@ -643,6 +748,27 @@ export function RequisitionForm({
     selectedTags,
     supplierQuotes,
   ])
+
+  // Debounced server autosave while the user edits.
+  useEffect(() => {
+    if (!isDirty || !isEditable) {
+      return
+    }
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      void autosaveDraft()
+    }, 1500)
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [autosaveDraft, isDirty, isEditable])
 
   const shouldBlockNavigation = isDirty && isEditable && !isSaving
   const blocker = useBlocker(
@@ -677,18 +803,64 @@ export function RequisitionForm({
   }, [autosaveDraft, blocker])
 
   useEffect(() => {
-    if (!shouldBlockNavigation) {
+    if (!isEditable) {
       return
     }
 
+    const flushOnLeave = () => {
+      if (!isDirtyRef.current || !costCenterId) {
+        return
+      }
+
+      writeLocalDraftSnapshot()
+
+      if (!hasMeaningfulDraftProgress()) {
+        return
+      }
+
+      const payload = {
+        ...buildDraftPayload(false),
+        submit: false,
+      }
+
+      flushRequisitionDraftKeepalive(
+        payload,
+        persistedRequisitionIdRef.current
+      )
+    }
+
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirtyRef.current) {
+        return
+      }
+      flushOnLeave()
       event.preventDefault()
       event.returnValue = ""
     }
 
+    window.addEventListener("pagehide", flushOnLeave)
     window.addEventListener("beforeunload", onBeforeUnload)
-    return () => window.removeEventListener("beforeunload", onBeforeUnload)
-  }, [shouldBlockNavigation])
+    return () => {
+      window.removeEventListener("pagehide", flushOnLeave)
+      window.removeEventListener("beforeunload", onBeforeUnload)
+    }
+  }, [
+    activityComment,
+    costCenterId,
+    currencyId,
+    discountType,
+    discountValue,
+    expectedDeliveryDate,
+    isEditable,
+    isRecurring,
+    lineItems,
+    priority,
+    quoteWaiverReason,
+    reminderDate,
+    requiresDownpayment,
+    selectedTags,
+    supplierQuotes,
+  ])
 
   const handleApprovalDecision = async () => {
     if (!requisitionId) {

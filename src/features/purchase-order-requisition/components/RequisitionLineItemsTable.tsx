@@ -441,6 +441,18 @@ export function mapLineItemsForApi(items: RequisitionLineItemDraft[]) {
   }))
 }
 
+/** Only rows that the API can persist (budget line selected). */
+export function mapCompleteLineItemsForApi(items: RequisitionLineItemDraft[]) {
+  return mapLineItemsForApi(
+    items.filter(
+      (item) =>
+        item.chart_of_account_id !== null &&
+        Number.isFinite(item.quantity) &&
+        item.unit_cost >= 0
+    )
+  )
+}
+
 export function isLineItemsValid(items: RequisitionLineItemDraft[]) {
   return (
     items.length > 0 &&
