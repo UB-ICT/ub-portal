@@ -24,6 +24,7 @@ import {
 import {
   applyRecommendedSupplierDefaults,
   createEmptySupplierQuote,
+  mapDraftSupplierQuotesToPayload,
   mapSupplierQuoteToUploadMeta,
   mapSupplierQuotesToPayload,
   validateSupplierQuotes,
@@ -34,7 +35,7 @@ import {
   createEmptyLineItem,
   calculateRequisitionTotalFromLineItems,
   isLineItemsValid,
-  mapCompleteLineItemsForApi,
+  mapDraftLineItemsForApi,
   mapLineItemsForApi,
   RequisitionLineItemsTable,
   type RequisitionLineItemDraft,
@@ -123,6 +124,11 @@ type RequisitionFormProps = {
   onSuccess?: (requisition: RequisitionRecord) => void
   /** Fired after a background draft save (navigate-away / panel switch). */
   onDraftSaved?: (requisition: RequisitionRecord) => void
+  /**
+   * After approve / reject / request-review / cancel / close — parent can
+   * move selection to the next visible requisition.
+   */
+  onDecisionComplete?: (requisitionId: number) => void
   /** Lets the parent trigger the same full-draft save before in-page navigation. */
   onRegisterAutosave?: (autosave: RequisitionFormAutosave | null) => void
   onCancel?: () => void
@@ -134,6 +140,7 @@ export function RequisitionForm({
   className,
   onSuccess,
   onDraftSaved,
+  onDecisionComplete,
   onRegisterAutosave,
   onCancel,
 }: RequisitionFormProps) {
@@ -168,6 +175,7 @@ export function RequisitionForm({
   const [stageLabel, setStageLabel] = useState("")
   const [currencyId, setCurrencyId] = useState("")
   const [priority, setPriority] = useState<RequisitionPriority>("standard")
+  const [description, setDescription] = useState("")
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("")
   const [isRecurring, setIsRecurring] = useState(false)
   const [requiresDownpayment, setRequiresDownpayment] = useState(false)
@@ -243,6 +251,7 @@ export function RequisitionForm({
     setStageLabel(requisition.stage?.name ?? "")
     setCurrencyId(String(requisition.currency_id))
     setPriority(normalizeRequisitionPriority(requisition.priority))
+    setDescription(requisition.description ?? "")
     setExpectedDeliveryDate(
       requisition.expected_delivery_date
         ? toDateInputValue(requisition.expected_delivery_date)
@@ -319,7 +328,42 @@ export function RequisitionForm({
         }
 
         applyRequisitionState(requisition)
-        clearRequisitionDraftSnapshot(requisition.id)
+
+        // Overlay any newer local draft so incomplete fields survive navigation.
+        const snapshot = readRequisitionDraftSnapshot(requisitionId)
+        if (!snapshot) {
+          return
+        }
+
+        beginQuietUpdate()
+        if (snapshot.currencyId) {
+          setCurrencyId(snapshot.currencyId)
+        }
+        setPriority(snapshot.priority)
+        setDescription(snapshot.description ?? "")
+        setExpectedDeliveryDate(snapshot.expectedDeliveryDate)
+        setIsRecurring(snapshot.isRecurring)
+        setRequiresDownpayment(snapshot.requiresDownpayment)
+        setReminderDate(snapshot.reminderDate)
+        setQuoteWaiverReason(snapshot.quoteWaiverReason)
+        setDiscountType(snapshot.discountType)
+        setDiscountValue(snapshot.discountValue)
+        if (snapshot.selectedTags.length > 0) {
+          setSelectedTags(snapshot.selectedTags)
+        }
+        if (snapshot.lineItems.length > 0) {
+          setLineItems(snapshot.lineItems)
+        }
+        if (snapshot.supplierQuotes.length > 0) {
+          setSupplierQuotes(
+            snapshot.supplierQuotes.map((quote) => ({
+              ...quote,
+              file: null,
+              previewUrl: null,
+            }))
+          )
+        }
+        endQuietUpdate()
       })
       return
     }
@@ -335,6 +379,7 @@ export function RequisitionForm({
     beginQuietUpdate()
     setCurrencyId(snapshot.currencyId)
     setPriority(snapshot.priority)
+    setDescription(snapshot.description ?? "")
     setExpectedDeliveryDate(snapshot.expectedDeliveryDate)
     setIsRecurring(snapshot.isRecurring)
     setRequiresDownpayment(snapshot.requiresDownpayment)
@@ -509,12 +554,13 @@ export function RequisitionForm({
   const buildDraftPayload = (shouldSubmit: boolean) => {
     const items = shouldSubmit
       ? mapLineItemsForApi(lineItems)
-      : mapCompleteLineItemsForApi(lineItems)
+      : mapDraftLineItemsForApi(lineItems)
 
     return {
       cost_center_id: costCenterId as number,
       currency_id: currencyId ? Number(currencyId) : null,
       priority,
+      description: description.trim() || null,
       expected_delivery_date: expectedDeliveryDate || null,
       is_recurring: isRecurring,
       requires_downpayment: requiresDownpayment,
@@ -522,7 +568,7 @@ export function RequisitionForm({
       reminder_date: isRecurring ? reminderDate : null,
       suppliers: shouldSubmit
         ? mapSupplierQuotesToPayload(supplierQuotes)
-        : mapSupplierQuotesToPayload(supplierQuotes),
+        : mapDraftSupplierQuotesToPayload(supplierQuotes),
       items,
       discount_type: discountType,
       discount_value: discountType === "none" ? 0 : discountValue,
@@ -535,6 +581,7 @@ export function RequisitionForm({
     writeRequisitionDraftSnapshot(persistedRequisitionIdRef.current, {
       currencyId,
       priority,
+      description,
       expectedDeliveryDate,
       isRecurring,
       requiresDownpayment,
@@ -552,7 +599,9 @@ export function RequisitionForm({
 
   const hasMeaningfulDraftProgress = () =>
     Boolean(currencyId) ||
-    mapCompleteLineItemsForApi(lineItems).length > 0 ||
+    description.trim() !== "" ||
+    mapDraftLineItemsForApi(lineItems).length > 0 ||
+    mapDraftSupplierQuotesToPayload(supplierQuotes).length > 0 ||
     mapSupplierQuotesToPayload(supplierQuotes).length > 0 ||
     selectedTags.length > 0 ||
     Boolean(expectedDeliveryDate) ||
@@ -610,6 +659,27 @@ export function RequisitionForm({
       beginQuietUpdate()
       setSupplierQuotes(syncedQuotes)
       endQuietUpdate()
+
+      // Keep a local snapshot after draft saves so navigate-away / refresh can
+      // restore incomplete fields that the server may still be catching up on.
+      writeRequisitionDraftSnapshot(requisition.id, {
+        currencyId,
+        priority,
+        description,
+        expectedDeliveryDate,
+        isRecurring,
+        requiresDownpayment,
+        reminderDate,
+        quoteWaiverReason,
+        discountType,
+        discountValue,
+        activityComment,
+        selectedTagIds: selectedTags.map((tag) => tag.id),
+        selectedTags,
+        lineItems,
+        supplierQuotes: syncedQuotes,
+      })
+      clearRequisitionDraftSnapshot(null)
     } catch (uploadError) {
       setFormError(
         uploadError instanceof Error
@@ -618,16 +688,20 @@ export function RequisitionForm({
       )
       // Still keep the requisition id so later saves update the same draft.
       persistedRequisitionIdRef.current = requisition.id
+      writeLocalDraftSnapshot()
       return null
     }
 
     isDirtyRef.current = false
     setIsDirty(false)
     persistedRequisitionIdRef.current = requisition.id
-    clearRequisitionDraftSnapshot(requisition.id)
-    clearRequisitionDraftSnapshot(null)
 
-    if (source === "explicit" && existingId != null) {
+    if (shouldSubmit) {
+      clearRequisitionDraftSnapshot(requisition.id)
+      clearRequisitionDraftSnapshot(null)
+    }
+
+    if (source === "explicit" && shouldSubmit && existingId != null) {
       applyRequisitionState(requisition)
       setActivityComment("")
       await fetchLogs(requisition.id, true)
@@ -641,12 +715,25 @@ export function RequisitionForm({
       if (existingId == null) {
         skipNextServerHydrationRef.current = true
       }
+    } else if (source === "explicit" && !shouldSubmit) {
+      // Keep current in-progress form state after draft save; only refresh headers.
+      beginQuietUpdate()
+      setReferenceNumber(requisition.requisition_number ?? requisition.number)
+      setStatusLabel(requisition.status?.name ?? "")
+      setStageLabel(requisition.stage?.name ?? "")
+      endQuietUpdate()
+      if (existingId == null) {
+        skipNextServerHydrationRef.current = true
+      }
     }
 
     if (source === "autosave") {
       onDraftSaved?.(requisition)
-    } else {
+    } else if (shouldSubmit) {
       onSuccess?.(requisition)
+    } else {
+      // Explicit draft save — keep editing the same draft without remount wipe.
+      onDraftSaved?.(requisition)
     }
 
     return requisition
@@ -688,6 +775,7 @@ export function RequisitionForm({
     costCenterId,
     createRequisition,
     currencyId,
+    description,
     discountType,
     discountValue,
     expectedDeliveryDate,
@@ -720,6 +808,7 @@ export function RequisitionForm({
   }, [
     activityComment,
     currencyId,
+    description,
     discountType,
     discountValue,
     expectedDeliveryDate,
@@ -832,6 +921,7 @@ export function RequisitionForm({
     activityComment,
     costCenterId,
     currencyId,
+    description,
     discountType,
     discountValue,
     expectedDeliveryDate,
@@ -848,6 +938,11 @@ export function RequisitionForm({
 
   const handleApprovalDecision = async () => {
     if (!requisitionId) {
+      return
+    }
+
+    if (onDecisionComplete) {
+      onDecisionComplete(requisitionId)
       return
     }
 
@@ -984,6 +1079,28 @@ export function RequisitionForm({
             required
           />
         ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="requisition-description"
+          className="text-xs font-medium uppercase tracking-widest text-muted-foreground"
+        >
+          Description{" "}
+          <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
+            (optional)
+          </span>
+        </label>
+        <textarea
+          id="requisition-description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={4}
+          maxLength={5000}
+          disabled={isFormDisabled}
+          placeholder="Add general details about this requisition..."
+          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+        />
       </div>
 
       <RequisitionTagPicker

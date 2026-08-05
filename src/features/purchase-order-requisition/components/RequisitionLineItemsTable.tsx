@@ -453,6 +453,26 @@ export function mapCompleteLineItemsForApi(items: RequisitionLineItemDraft[]) {
   )
 }
 
+/** Persist in-progress draft rows, including incomplete budget lines. */
+export function mapDraftLineItemsForApi(items: RequisitionLineItemDraft[]) {
+  return items
+    .filter(
+      (item) =>
+        item.chart_of_account_id !== null ||
+        item.comments.trim() !== "" ||
+        (Number.isFinite(item.quantity) && item.quantity !== 0) ||
+        item.unit_cost > 0 ||
+        item.gst_applicable
+    )
+    .map((item) => ({
+      chart_of_account_id: item.chart_of_account_id,
+      quantity: Number.isFinite(item.quantity) ? item.quantity : 0,
+      unit_cost: item.unit_cost >= 0 ? item.unit_cost : 0,
+      gst_applicable: item.gst_applicable,
+      comments: item.comments.trim() || undefined,
+    }))
+}
+
 export function isLineItemsValid(items: RequisitionLineItemDraft[]) {
   return (
     items.length > 0 &&

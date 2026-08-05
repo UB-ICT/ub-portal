@@ -11,6 +11,7 @@ export type RequisitionDraftSnapshot = {
   requisitionId: number | null
   currencyId: string
   priority: RequisitionPriority
+  description: string
   expectedDeliveryDate: string
   isRecurring: boolean
   requiresDownpayment: boolean

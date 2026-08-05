@@ -137,6 +137,18 @@ export function mapSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {
     }))
 }
 
+/** Draft saves keep supplier selections even before a PDF is attached. */
+export function mapDraftSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {
+  return applyRecommendedSupplierDefaults(quotes)
+    .filter((quote) => quote.supplierId !== "")
+    .map((quote) => ({
+      supplier_id: Number(quote.supplierId),
+      is_recommended: quote.isRecommended,
+      quoted_total: quote.quotedTotal ? Number(quote.quotedTotal) : null,
+      quote_reference_number: quote.quoteReferenceNumber.trim() || null,
+    }))
+}
+
 export function mapSupplierQuoteToUploadMeta(
   quote: SupplierQuoteDraft
 ): SupplierQuoteUploadMeta {

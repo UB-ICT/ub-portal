@@ -51,7 +51,7 @@ export type RequisitionSupplierPivot = {
 }
 
 export type RequisitionLineItemInput = {
-  chart_of_account_id: number
+  chart_of_account_id: number | null
   quantity: number
   unit_cost: number
   gst_applicable?: boolean
@@ -119,6 +119,7 @@ export type RequisitionRecord = {
   discount_amount?: number | string | null
   stage_id: number
   priority: RequisitionPriority
+  description?: string | null
   expected_delivery_date: string | null
   is_recurring: boolean
   requires_downpayment?: boolean
@@ -159,6 +160,7 @@ export type CreateRequisitionPayload = {
   cost_center_id: number
   currency_id: number | null
   priority: RequisitionPriority
+  description?: string | null
   expected_delivery_date?: string | null
   is_recurring: boolean
   requires_downpayment?: boolean

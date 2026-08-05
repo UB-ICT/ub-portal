@@ -98,12 +98,18 @@ export function RequisitionCard({
       className={cn(
         "gap-0 border-l-4 py-0 shadow-sm transition-all",
         statusStyles.accent,
-        selected && "border-primary/60 ring-2 ring-primary/20",
+        selected
+          ? "border-primary bg-primary/8 ring-2 ring-primary/40 shadow-md"
+          : null,
         isInteractive &&
+          !selected &&
           "cursor-pointer hover:border-primary/40 hover:bg-muted/15 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        isInteractive && selected && "cursor-pointer focus-visible:outline-none",
         className
       )}
       role={isInteractive ? "button" : undefined}
+      aria-current={selected ? "true" : undefined}
+      aria-pressed={isInteractive ? selected : undefined}
       tabIndex={isInteractive ? 0 : undefined}
       onClick={onClick}
       onKeyDown={

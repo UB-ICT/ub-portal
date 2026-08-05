@@ -10,6 +10,12 @@ import { RequisitionNumberBadge } from "@/features/purchase-order-requisition/co
 import { RequisitionPane } from "@/features/purchase-order-requisition/components/RequisitionPane"
 import { mapPipelineToTimelineSteps } from "@/features/purchase-order-requisition/lib/pipeline-utils"
 import { mapApiStatusToCardStatus } from "@/features/purchase-order-requisition/lib/requisition-mappers"
+import {
+  readStoredRequisitionSelection,
+  resolveInitialRequisitionSelection,
+  writeStoredRequisitionSelection,
+  type StoredRequisitionSelection,
+} from "@/features/purchase-order-requisition/lib/requisition-selection-storage"
 import { UBTimeline } from "@/components/shared/UBTimeline"
 import type { RequisitionRecord } from "@/lib/api/requisitions"
 import { useRequisitionsStore } from "@/store/requisitions-store"
@@ -31,10 +37,31 @@ function resolveActiveRequisition(
   return requisitions.find((requisition) => requisition.id === selectedRequisitionId)
 }
 
+function applySelectionState(
+  selection: StoredRequisitionSelection,
+  setters: {
+    setSelectedRequisitionId: (id: number | null) => void
+    setPanelMode: (mode: PanelMode) => void
+    setFormInstanceKey: (key: string) => void
+  }
+) {
+  if (selection.mode === "create") {
+    setters.setSelectedRequisitionId(null)
+    setters.setPanelMode("create")
+    setters.setFormInstanceKey(`new-${Date.now()}`)
+    return
+  }
+
+  setters.setSelectedRequisitionId(selection.requisitionId)
+  setters.setPanelMode("edit")
+  setters.setFormInstanceKey(`r-${selection.requisitionId}`)
+}
+
 export function PORRequisitionsPage() {
   const [panelMode, setPanelMode] = useState<PanelMode>("create")
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
   const [formInstanceKey, setFormInstanceKey] = useState(() => `new-${Date.now()}`)
+  const [hasResolvedSelection, setHasResolvedSelection] = useState(false)
   const autosaveRef = useRef<RequisitionFormAutosave | null>(null)
 
   const requisitions = useRequisitionsStore((state) => state.requisitions)
@@ -56,9 +83,41 @@ export function PORRequisitionsPage() {
     selectedRequisitionId
   )
 
+  const persistSelection = useCallback((selection: StoredRequisitionSelection) => {
+    writeStoredRequisitionSelection(selection)
+  }, [])
+
   useEffect(() => {
     void fetchApprovalPipeline()
   }, [fetchApprovalPipeline])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void (async () => {
+      const list = await fetchRequisitions()
+      if (cancelled) {
+        return
+      }
+
+      const resolved = resolveInitialRequisitionSelection(
+        list,
+        readStoredRequisitionSelection()
+      )
+
+      applySelectionState(resolved, {
+        setSelectedRequisitionId,
+        setPanelMode,
+        setFormInstanceKey,
+      })
+      writeStoredRequisitionSelection(resolved)
+      setHasResolvedSelection(true)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [fetchRequisitions])
 
   const runAfterAutosave = useCallback(async (action: () => void) => {
     const autosave = autosaveRef.current
@@ -76,6 +135,7 @@ export function PORRequisitionsPage() {
       setSelectedRequisitionId(id)
       setPanelMode("edit")
       setFormInstanceKey(`r-${id}`)
+      persistSelection({ mode: "edit", requisitionId: id })
     })
   }
 
@@ -84,6 +144,7 @@ export function PORRequisitionsPage() {
       setSelectedRequisitionId(null)
       setPanelMode("create")
       setFormInstanceKey(`new-${Date.now()}`)
+      persistSelection({ mode: "create" })
     })
   }
 
@@ -92,6 +153,7 @@ export function PORRequisitionsPage() {
     setSelectedRequisitionId(requisition.id)
     setPanelMode("edit")
     setFormInstanceKey(`r-${requisition.id}`)
+    persistSelection({ mode: "edit", requisitionId: requisition.id })
   }
 
   const handleDraftSaved = async (requisition: RequisitionRecord) => {
@@ -99,6 +161,50 @@ export function PORRequisitionsPage() {
     // Keep formInstanceKey stable so the in-progress form is not remounted.
     setSelectedRequisitionId(requisition.id)
     setPanelMode("edit")
+    persistSelection({ mode: "edit", requisitionId: requisition.id })
+  }
+
+  const handleDecisionComplete = async (decidedId: number) => {
+    const previousList = requisitions
+    const decidedIndex = previousList.findIndex(
+      (requisition) => requisition.id === decidedId
+    )
+    const preferredNextId =
+      decidedIndex >= 0
+        ? (previousList[decidedIndex + 1]?.id ??
+          previousList[decidedIndex - 1]?.id ??
+          null)
+        : null
+
+    const list = await fetchRequisitions(true)
+
+    // Still in this user's list (e.g. cost-center cancel) — stay on it.
+    if (list.some((requisition) => requisition.id === decidedId)) {
+      setSelectedRequisitionId(decidedId)
+      setPanelMode("edit")
+      setFormInstanceKey(`r-${decidedId}-${Date.now()}`)
+      persistSelection({ mode: "edit", requisitionId: decidedId })
+      return
+    }
+
+    const nextId =
+      preferredNextId != null &&
+      list.some((requisition) => requisition.id === preferredNextId)
+        ? preferredNextId
+        : (list[0]?.id ?? null)
+
+    if (nextId != null) {
+      setSelectedRequisitionId(nextId)
+      setPanelMode("edit")
+      setFormInstanceKey(`r-${nextId}`)
+      persistSelection({ mode: "edit", requisitionId: nextId })
+      return
+    }
+
+    setSelectedRequisitionId(null)
+    setPanelMode("create")
+    setFormInstanceKey(`new-${Date.now()}`)
+    persistSelection({ mode: "create" })
   }
 
   const handleRegisterAutosave = useCallback(
@@ -113,6 +219,7 @@ export function PORRequisitionsPage() {
       setSelectedRequisitionId(null)
       setPanelMode("create")
       setFormInstanceKey(`new-${Date.now()}`)
+      persistSelection({ mode: "create" })
     })
   }
 
@@ -192,15 +299,22 @@ export function PORRequisitionsPage() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">
-            <RequisitionForm
-              key={formInstanceKey}
-              mode={panelMode}
-              requisitionId={selectedRequisitionId ?? undefined}
-              onSuccess={handleFormSuccess}
-              onDraftSaved={handleDraftSaved}
-              onRegisterAutosave={handleRegisterAutosave}
-              onCancel={handleCancel}
-            />
+            {!hasResolvedSelection ? (
+              <p className="text-sm text-muted-foreground">
+                Loading requisition...
+              </p>
+            ) : (
+              <RequisitionForm
+                key={formInstanceKey}
+                mode={panelMode}
+                requisitionId={selectedRequisitionId ?? undefined}
+                onSuccess={handleFormSuccess}
+                onDraftSaved={handleDraftSaved}
+                onDecisionComplete={handleDecisionComplete}
+                onRegisterAutosave={handleRegisterAutosave}
+                onCancel={handleCancel}
+              />
+            )}
           </div>
         </section>
       </div>

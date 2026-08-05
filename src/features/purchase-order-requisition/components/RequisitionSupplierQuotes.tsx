@@ -90,22 +90,43 @@ export function RequisitionSupplierQuotes({
     void fetchAttachments(requisitionId).then((attachments) => {
       hasLoadedAttachments.current = true
 
-      // Keep any quotes that still have a local File pending upload so a
-      // background attachment refresh cannot drop in-progress selections.
-      const pendingLocalQuotes = quotesRef.current.filter(
-        (quote) => quote.file && quote.supplierId && !quote.attachmentId
-      )
+      const localQuotes = quotesRef.current
+      const pendingOrUnsynced = localQuotes.filter((quote) => {
+        if (quote.file && quote.supplierId && !quote.attachmentId) {
+          return true
+        }
+
+        if (!quote.supplierId) {
+          return false
+        }
+
+        if (quote.attachmentId) {
+          return !attachments.some(
+            (attachment) => attachment.id === quote.attachmentId
+          )
+        }
+
+        // Supplier chosen locally but no uploaded quote for that supplier yet.
+        return !attachments.some(
+          (attachment) => String(attachment.supplier_id) === quote.supplierId
+        )
+      })
 
       if (attachments.length > 0) {
         emitChange([
           ...mapAttachmentsToQuotes(attachments),
-          ...pendingLocalQuotes,
+          ...pendingOrUnsynced,
         ])
         return
       }
 
-      if (pendingLocalQuotes.length > 0) {
-        emitChange(pendingLocalQuotes)
+      if (
+        pendingOrUnsynced.length > 0 ||
+        localQuotes.some((quote) => quote.supplierId || quote.attachmentId)
+      ) {
+        emitChange(
+          pendingOrUnsynced.length > 0 ? pendingOrUnsynced : localQuotes
+        )
         return
       }
 
