@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Navigate } from "react-router-dom"
+import { Navigate, useSearchParams } from "react-router-dom"
 
 import { UBButton } from "@/components/shared/UBButton"
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
 import {
   RequisitionForm,
   type RequisitionFormAutosave,
@@ -63,6 +64,8 @@ export function PORRequisitionsPage() {
   const [formInstanceKey, setFormInstanceKey] = useState(() => `new-${Date.now()}`)
   const [hasResolvedSelection, setHasResolvedSelection] = useState(false)
   const autosaveRef = useRef<RequisitionFormAutosave | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialRequisitionParam = useRef(searchParams.get("requisition"))
 
   const requisitions = useRequisitionsStore((state) => state.requisitions)
   const selectedRequisition = useRequisitionsStore(
@@ -92,17 +95,43 @@ export function PORRequisitionsPage() {
   }, [fetchApprovalPipeline])
 
   useEffect(() => {
+    const refreshVisibleData = () => {
+      if (document.visibilityState !== "visible") {
+        return
+      }
+
+      void fetchRequisitions(true)
+      if (selectedRequisitionId) {
+        void useRequisitionsStore.getState().fetchRequisitionById(selectedRequisitionId)
+      }
+    }
+
+    window.addEventListener("focus", refreshVisibleData)
+    document.addEventListener("visibilitychange", refreshVisibleData)
+
+    return () => {
+      window.removeEventListener("focus", refreshVisibleData)
+      document.removeEventListener("visibilitychange", refreshVisibleData)
+    }
+  }, [fetchRequisitions, selectedRequisitionId])
+
+  useEffect(() => {
     let cancelled = false
 
     void (async () => {
-      const list = await fetchRequisitions()
+      const list = await fetchRequisitions(true)
       if (cancelled) {
         return
       }
 
+      const queryId = Number(initialRequisitionParam.current)
+      const preferredId =
+        Number.isFinite(queryId) && queryId > 0 ? queryId : null
+
       const resolved = resolveInitialRequisitionSelection(
         list,
-        readStoredRequisitionSelection()
+        readStoredRequisitionSelection(),
+        preferredId
       )
 
       applySelectionState(resolved, {
@@ -112,12 +141,69 @@ export function PORRequisitionsPage() {
       })
       writeStoredRequisitionSelection(resolved)
       setHasResolvedSelection(true)
+
+      if (preferredId) {
+        setSearchParams(
+          (current) => {
+            if (!current.has("requisition")) {
+              return current
+            }
+            const next = new URLSearchParams(current)
+            next.delete("requisition")
+            return next
+          },
+          { replace: true }
+        )
+      }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [fetchRequisitions])
+  }, [fetchRequisitions, setSearchParams])
+
+  useEffect(() => {
+    if (!hasResolvedSelection) {
+      return
+    }
+
+    const queryId = Number(searchParams.get("requisition"))
+    if (!Number.isFinite(queryId) || queryId <= 0) {
+      return
+    }
+
+    const exists = requisitions.some((requisition) => requisition.id === queryId)
+    if (!exists) {
+      return
+    }
+
+    applySelectionState(
+      { mode: "edit", requisitionId: queryId },
+      {
+        setSelectedRequisitionId,
+        setPanelMode,
+        setFormInstanceKey,
+      }
+    )
+    writeStoredRequisitionSelection({ mode: "edit", requisitionId: queryId })
+
+    setSearchParams(
+      (current) => {
+        if (!current.has("requisition")) {
+          return current
+        }
+        const next = new URLSearchParams(current)
+        next.delete("requisition")
+        return next
+      },
+      { replace: true }
+    )
+  }, [
+    hasResolvedSelection,
+    requisitions,
+    searchParams,
+    setSearchParams,
+  ])
 
   const runAfterAutosave = useCallback(async (action: () => void) => {
     const autosave = autosaveRef.current
@@ -279,9 +365,10 @@ export function PORRequisitionsPage() {
 
           <div className="shrink-0 border-b bg-muted/30 p-4">
             {isLoadingPipeline && timelineSteps.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Loading approval pipeline...
-              </p>
+              <LoadingSpinner
+                className="py-4"
+                label="Loading approval pipeline..."
+              />
             ) : timelineSteps.length > 0 ? (
               <UBTimeline
                 timelineTitle={
@@ -300,9 +387,7 @@ export function PORRequisitionsPage() {
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">
             {!hasResolvedSelection ? (
-              <p className="text-sm text-muted-foreground">
-                Loading requisition...
-              </p>
+              <LoadingSpinner label="Loading requisition..." />
             ) : (
               <RequisitionForm
                 key={formInstanceKey}

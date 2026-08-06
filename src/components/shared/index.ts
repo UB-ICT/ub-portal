@@ -29,6 +29,8 @@ export type { UBTagProps } from "./UBTag"
 export { UBNotificationBell } from "./UBNotificationBell"
 export type { UBNotificationBellProps } from "./UBNotificationBell"
 
+export { LoadingSpinner } from "./LoadingSpinner"
+
 export { UBMenu } from "./UBMenu"
 export type { UBMenuProps, UBMenuItem } from "./UBMenu"
 

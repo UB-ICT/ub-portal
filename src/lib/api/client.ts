@@ -48,6 +48,7 @@ export async function apiRequest<T>(
   const isFormData = requestInit.body instanceof FormData
   const response = await fetch(buildApiUrl(endpoint), {
     ...requestInit,
+    cache: requestInit.cache ?? "no-store",
     headers: {
       Accept: "application/json",
       ...(requestInit.body && !isFormData

@@ -4,10 +4,13 @@ import { useNavigate } from "react-router-dom"
 
 import { useTheme } from "@/components/theme-provider"
 import type { PortalApplication } from "@/lib/api/menu"
+import type { PortalNotification } from "@/lib/api/notifications"
+import { writeStoredRequisitionSelection } from "@/features/purchase-order-requisition/lib/requisition-selection-storage"
 import { resolveMenuIcon } from "@/lib/menu-icons"
 import { cn } from "@/lib/utils"
 import { useApplicationMenuStore } from "@/store/application-menu-store"
 import { useApplicationsStore } from "@/store/applications-store"
+import { useNotificationsStore } from "@/store/notifications-store"
 import { UBButton, UBIconTileButton } from "./UBButton"
 import { UBNotificationBell } from "./UBNotificationBell"
 
@@ -62,8 +65,10 @@ export function UBHeader({
   const isDarkMode = theme === "dark"
   const [isAppsOpen, setIsAppsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const appsMenuRef = useRef<HTMLDivElement>(null)
   const profileMenuRef = useRef<HTMLDivElement>(null)
+  const notificationsMenuRef = useRef<HTMLDivElement>(null)
   const storeApplications = useApplicationsStore((state) => state.applications)
   const isLoadingApplications = useApplicationsStore((state) => state.isLoading)
   const fetchMyApplications = useApplicationsStore(
@@ -73,6 +78,17 @@ export function UBHeader({
     (state) => state.loadApplication
   )
   const applications = applicationsOverride ?? storeApplications
+  const unreadCount = useNotificationsStore((state) => state.unreadCount)
+  const notifications = useNotificationsStore((state) => state.notifications)
+  const isLoadingNotifications = useNotificationsStore((state) => state.isLoading)
+  const fetchNotificationsList = useNotificationsStore(
+    (state) => state.fetchNotifications
+  )
+  const refreshUnreadCount = useNotificationsStore(
+    (state) => state.refreshUnreadCount
+  )
+  const markAsRead = useNotificationsStore((state) => state.markAsRead)
+  const resolvedNotificationCount = notificationCount || unreadCount
 
   useEffect(() => {
     if (!applicationsOverride) {
@@ -81,13 +97,18 @@ export function UBHeader({
   }, [applicationsOverride, fetchMyApplications])
 
   useEffect(() => {
-    if (!isAppsOpen && !isProfileOpen) {
+    void refreshUnreadCount()
+  }, [refreshUnreadCount])
+
+  useEffect(() => {
+    if (!isAppsOpen && !isProfileOpen && !isNotificationsOpen) {
       return
     }
 
     const closeMenus = () => {
       setIsAppsOpen(false)
       setIsProfileOpen(false)
+      setIsNotificationsOpen(false)
     }
 
     const handlePointerDown = (event: MouseEvent) => {
@@ -95,7 +116,8 @@ export function UBHeader({
 
       if (
         appsMenuRef.current?.contains(target) ||
-        profileMenuRef.current?.contains(target)
+        profileMenuRef.current?.contains(target) ||
+        notificationsMenuRef.current?.contains(target)
       ) {
         return
       }
@@ -116,7 +138,7 @@ export function UBHeader({
       document.removeEventListener("mousedown", handlePointerDown)
       document.removeEventListener("keydown", handleKeyDown)
     }
-  }, [isAppsOpen, isProfileOpen])
+  }, [isAppsOpen, isProfileOpen, isNotificationsOpen])
 
   const handleApplicationClick = async (application: PortalApplication) => {
     setIsAppsOpen(false)
@@ -139,12 +161,43 @@ export function UBHeader({
     onAppsClick?.()
     setIsAppsOpen((current) => !current)
     setIsProfileOpen(false)
+    setIsNotificationsOpen(false)
   }
 
   const handleProfileClick = () => {
     onProfileClick?.()
     setIsProfileOpen((current) => !current)
     setIsAppsOpen(false)
+    setIsNotificationsOpen(false)
+  }
+
+  const handleNotificationsClick = () => {
+    onNotificationsClick?.()
+    setIsNotificationsOpen((current) => {
+      const next = !current
+      if (next) {
+        void fetchNotificationsList(true)
+      }
+      return next
+    })
+    setIsAppsOpen(false)
+    setIsProfileOpen(false)
+  }
+
+  const handleNotificationSelect = async (notification: PortalNotification) => {
+    await markAsRead(notification.id)
+    setIsNotificationsOpen(false)
+
+    const requisitionId = Number(notification.data.requisition_id)
+    if (!Number.isFinite(requisitionId) || requisitionId <= 0) {
+      return
+    }
+
+    writeStoredRequisitionSelection({
+      mode: "edit",
+      requisitionId,
+    })
+    navigate(`/requisitions/forms?requisition=${requisitionId}`)
   }
 
   const handleAdminConsoleClick = () => {
@@ -188,10 +241,54 @@ export function UBHeader({
             {isDarkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </UBButton>
 
-          <UBNotificationBell
-            notificationCount={notificationCount}
-            onClick={onNotificationsClick}
-          />
+          <div className="relative" ref={notificationsMenuRef}>
+            <UBNotificationBell
+              notificationCount={resolvedNotificationCount}
+              onClick={handleNotificationsClick}
+              aria-expanded={isNotificationsOpen}
+            />
+
+            {isNotificationsOpen ? (
+              <div className="absolute top-11 right-0 z-50 w-80 rounded-xl border bg-popover p-2 shadow-lg">
+                <div className="border-b px-2 py-2">
+                  <p className="text-sm font-semibold">Notifications</p>
+                </div>
+                {isLoadingNotifications && notifications.length === 0 ? (
+                  <p className="px-2 py-4 text-sm text-muted-foreground">
+                    Loading notifications...
+                  </p>
+                ) : notifications.length === 0 ? (
+                  <p className="px-2 py-4 text-sm text-muted-foreground">
+                    No notifications yet.
+                  </p>
+                ) : (
+                  <ul className="max-h-80 overflow-y-auto">
+                    {notifications.map((notification) => (
+                      <li key={notification.id}>
+                        <button
+                          type="button"
+                          onClick={() => void handleNotificationSelect(notification)}
+                          className={cn(
+                            "w-full rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-muted/60",
+                            !notification.read_at && "bg-primary/5"
+                          )}
+                        >
+                          <p className="text-sm text-foreground">
+                            {notification.data.message}
+                          </p>
+                          {notification.data.requisition_number ? (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              #{notification.data.requisition_number}
+                            </p>
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : null}
+          </div>
 
           <div className="relative" ref={appsMenuRef}>
             <UBButton

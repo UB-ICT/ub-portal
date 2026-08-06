@@ -4,11 +4,12 @@ import { readStoredAccessToken } from "@/lib/auth/storage"
 export type NotificationData = {
   type: string
   message: string
-  requisition_id?: string
+  requisition_id?: string | number
   requisition_number?: string
   supplier_id?: string
   supplier_name?: string
   submitted_by?: string | null
+  stage_id?: number | null
 }
 
 export type PortalNotification = {

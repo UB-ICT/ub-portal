@@ -52,8 +52,16 @@ export function writeStoredRequisitionSelection(
  */
 export function resolveInitialRequisitionSelection(
   requisitions: RequisitionRecord[],
-  stored: StoredRequisitionSelection | null
+  stored: StoredRequisitionSelection | null,
+  preferredRequisitionId?: number | null
 ): StoredRequisitionSelection {
+  if (
+    preferredRequisitionId &&
+    requisitions.some((requisition) => requisition.id === preferredRequisitionId)
+  ) {
+    return { mode: "edit", requisitionId: preferredRequisitionId }
+  }
+
   if (stored?.mode === "create") {
     return { mode: "create" }
   }

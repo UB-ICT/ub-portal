@@ -115,12 +115,14 @@ let pipelineFetchPromise: Promise<Pipeline | null> | null = null
 export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
   ...initialState,
   fetchRequisitions: async (force = false) => {
-    if (!force && get().requisitions.length > 0 && !get().isLoadingList) {
-      return get().requisitions
-    }
-
+    // Live queue data: always refetch unless an identical request is already in flight.
+    // `force` is kept for callers that want an explicit refresh after mutations.
     if (listFetchPromise) {
-      return listFetchPromise
+      if (!force) {
+        return listFetchPromise
+      }
+      // Wait for the in-flight request, then fetch again so force is not dropped.
+      await listFetchPromise
     }
 
     const token = readStoredAccessToken()
@@ -165,11 +167,20 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
 
     try {
       const requisition = await fetchRequisition(id)
-      set({
+      set((state) => ({
         selectedRequisition: requisition,
+        // Keep the sidebar list in sync with the latest detail payload.
+        requisitions: state.requisitions.map((item) =>
+          item.id === requisition.id
+            ? {
+                ...item,
+                ...requisition,
+              }
+            : item
+        ),
         isLoadingSelected: false,
         error: null,
-      })
+      }))
       return requisition
     } catch (error) {
       set({

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
 import { cn } from "@/lib/utils"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 
@@ -107,14 +108,15 @@ export function RequisitionPane({
     >
       <SearchRequisitions className="shrink-0" onSearch={setSearchCriteria} />
       {isLoadingList && listItems.length === 0 ? (
-        <p className="px-1 text-sm text-muted-foreground">Loading requisitions...</p>
-      ) : null}
-      <ListRequisitions
-        className="min-h-0 flex-1 overflow-hidden"
-        requisitions={filteredRequisitions}
-        selectedRequisitionId={selectedRequisitionId}
-        onRequisitionClick={onRequisitionSelect}
-      />
+        <LoadingSpinner className="flex-1" label="Loading requisitions..." />
+      ) : (
+        <ListRequisitions
+          className="min-h-0 flex-1 overflow-hidden"
+          requisitions={filteredRequisitions}
+          selectedRequisitionId={selectedRequisitionId}
+          onRequisitionClick={onRequisitionSelect}
+        />
+      )}
     </div>
   )
 }

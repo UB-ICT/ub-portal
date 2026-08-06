@@ -29,6 +29,7 @@ const initialState = {
 }
 
 let logsFetchPromise: Promise<RequisitionLogEntry[]> | null = null
+let logsFetchRequisitionId: number | null = null
 let lastFetchedRequisitionId: number | null = null
 
 export const useRequisitionLogsStore = create<RequisitionLogsState>((set, get) => ({
@@ -43,7 +44,11 @@ export const useRequisitionLogsStore = create<RequisitionLogsState>((set, get) =
       return get().logs
     }
 
-    if (logsFetchPromise) {
+    if (
+      logsFetchPromise &&
+      logsFetchRequisitionId === requisitionId &&
+      !force
+    ) {
       return logsFetchPromise
     }
 
@@ -54,6 +59,7 @@ export const useRequisitionLogsStore = create<RequisitionLogsState>((set, get) =
       return []
     }
 
+    logsFetchRequisitionId = requisitionId
     logsFetchPromise = (async () => {
       set({ isLoading: true, error: null })
 
@@ -74,6 +80,7 @@ export const useRequisitionLogsStore = create<RequisitionLogsState>((set, get) =
         return []
       } finally {
         logsFetchPromise = null
+        logsFetchRequisitionId = null
       }
     })()
 
@@ -103,6 +110,7 @@ export const useRequisitionLogsStore = create<RequisitionLogsState>((set, get) =
   },
   reset: () => {
     logsFetchPromise = null
+    logsFetchRequisitionId = null
     lastFetchedRequisitionId = null
     set(initialState)
   },

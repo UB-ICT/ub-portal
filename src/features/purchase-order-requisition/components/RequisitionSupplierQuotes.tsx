@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react"
 import { useEffect, useRef } from "react"
 
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
 import { UBButton } from "@/components/shared/UBButton"
 import { cn } from "@/lib/utils"
 import { useRequisitionQuotesStore } from "@/store/requisition-quotes-store"
@@ -87,23 +88,26 @@ export function RequisitionSupplierQuotes({
       return
     }
 
-    void fetchAttachments(requisitionId).then((attachments) => {
+    void fetchAttachments(requisitionId, true).then((attachments) => {
       hasLoadedAttachments.current = true
 
       const localQuotes = quotesRef.current
+      // Server attachments are authoritative. Keep only local work that is not
+      // already on the server. Drop stale rows whose attachmentId was deleted
+      // (e.g. old autosave duplicates still sitting in localStorage drafts).
       const pendingOrUnsynced = localQuotes.filter((quote) => {
-        if (quote.file && quote.supplierId && !quote.attachmentId) {
-          return true
+        if (quote.attachmentId) {
+          return false
+        }
+
+        if (quote.file && quote.supplierId) {
+          return !attachments.some(
+            (attachment) => String(attachment.supplier_id) === quote.supplierId
+          )
         }
 
         if (!quote.supplierId) {
           return false
-        }
-
-        if (quote.attachmentId) {
-          return !attachments.some(
-            (attachment) => attachment.id === quote.attachmentId
-          )
         }
 
         // Supplier chosen locally but no uploaded quote for that supplier yet.
@@ -224,7 +228,9 @@ export function RequisitionSupplierQuotes({
         ) : null}
       </div>
 
-      {visibleQuotes.length === 0 ? (
+      {isLoading && visibleQuotes.length === 0 ? (
+        <LoadingSpinner label="Loading supplier quotes..." />
+      ) : visibleQuotes.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border/80 bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
           {disabled
             ? "No supplier quotes are attached to this requisition."

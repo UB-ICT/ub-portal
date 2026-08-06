@@ -38,6 +38,7 @@ const initialState = {
 }
 
 let attachmentsFetchPromise: Promise<RequisitionAttachment[]> | null = null
+let attachmentsFetchRequisitionId: number | null = null
 let lastFetchedRequisitionId: number | null = null
 
 export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
@@ -53,7 +54,11 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
         return get().attachments
       }
 
-      if (attachmentsFetchPromise) {
+      if (
+        attachmentsFetchPromise &&
+        attachmentsFetchRequisitionId === requisitionId &&
+        !force
+      ) {
         return attachmentsFetchPromise
       }
 
@@ -64,6 +69,7 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
         return []
       }
 
+      attachmentsFetchRequisitionId = requisitionId
       attachmentsFetchPromise = (async () => {
         set({ isLoading: true, error: null })
 
@@ -84,6 +90,7 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
           return []
         } finally {
           attachmentsFetchPromise = null
+          attachmentsFetchRequisitionId = null
         }
       })()
 
@@ -101,10 +108,18 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
         )
 
         set((state) => ({
-          attachments: [attachment, ...state.attachments],
+          attachments: [
+            attachment,
+            ...state.attachments.filter(
+              (existing) =>
+                existing.supplier_id !== attachment.supplier_id &&
+                existing.id !== attachment.id
+            ),
+          ],
           isUploading: false,
           error: null,
         }))
+        lastFetchedRequisitionId = requisitionId
 
         return attachment
       } catch (error) {
@@ -144,6 +159,7 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
     },
     reset: () => {
       attachmentsFetchPromise = null
+      attachmentsFetchRequisitionId = null
       lastFetchedRequisitionId = null
       set(initialState)
     },

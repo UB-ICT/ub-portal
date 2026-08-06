@@ -6,6 +6,7 @@ import { uploadRequisitionQuote } from "@/lib/api/attachments"
 import { fetchOperationalBudgetLineItems } from "@/lib/api/budgets"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { UBButton } from "@/components/shared/UBButton"
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
 import { UBInput } from "@/components/shared/UBInput"
 import type { RequisitionPriority, RequisitionRecord, RequisitionUserStageAction } from "@/lib/api/requisitions"
 import { flushRequisitionDraftKeepalive } from "@/lib/api/requisitions"
@@ -354,14 +355,32 @@ export function RequisitionForm({
         if (snapshot.lineItems.length > 0) {
           setLineItems(snapshot.lineItems)
         }
-        if (snapshot.supplierQuotes.length > 0) {
-          setSupplierQuotes(
-            snapshot.supplierQuotes.map((quote) => ({
-              ...quote,
-              file: null,
-              previewUrl: null,
-            }))
-          )
+        // Never restore attachment-backed quotes from localStorage — the
+        // attachments API is source of truth. Only keep incomplete local rows
+        // (supplier chosen, PDF not uploaded yet) so draft progress survives.
+        const pendingLocalQuotes = snapshot.supplierQuotes.filter(
+          (quote) => quote.supplierId && !quote.attachmentId
+        )
+        if (pendingLocalQuotes.length > 0) {
+          setSupplierQuotes((current) => {
+            const serverQuotes = current.filter((quote) => quote.attachmentId)
+            const extras = pendingLocalQuotes
+              .map((quote) => ({
+                ...quote,
+                file: null,
+                previewUrl: null,
+              }))
+              .filter(
+                (quote) =>
+                  !serverQuotes.some(
+                    (serverQuote) => serverQuote.supplierId === quote.supplierId
+                  )
+              )
+
+            return serverQuotes.length > 0 || extras.length > 0
+              ? [...serverQuotes, ...extras]
+              : current
+          })
         }
         endQuietUpdate()
       })
@@ -970,7 +989,12 @@ export function RequisitionForm({
   }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)}>
+    <div className={cn("relative flex flex-col gap-6", className)}>
+      {isLoading ? (
+        <div className="absolute inset-0 z-10 flex items-start justify-center rounded-lg bg-background/70 pt-16 backdrop-blur-[1px]">
+          <LoadingSpinner label="Loading requisition..." />
+        </div>
+      ) : null}
       <div className="flex flex-col gap-4">
         {mode === "edit" && isCancelledRequisition ? (
           <div className="rounded-lg border border-slate-300 bg-slate-100 px-4 py-3 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">

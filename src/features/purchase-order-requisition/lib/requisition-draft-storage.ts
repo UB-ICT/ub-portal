@@ -45,11 +45,15 @@ export function writeRequisitionDraftSnapshot(
       updatedAt: Date.now(),
       requisitionId: requisitionId ?? null,
       ...snapshot,
-      supplierQuotes: snapshot.supplierQuotes.map((quote) => ({
-        ...quote,
-        file: null,
-        previewUrl: null,
-      })),
+      // Attachment-backed quotes belong on the server. Persisting them in
+      // localStorage caused deleted duplicates to reappear after refresh.
+      supplierQuotes: snapshot.supplierQuotes
+        .filter((quote) => quote.supplierId && !quote.attachmentId)
+        .map((quote) => ({
+          ...quote,
+          file: null,
+          previewUrl: null,
+        })),
     }
     localStorage.setItem(draftStorageKey(requisitionId), JSON.stringify(payload))
 

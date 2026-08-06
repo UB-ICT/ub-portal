@@ -34,7 +34,7 @@ export function RequisitionActivityLog({
       return
     }
 
-    void fetchLogs(requisitionId)
+    void fetchLogs(requisitionId, true)
   }, [fetchLogs, requisitionId])
 
   const handleSubmitComment = async () => {

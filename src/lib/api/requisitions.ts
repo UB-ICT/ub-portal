@@ -10,6 +10,13 @@ type ApiListResponse<T> = {
   success: boolean
   data: T
   message?: string
+  count?: number
+  meta?: {
+    current_page: number
+    last_page: number
+    per_page: number
+    total: number
+  }
 }
 
 export type CostCenterUser = {
@@ -206,8 +213,29 @@ async function request<T>(endpoint: string, options: RequestInit = {}) {
   return response.data
 }
 
+async function requestPage<T>(endpoint: string, options: RequestInit = {}) {
+  return apiRequest<ApiListResponse<T>>(endpoint, {
+    ...options,
+    token: getToken(),
+  })
+}
+
 export async function fetchRequisitions() {
-  return request<RequisitionRecord[]>(`${BASE_PATH}/requisitions`)
+  const perPage = 50
+  let page = 1
+  let lastPage = 1
+  const all: RequisitionRecord[] = []
+
+  do {
+    const response = await requestPage<RequisitionRecord[]>(
+      `${BASE_PATH}/requisitions?page=${page}&per_page=${perPage}`
+    )
+    all.push(...(response.data ?? []))
+    lastPage = response.meta?.last_page ?? 1
+    page += 1
+  } while (page <= lastPage)
+
+  return all
 }
 
 export async function fetchRequisition(id: number) {
