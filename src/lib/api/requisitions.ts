@@ -389,20 +389,20 @@ export function getRequisitionExportUrl(id: number) {
   return `${BASE_PATH}/requisitions/${id}/export`
 }
 
-export async function downloadRequisitionExport(
+export async function downloadRequisitionPrintPdf(
   id: number,
-  fallbackFileName = "requisition-export.zip"
+  fallbackFileName = "requisition.pdf"
 ) {
   const response = await fetch(buildApiUrl(getRequisitionExportUrl(id)), {
     headers: {
-      Accept: "application/zip",
+      Accept: "application/pdf",
       Authorization: `Bearer ${getToken()}`,
     },
     cache: "no-store",
   })
 
   if (!response.ok) {
-    let message = "Failed to export requisition."
+    let message = "Failed to generate requisition PDF."
     try {
       const payload = (await response.json()) as { message?: string }
       if (payload.message) {
@@ -419,11 +419,27 @@ export async function downloadRequisitionExport(
   const fileName = matched?.[1] || fallbackFileName
   const blob = await response.blob()
   const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = fileName
-  anchor.click()
-  URL.revokeObjectURL(url)
+
+  const printWindow = window.open(url, "_blank", "noopener,noreferrer")
+  if (printWindow) {
+    const triggerPrint = () => {
+      try {
+        printWindow.focus()
+        printWindow.print()
+      } catch {
+        // ignore
+      }
+    }
+    printWindow.addEventListener("load", triggerPrint)
+    window.setTimeout(triggerPrint, 750)
+  } else {
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = fileName
+    anchor.click()
+  }
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 export async function emailRequisitionPurchaseOrder(

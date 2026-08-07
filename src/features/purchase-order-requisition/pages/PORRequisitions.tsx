@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
-import { Download } from "lucide-react"
+import { Printer } from "lucide-react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
@@ -20,7 +20,7 @@ import {
 } from "@/features/purchase-order-requisition/lib/requisition-selection-storage"
 import { UBTimeline } from "@/components/shared/UBTimeline"
 import {
-  downloadRequisitionExport,
+  downloadRequisitionPrintPdf,
   type RequisitionRecord,
 } from "@/lib/api/requisitions"
 import { useRequisitionsStore } from "@/store/requisitions-store"
@@ -67,8 +67,8 @@ export function PORRequisitionsPage() {
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
   const [formInstanceKey, setFormInstanceKey] = useState(() => `new-${Date.now()}`)
   const [hasResolvedSelection, setHasResolvedSelection] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
-  const [exportError, setExportError] = useState<string | null>(null)
+  const [isPrinting, setIsPrinting] = useState(false)
+  const [printError, setPrintError] = useState<string | null>(null)
   const autosaveRef = useRef<RequisitionFormAutosave | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const initialRequisitionParam = useRef(searchParams.get("requisition"))
@@ -315,29 +315,31 @@ export function PORRequisitionsPage() {
     })
   }
 
-  const handleExport = async () => {
+  const handlePrintRequisition = async () => {
     if (!selectedRequisitionId) {
       return
     }
 
-    setExportError(null)
-    setIsExporting(true)
+    setPrintError(null)
+    setIsPrinting(true)
 
     try {
       const number =
         activeRequisition?.requisition_number ??
         activeRequisition?.number ??
         String(selectedRequisitionId)
-      await downloadRequisitionExport(
+      await downloadRequisitionPrintPdf(
         selectedRequisitionId,
-        `requisition-${number}-export.zip`
+        `requisition-${number}.pdf`
       )
     } catch (error) {
-      setExportError(
-        error instanceof Error ? error.message : "Failed to export requisition."
+      setPrintError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate requisition PDF."
       )
     } finally {
-      setIsExporting(false)
+      setIsPrinting(false)
     }
   }
 
@@ -356,27 +358,10 @@ export function PORRequisitionsPage() {
           Progress is saved as a draft automatically while you work, and when
           you leave this page or refresh.
         </p>
-        <div className="flex shrink-0 items-center gap-2">
-          {panelMode === "edit" && selectedRequisitionId ? (
-            <UBButton
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => void handleExport()}
-              disabled={isExporting}
-            >
-              <Download className="size-4" data-icon="inline-start" />
-              {isExporting ? "Exporting..." : "Export"}
-            </UBButton>
-          ) : null}
-          <UBButton size="sm" onClick={handleNewRequisition}>
-            New requisition
-          </UBButton>
-        </div>
+        <UBButton size="sm" onClick={handleNewRequisition}>
+          New requisition
+        </UBButton>
       </header>
-      {exportError ? (
-        <p className="shrink-0 text-sm text-destructive">{exportError}</p>
-      ) : null}
 
       <div className="flex min-h-0 flex-1 gap-2 overflow-hidden">
         <RequisitionPane
@@ -403,6 +388,24 @@ export function PORRequisitionsPage() {
                 <p className="text-xs text-muted-foreground">
                   Edit the selected requisition and save your changes.
                 </p>
+                {selectedRequisitionId ? (
+                  <UBButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="ml-auto"
+                    onClick={() => void handlePrintRequisition()}
+                    disabled={isPrinting}
+                  >
+                    <Printer className="size-4" data-icon="inline-start" />
+                    {isPrinting ? "Preparing..." : "Print requisition"}
+                  </UBButton>
+                ) : null}
+                {printError ? (
+                  <p className="basis-full text-sm text-destructive">
+                    {printError}
+                  </p>
+                ) : null}
               </div>
             ) : (
               <p className="mt-0.5 text-xs text-muted-foreground">
