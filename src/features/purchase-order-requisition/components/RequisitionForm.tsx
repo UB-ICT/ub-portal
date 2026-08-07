@@ -2,7 +2,6 @@ import { Save, Send, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useBlocker } from "react-router-dom"
 
-import { uploadRequisitionQuote } from "@/lib/api/attachments"
 import { fetchOperationalBudgetLineItems } from "@/lib/api/budgets"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { UBButton } from "@/components/shared/UBButton"
@@ -27,7 +26,6 @@ import {
   applyRecommendedSupplierDefaults,
   createEmptySupplierQuote,
   mapDraftSupplierQuotesToPayload,
-  mapSupplierQuoteToUploadMeta,
   mapSupplierQuotesToPayload,
   validateSupplierQuotes,
   type SupplierQuoteDraft,
@@ -80,45 +78,132 @@ async function syncPendingQuoteUploads(
   requisitionId: number,
   quotes: SupplierQuoteDraft[]
 ): Promise<SupplierQuoteDraft[]> {
-  // Normalize preferred flags across the full quote list first, then upload
-  // each new file once. Clear the local File afterward so later autosaves
-  // do not upload the same PDF again.
-  const normalizedQuotes = applyRecommendedSupplierDefaults(quotes)
-  const nextQuotes: SupplierQuoteDraft[] = []
+  // Quote PDF uploads are owned by RequisitionSupplierQuotes (immediate upload
+  // on file select). Autosave must NOT re-upload here — a second POST deletes
+  // the first attachment for that supplier and races the UI attachmentId.
+  void requisitionId
+  return applyRecommendedSupplierDefaults(quotes)
+}
 
-  for (const quote of normalizedQuotes) {
-    if (quote.file && quote.supplierId) {
-      const attachment = await uploadRequisitionQuote(
-        requisitionId,
-        Number(quote.supplierId),
-        quote.file,
-        mapSupplierQuoteToUploadMeta(quote)
-      )
+/**
+ * Prefer live rows that still hold a local File / attachment over a stale
+ * sync snapshot. Autosave often finishes with quote state from before the
+ * user picked a PDF; never let that wipe a newer live row.
+ */
+function mergeQuotesAfterSync(
+  syncedQuotes: SupplierQuoteDraft[],
+  liveQuotes: SupplierQuoteDraft[]
+): SupplierQuoteDraft[] {
+  const syncedByClientId = new Map(
+    syncedQuotes.map((quote) => [quote.clientId, quote])
+  )
+  const liveClientIds = new Set(liveQuotes.map((quote) => quote.clientId))
 
-      if (quote.previewUrl?.startsWith("blob:")) {
-        URL.revokeObjectURL(quote.previewUrl)
-      }
+  const merged = liveQuotes.map((live) => {
+    const synced = syncedByClientId.get(live.clientId)
 
-      nextQuotes.push({
-        ...quote,
-        attachmentId: attachment.id,
-        fileName: attachment.file_name || quote.fileName,
-        file: null,
-        previewUrl: null,
-      })
-      continue
+    // Live row still has a pending File that sync never saw — keep it.
+    if (live.file && !live.attachmentId) {
+      return live
     }
 
-    nextQuotes.push(quote)
+    // Live already uploaded; prefer the richer of live vs synced.
+    if (live.attachmentId || live.file || live.fileName) {
+      if (!synced) {
+        return live
+      }
+
+      return {
+        ...synced,
+        ...live,
+        attachmentId: live.attachmentId ?? synced.attachmentId,
+        file: live.file ?? synced.file,
+        fileName: live.fileName || synced.fileName,
+        previewUrl: live.previewUrl ?? synced.previewUrl,
+      }
+    }
+
+    if (synced) {
+      return synced
+    }
+
+    return live
+  })
+
+  for (const synced of syncedQuotes) {
+    if (!liveClientIds.has(synced.clientId)) {
+      merged.push(synced)
+    }
   }
 
-  // Refresh the quotes store so a concurrent/stale attachments fetch cannot
-  // blank the UI after a successful upload.
-  await useRequisitionQuotesStore
-    .getState()
-    .fetchAttachments(requisitionId, true)
+  return applyRecommendedSupplierDefaults(merged)
+}
 
-  return nextQuotes
+function hasPendingQuoteUploads(quotes: SupplierQuoteDraft[]) {
+  return quotes.some(
+    (quote) => Boolean(quote.file && quote.supplierId && !quote.attachmentId)
+  )
+}
+
+/** Prefer whichever quote row still has a local PDF or server attachment. */
+function preferRicherQuote(
+  incoming: SupplierQuoteDraft,
+  current?: SupplierQuoteDraft
+): SupplierQuoteDraft {
+  if (!current) {
+    return incoming
+  }
+
+  const incomingHasDoc = Boolean(
+    incoming.file || incoming.attachmentId || incoming.fileName
+  )
+  const currentHasDoc = Boolean(
+    current.file || current.attachmentId || current.fileName
+  )
+
+  if (currentHasDoc && !incomingHasDoc) {
+    return current
+  }
+
+  return {
+    ...current,
+    ...incoming,
+    attachmentId: incoming.attachmentId ?? current.attachmentId,
+    file: incoming.file ?? current.file,
+    fileName: incoming.fileName || current.fileName,
+    previewUrl: incoming.previewUrl ?? current.previewUrl,
+  }
+}
+
+function mergeQuoteListsPreferringDocuments(
+  incoming: SupplierQuoteDraft[],
+  current: SupplierQuoteDraft[]
+): SupplierQuoteDraft[] {
+  const currentByClientId = new Map(
+    current.map((quote) => [quote.clientId, quote])
+  )
+  const seen = new Set<string>()
+  const merged: SupplierQuoteDraft[] = []
+
+  for (const quote of incoming) {
+    seen.add(quote.clientId)
+    merged.push(preferRicherQuote(quote, currentByClientId.get(quote.clientId)))
+  }
+
+  for (const quote of current) {
+    if (seen.has(quote.clientId)) {
+      continue
+    }
+    // Keep live rows that still have a document and were missing from a
+    // stale incoming snapshot (classic autosave race).
+    if (quote.file || quote.attachmentId || quote.fileName) {
+      merged.push(quote)
+    }
+  }
+
+  return applyRecommendedSupplierDefaults(
+    merged.length > 0 ? merged : current
+  )
 }
 
 export type RequisitionFormMode = "create" | "edit"
@@ -231,9 +316,45 @@ export function RequisitionForm({
   const skipDirtyTrackingRef = useRef(true)
   const isDirtyRef = useRef(false)
   const autosaveInFlightRef = useRef<Promise<boolean> | null>(null)
+  const autosaveQueuedRef = useRef(false)
+  const supplierQuotesRef = useRef(supplierQuotes)
   const skipNextServerHydrationRef = useRef(false)
   const persistedRequisitionIdRef = useRef<number | null>(requisitionId ?? null)
+  const [draftRequisitionId, setDraftRequisitionId] = useState<number | null>(
+    requisitionId ?? null
+  )
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Keep the ref in lockstep with every quote update — including ones that
+  // have not flushed through React yet — so in-flight autosaves cannot read
+  // a stale list and wipe a just-selected PDF.
+  const replaceSupplierQuotes = (
+    next:
+      | SupplierQuoteDraft[]
+      | ((current: SupplierQuoteDraft[]) => SupplierQuoteDraft[])
+  ) => {
+    if (typeof next === "function") {
+      setSupplierQuotes((current) => {
+        const resolved = next(current)
+        supplierQuotesRef.current = resolved
+        return resolved
+      })
+      return
+    }
+
+    supplierQuotesRef.current = next
+    setSupplierQuotes(next)
+  }
+
+  useEffect(() => {
+    persistedRequisitionIdRef.current = requisitionId ?? persistedRequisitionIdRef.current
+    // Never clear a known draft id just because the parent prop is still null
+    // during create→edit transition — quote uploads need that id for POST.
+    if (requisitionId) {
+      setDraftRequisitionId(requisitionId)
+      useRequisitionQuotesStore.getState().setActiveRequisitionId(requisitionId)
+    }
+  }, [requisitionId])
 
   const beginQuietUpdate = () => {
     skipDirtyTrackingRef.current = true
@@ -365,11 +486,21 @@ export function RequisitionForm({
         // Never restore attachment-backed quotes from localStorage — the
         // attachments API is source of truth. Only keep incomplete local rows
         // (supplier chosen, PDF not uploaded yet) so draft progress survives.
+        // Critical: never replace live rows that still hold a File / attachment
+        // with a File-stripped snapshot — that is what made uploads vanish.
         const pendingLocalQuotes = snapshot.supplierQuotes.filter(
           (quote) => quote.supplierId && !quote.attachmentId
         )
         if (pendingLocalQuotes.length > 0) {
-          setSupplierQuotes((current) => {
+          replaceSupplierQuotes((current) => {
+            if (
+              current.some(
+                (quote) => quote.file || quote.attachmentId || quote.fileName
+              )
+            ) {
+              return current
+            }
+
             const serverQuotes = current.filter((quote) => quote.attachmentId)
             const extras = pendingLocalQuotes
               .map((quote) => ({
@@ -420,7 +551,7 @@ export function RequisitionForm({
         ? snapshot.lineItems
         : [createEmptyLineItem()]
     )
-    setSupplierQuotes(
+    replaceSupplierQuotes(
       snapshot.supplierQuotes.length > 0
         ? snapshot.supplierQuotes.map((quote) => ({
             ...quote,
@@ -525,6 +656,9 @@ export function RequisitionForm({
     isSaving ||
     isReviewing ||
     (mode === "edit" && !isEditable)
+  // Quote uploads must stay interactive during autosave/load — disabling the
+  // section was preventing the file input from firing and the POST never ran.
+  const quotesDisabled = isTerminalRequisition || (mode === "edit" && !isEditable)
   const canAddLineItems = canAddLineItemsToRequisition(statusLabel, mode)
   const showSubmitAction = canSubmitRequisition(statusLabel, mode)
   const requisitionTotal = calculateRequisitionTotalFromLineItems(
@@ -677,14 +811,38 @@ export function RequisitionForm({
       return null
     }
 
+    let pendingQuoteUploadsRemain = false
+
     try {
+      // Always sync the latest quotes — not the closure snapshot from when
+      // persist started — so a PDF selected mid-autosave is not dropped.
+      const quotesToSync = supplierQuotesRef.current
       const syncedQuotes = await syncPendingQuoteUploads(
         requisition.id,
-        supplierQuotes
+        quotesToSync
       )
+      // Re-read after the await: the user may have picked a PDF while we were
+      // saving. Prefer any live document over a stale sync snapshot.
+      const mergedQuotes = mergeQuoteListsPreferringDocuments(
+        mergeQuotesAfterSync(syncedQuotes, supplierQuotesRef.current),
+        supplierQuotesRef.current
+      )
+      pendingQuoteUploadsRemain = hasPendingQuoteUploads(mergedQuotes)
+
       beginQuietUpdate()
-      setSupplierQuotes(syncedQuotes)
-      endQuietUpdate()
+      replaceSupplierQuotes(mergedQuotes)
+      if (pendingQuoteUploadsRemain) {
+        // Keep dirty so a follow-up autosave uploads the newer file(s).
+        isDirtyRef.current = true
+        setIsDirty(true)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            skipDirtyTrackingRef.current = false
+          })
+        })
+      } else {
+        endQuietUpdate()
+      }
 
       // Keep a local snapshot after draft saves so navigate-away / refresh can
       // restore incomplete fields that the server may still be catching up on.
@@ -703,7 +861,7 @@ export function RequisitionForm({
         selectedTagIds: selectedTags.map((tag) => tag.id),
         selectedTags,
         lineItems,
-        supplierQuotes: syncedQuotes,
+        supplierQuotes: supplierQuotesRef.current,
       })
       clearRequisitionDraftSnapshot(null)
     } catch (uploadError) {
@@ -714,17 +872,42 @@ export function RequisitionForm({
       )
       // Still keep the requisition id so later saves update the same draft.
       persistedRequisitionIdRef.current = requisition.id
+      setDraftRequisitionId(requisition.id)
+      useRequisitionQuotesStore.getState().setActiveRequisitionId(requisition.id)
       writeLocalDraftSnapshot()
       return null
     }
 
-    isDirtyRef.current = false
-    setIsDirty(false)
     persistedRequisitionIdRef.current = requisition.id
+    setDraftRequisitionId(requisition.id)
+    useRequisitionQuotesStore.getState().setActiveRequisitionId(requisition.id)
+
+    if (!pendingQuoteUploadsRemain) {
+      isDirtyRef.current = false
+      setIsDirty(false)
+    }
 
     if (shouldSubmit) {
       clearRequisitionDraftSnapshot(requisition.id)
       clearRequisitionDraftSnapshot(null)
+    }
+
+    const finishHeaderUpdate = () => {
+      beginQuietUpdate()
+      setReferenceNumber(requisition.requisition_number ?? requisition.number)
+      setStatusLabel(requisition.status?.name ?? "")
+      setStageLabel(requisition.stage?.name ?? "")
+      if (pendingQuoteUploadsRemain) {
+        isDirtyRef.current = true
+        setIsDirty(true)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            skipDirtyTrackingRef.current = false
+          })
+        })
+      } else {
+        endQuietUpdate()
+      }
     }
 
     if (source === "explicit" && shouldSubmit && existingId != null) {
@@ -732,22 +915,14 @@ export function RequisitionForm({
       setActivityComment("")
       await fetchLogs(requisition.id, true)
     } else if (source === "autosave") {
-      beginQuietUpdate()
-      setReferenceNumber(requisition.requisition_number ?? requisition.number)
-      setStatusLabel(requisition.status?.name ?? "")
-      setStageLabel(requisition.stage?.name ?? "")
-      endQuietUpdate()
+      finishHeaderUpdate()
 
       if (existingId == null) {
         skipNextServerHydrationRef.current = true
       }
     } else if (source === "explicit" && !shouldSubmit) {
       // Keep current in-progress form state after draft save; only refresh headers.
-      beginQuietUpdate()
-      setReferenceNumber(requisition.requisition_number ?? requisition.number)
-      setStatusLabel(requisition.status?.name ?? "")
-      setStageLabel(requisition.stage?.name ?? "")
-      endQuietUpdate()
+      finishHeaderUpdate()
       if (existingId == null) {
         skipNextServerHydrationRef.current = true
       }
@@ -781,6 +956,9 @@ export function RequisitionForm({
     }
 
     if (autosaveInFlightRef.current) {
+      // A newer edit happened while saving (e.g. PDF picked mid-flight).
+      // Retry once the in-flight save finishes so we don't drop that work.
+      autosaveQueuedRef.current = true
       return autosaveInFlightRef.current
     }
 
@@ -792,9 +970,20 @@ export function RequisitionForm({
     autosaveInFlightRef.current = run
 
     try {
-      return await run
+      const result = await run
+
+      if (autosaveQueuedRef.current) {
+        autosaveQueuedRef.current = false
+        if (isDirtyRef.current) {
+          return autosaveDraft()
+        }
+      }
+
+      return result
     } finally {
-      autosaveInFlightRef.current = null
+      if (autosaveInFlightRef.current === run) {
+        autosaveInFlightRef.current = null
+      }
     }
   }, [
     activityComment,
@@ -1158,12 +1347,12 @@ export function RequisitionForm({
 
       <RequisitionSupplierQuotes
         quotes={supplierQuotes}
-        onChange={setSupplierQuotes}
+        onChange={replaceSupplierQuotes}
         quoteWaiverReason={quoteWaiverReason}
         onQuoteWaiverReasonChange={setQuoteWaiverReason}
-        requisitionId={mode === "edit" ? requisitionId : undefined}
+        requisitionId={requisitionId ?? draftRequisitionId ?? undefined}
         requisitionTotal={requisitionTotal}
-        disabled={isFormDisabled}
+        disabled={quotesDisabled}
       />
 
       {mode === "edit" && isEditable ? (

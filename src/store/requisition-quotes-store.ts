@@ -9,16 +9,40 @@ import {
 } from "@/lib/api/attachments"
 import { readStoredAccessToken } from "@/lib/auth/storage"
 
+type PendingQuoteUpload = {
+  clientId: string
+  requisitionId: number
+  supplierId: number
+  file: File
+  meta?: RequisitionQuoteUploadMeta
+}
+
 type RequisitionQuotesState = {
   attachments: RequisitionAttachment[]
   isLoading: boolean
   isUploading: boolean
   isDeleting: boolean
   error: string | null
+  /** Latest known requisition id for in-progress draft uploads */
+  activeRequisitionId: number | null
+  /** clientId → in-flight/pending local PDF waiting for POST */
+  pendingByClientId: Record<string, PendingQuoteUpload>
+  lastUploadedByClientId: Record<
+    string,
+    { attachmentId: number; fileName: string }
+  >
+  setActiveRequisitionId: (requisitionId: number | null) => void
   fetchAttachments: (
     requisitionId: number,
     force?: boolean
   ) => Promise<RequisitionAttachment[] | null>
+  /**
+   * Queue + immediately POST a quote PDF. Safe to call repeatedly; duplicate
+   * in-flight uploads for the same clientId are ignored.
+   */
+  enqueueAndUploadQuote: (
+    pending: PendingQuoteUpload
+  ) => Promise<RequisitionAttachment | null>
   uploadQuote: (
     requisitionId: number,
     supplierId: number,
@@ -26,6 +50,7 @@ type RequisitionQuotesState = {
     meta?: RequisitionQuoteUploadMeta
   ) => Promise<RequisitionAttachment | null>
   deleteQuote: (attachmentId: number) => Promise<boolean>
+  clearPending: (clientId: string) => void
   reset: () => void
 }
 
@@ -35,16 +60,26 @@ const initialState = {
   isUploading: false,
   isDeleting: false,
   error: null as string | null,
+  activeRequisitionId: null as number | null,
+  pendingByClientId: {} as Record<string, PendingQuoteUpload>,
+  lastUploadedByClientId: {} as Record<
+    string,
+    { attachmentId: number; fileName: string }
+  >,
 }
 
 let attachmentsFetchPromise: Promise<RequisitionAttachment[] | null> | null =
   null
 let attachmentsFetchRequisitionId: number | null = null
 let lastFetchedRequisitionId: number | null = null
+const inFlightClientIds = new Set<string>()
 
 export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
   (set, get) => ({
     ...initialState,
+    setActiveRequisitionId: (requisitionId) => {
+      set({ activeRequisitionId: requisitionId })
+    },
     fetchAttachments: async (requisitionId, force = false) => {
       if (
         !force &&
@@ -72,7 +107,14 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
 
       attachmentsFetchRequisitionId = requisitionId
       attachmentsFetchPromise = (async () => {
-        set({ isLoading: true, error: null })
+        const isFirstLoad =
+          lastFetchedRequisitionId !== requisitionId &&
+          get().attachments.length === 0
+        if (isFirstLoad) {
+          set({ isLoading: true, error: null })
+        } else {
+          set({ error: null })
+        }
 
         try {
           const attachments = await fetchRequisitionAttachments(requisitionId)
@@ -87,7 +129,6 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
                 ? error.message
                 : "Failed to load supplier quotes.",
           })
-          // null = failed fetch; callers must not treat this as "no quotes".
           return null
         } finally {
           attachmentsFetchPromise = null
@@ -97,31 +138,55 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
 
       return attachmentsFetchPromise
     },
-    uploadQuote: async (requisitionId, supplierId, file, meta) => {
+    enqueueAndUploadQuote: async (pending) => {
+      set((state) => ({
+        pendingByClientId: {
+          ...state.pendingByClientId,
+          [pending.clientId]: pending,
+        },
+        error: null,
+      }))
+
+      if (inFlightClientIds.has(pending.clientId)) {
+        return null
+      }
+
+      inFlightClientIds.add(pending.clientId)
       set({ isUploading: true, error: null })
 
       try {
         const attachment = await uploadRequisitionQuote(
-          requisitionId,
-          supplierId,
-          file,
-          meta
+          pending.requisitionId,
+          pending.supplierId,
+          pending.file,
+          pending.meta
         )
 
-        set((state) => ({
-          attachments: [
-            attachment,
-            ...state.attachments.filter(
-              (existing) =>
-                existing.supplier_id !== attachment.supplier_id &&
-                existing.id !== attachment.id
-            ),
-          ],
-          isUploading: false,
-          error: null,
-        }))
-        lastFetchedRequisitionId = requisitionId
-
+        set((state) => {
+          const { [pending.clientId]: _removed, ...restPending } =
+            state.pendingByClientId
+          return {
+            attachments: [
+              attachment,
+              ...state.attachments.filter(
+                (existing) =>
+                  existing.supplier_id !== attachment.supplier_id &&
+                  existing.id !== attachment.id
+              ),
+            ],
+            pendingByClientId: restPending,
+            lastUploadedByClientId: {
+              ...state.lastUploadedByClientId,
+              [pending.clientId]: {
+                attachmentId: attachment.id,
+                fileName: attachment.file_name || pending.file.name,
+              },
+            },
+            isUploading: false,
+            error: null,
+          }
+        })
+        lastFetchedRequisitionId = pending.requisitionId
         return attachment
       } catch (error) {
         set({
@@ -132,7 +197,18 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
               : "Failed to upload supplier quote.",
         })
         return null
+      } finally {
+        inFlightClientIds.delete(pending.clientId)
       }
+    },
+    uploadQuote: async (requisitionId, supplierId, file, meta) => {
+      return get().enqueueAndUploadQuote({
+        clientId: `legacy-${supplierId}-${file.name}`,
+        requisitionId,
+        supplierId,
+        file,
+        meta,
+      })
     },
     deleteQuote: async (attachmentId) => {
       set({ isDeleting: true, error: null })
@@ -158,10 +234,17 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
         return false
       }
     },
+    clearPending: (clientId) => {
+      set((state) => {
+        const { [clientId]: _removed, ...rest } = state.pendingByClientId
+        return { pendingByClientId: rest }
+      })
+    },
     reset: () => {
       attachmentsFetchPromise = null
       attachmentsFetchRequisitionId = null
       lastFetchedRequisitionId = null
+      inFlightClientIds.clear()
       set(initialState)
     },
   })

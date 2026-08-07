@@ -143,8 +143,37 @@ export function PdfViewer({
     triggerBlobDownload(blob, displayName)
   }
 
-  if (!file && !canLoadRemote) {
+  if (!file && !canLoadRemote && !fileName) {
     return null
+  }
+
+  // fileName-only (e.g. hydration race): still show the document chrome so the
+  // row does not look empty while attachmentId/file catch up.
+  if (!file && !canLoadRemote) {
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/10 px-3 py-2",
+          className
+        )}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+          <FileText className="size-4 shrink-0" />
+          <span className="truncate">{displayName}</span>
+        </div>
+        {onRemove && !disabled ? (
+          <UBButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            aria-label="Remove quote file"
+          >
+            <X className="size-4" />
+          </UBButton>
+        ) : null}
+      </div>
+    )
   }
 
   return (

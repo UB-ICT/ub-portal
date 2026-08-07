@@ -1,10 +1,11 @@
-import { MessageSquarePlus, Upload, X } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { MessageSquarePlus, Upload } from "lucide-react"
+import { useEffect, useId, useRef, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { cn } from "@/lib/utils"
 import { useRequisitionLogsStore } from "@/store/requisition-logs-store"
 
+import { PdfViewer } from "./PdfViewer"
 import { RequisitionLogEntryCard } from "./RequisitionLogEntryCard"
 
 const PDF_ACCEPT = "application/pdf,.pdf"
@@ -13,16 +14,21 @@ type RequisitionActivityLogProps = {
   requisitionId?: number
   className?: string
   allowComments?: boolean
+  /** Seed a supporting PDF in the composer (Storybook / tests). */
+  initialSupportingFile?: File | null
 }
 
 function isPdfFile(file: File) {
-  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  )
 }
 
 export function RequisitionActivityLog({
   requisitionId,
   className,
   allowComments = true,
+  initialSupportingFile = null,
 }: RequisitionActivityLogProps) {
   const fetchLogs = useRequisitionLogsStore((state) => state.fetchLogs)
   const addComment = useRequisitionLogsStore((state) => state.addComment)
@@ -34,9 +40,10 @@ export function RequisitionActivityLog({
   const error = useRequisitionLogsStore((state) => state.error)
 
   const [comment, setComment] = useState("")
-  const [file, setFile] = useState<File | null>(null)
+  const [file, setFile] = useState<File | null>(initialSupportingFile)
   const [fileError, setFileError] = useState<string | null>(null)
   const fileInputId = useId()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!requisitionId) {
@@ -131,30 +138,9 @@ export function RequisitionActivityLog({
                 (optional)
               </span>
             </p>
-            {file ? (
-              <div className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/10 px-3 py-2 text-sm">
-                <span className="min-w-0 truncate">{file.name}</span>
-                <UBButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleFileChange(null)}
-                  aria-label="Remove supporting PDF"
-                >
-                  <X className="size-4" />
-                </UBButton>
-              </div>
-            ) : (
-              <label
-                htmlFor={fileInputId}
-                className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-muted/20"
-              >
-                <Upload className="size-4 shrink-0 text-primary/80" />
-                Upload PDF attachment
-              </label>
-            )}
             <input
               id={fileInputId}
+              ref={fileInputRef}
               type="file"
               accept={PDF_ACCEPT}
               className="sr-only"
@@ -163,8 +149,27 @@ export function RequisitionActivityLog({
                 event.target.value = ""
               }}
             />
+            {file ? (
+              <PdfViewer
+                file={file}
+                fileName={file.name}
+                onRemove={() => handleFileChange(null)}
+                previewDescription="Supporting PDF preview"
+              />
+            ) : (
+              <UBButton
+                type="button"
+                variant="outline"
+                className="flex h-auto min-h-10 w-full items-center justify-center gap-2 border-dashed px-3 py-2 text-sm font-normal"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="size-4 shrink-0 text-primary/80" />
+                Upload PDF attachment
+              </UBButton>
+            )}
             <p className="text-xs text-muted-foreground">
-              PDF files only, up to 10 MB.
+              PDF files only, up to 10 MB. Use View to preview or Download to
+              save a copy before posting.
             </p>
             {fileError ? (
               <p className="text-sm text-destructive">{fileError}</p>
