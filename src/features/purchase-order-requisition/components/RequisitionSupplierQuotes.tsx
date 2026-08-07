@@ -31,9 +31,11 @@ type RequisitionSupplierQuotesProps = {
 }
 
 function mapAttachmentsToQuotes(
-  attachments: Awaited<
-    ReturnType<
-      ReturnType<typeof useRequisitionQuotesStore.getState>["fetchAttachments"]
+  attachments: NonNullable<
+    Awaited<
+      ReturnType<
+        ReturnType<typeof useRequisitionQuotesStore.getState>["fetchAttachments"]
+      >
     >
   >
 ): SupplierQuoteDraft[] {
@@ -72,6 +74,7 @@ export function RequisitionSupplierQuotes({
   const storeError = useRequisitionQuotesStore((state) => state.error)
 
   const hasLoadedAttachments = useRef(false)
+  const loadGenerationRef = useRef(0)
   const quotesRef = useRef(quotes)
   quotesRef.current = quotes
 
@@ -88,13 +91,25 @@ export function RequisitionSupplierQuotes({
       return
     }
 
+    const loadGeneration = ++loadGenerationRef.current
+
     void fetchAttachments(requisitionId, true).then((attachments) => {
+      if (loadGeneration !== loadGenerationRef.current) {
+        return
+      }
+
+      // Fetch failed — keep whatever the form already shows (e.g. just-uploaded).
+      if (attachments === null) {
+        hasLoadedAttachments.current = true
+        return
+      }
+
       hasLoadedAttachments.current = true
 
       const localQuotes = quotesRef.current
-      // Server attachments are authoritative. Keep only local work that is not
-      // already on the server. Drop stale rows whose attachmentId was deleted
-      // (e.g. old autosave duplicates still sitting in localStorage drafts).
+      // Server attachments are authoritative when the API succeeds. Keep only
+      // local work that is not already on the server. Never blank out rows that
+      // already have a PDF just because a slow/empty fetch raced an upload.
       const pendingOrUnsynced = localQuotes.filter((quote) => {
         if (quote.attachmentId) {
           return false
@@ -110,7 +125,6 @@ export function RequisitionSupplierQuotes({
           return false
         }
 
-        // Supplier chosen locally but no uploaded quote for that supplier yet.
         return !attachments.some(
           (attachment) => String(attachment.supplier_id) === quote.supplierId
         )
@@ -124,17 +138,17 @@ export function RequisitionSupplierQuotes({
         return
       }
 
-      if (
-        pendingOrUnsynced.length > 0 ||
-        localQuotes.some((quote) => quote.supplierId || quote.attachmentId)
-      ) {
+      const localWithDocuments = localQuotes.filter(
+        (quote) => quote.attachmentId || quote.file || quote.fileName
+      )
+
+      if (localWithDocuments.length > 0 || pendingOrUnsynced.length > 0) {
         emitChange(
           pendingOrUnsynced.length > 0 ? pendingOrUnsynced : localQuotes
         )
         return
       }
 
-      // Read-only viewers should not get an empty upload row.
       emitChange(disabled ? [] : [createEmptySupplierQuote()])
     })
   }, [disabled, fetchAttachments, onChange, requisitionId])

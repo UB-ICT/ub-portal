@@ -13,6 +13,7 @@ import { flushRequisitionDraftKeepalive } from "@/lib/api/requisitions"
 import type { RequisitionTag } from "@/lib/api/tags"
 import { cn } from "@/lib/utils"
 import { fetchGstRate } from "@/lib/api/requisition-settings"
+import { useRequisitionQuotesStore } from "@/store/requisition-quotes-store"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 import type { DiscountType } from "../lib/line-pricing"
 import { DEFAULT_GST_RATE_PERCENT } from "../lib/line-pricing"
@@ -110,6 +111,12 @@ async function syncPendingQuoteUploads(
 
     nextQuotes.push(quote)
   }
+
+  // Refresh the quotes store so a concurrent/stale attachments fetch cannot
+  // blank the UI after a successful upload.
+  await useRequisitionQuotesStore
+    .getState()
+    .fetchAttachments(requisitionId, true)
 
   return nextQuotes
 }

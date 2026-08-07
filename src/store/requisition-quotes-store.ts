@@ -18,7 +18,7 @@ type RequisitionQuotesState = {
   fetchAttachments: (
     requisitionId: number,
     force?: boolean
-  ) => Promise<RequisitionAttachment[]>
+  ) => Promise<RequisitionAttachment[] | null>
   uploadQuote: (
     requisitionId: number,
     supplierId: number,
@@ -37,7 +37,8 @@ const initialState = {
   error: null as string | null,
 }
 
-let attachmentsFetchPromise: Promise<RequisitionAttachment[]> | null = null
+let attachmentsFetchPromise: Promise<RequisitionAttachment[] | null> | null =
+  null
 let attachmentsFetchRequisitionId: number | null = null
 let lastFetchedRequisitionId: number | null = null
 
@@ -80,14 +81,14 @@ export const useRequisitionQuotesStore = create<RequisitionQuotesState>(
           return attachments
         } catch (error) {
           set({
-            attachments: [],
             isLoading: false,
             error:
               error instanceof Error
                 ? error.message
                 : "Failed to load supplier quotes.",
           })
-          return []
+          // null = failed fetch; callers must not treat this as "no quotes".
+          return null
         } finally {
           attachmentsFetchPromise = null
           attachmentsFetchRequisitionId = null
