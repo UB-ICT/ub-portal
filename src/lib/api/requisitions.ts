@@ -389,17 +389,37 @@ export function getRequisitionPrintUrl(id: number) {
   return `${BASE_PATH}/requisitions/${id}/print`
 }
 
+export function getRequisitionExportUrl(id: number) {
+  return `${BASE_PATH}/requisitions/${id}/export`
+}
+
+async function fetchRequisitionPrintResponse(id: number) {
+  const headers = {
+    Accept: "application/pdf",
+    Authorization: `Bearer ${getToken()}`,
+  }
+
+  const printResponse = await fetch(buildApiUrl(getRequisitionPrintUrl(id)), {
+    headers,
+    cache: "no-store",
+  })
+
+  // Older API deploys only expose /export; fall back when /print is missing.
+  if (printResponse.status === 404) {
+    return fetch(buildApiUrl(getRequisitionExportUrl(id)), {
+      headers,
+      cache: "no-store",
+    })
+  }
+
+  return printResponse
+}
+
 export async function downloadRequisitionPrintPdf(
   id: number,
   fallbackFileName = "requisition.pdf"
 ) {
-  const response = await fetch(buildApiUrl(getRequisitionPrintUrl(id)), {
-    headers: {
-      Accept: "application/pdf",
-      Authorization: `Bearer ${getToken()}`,
-    },
-    cache: "no-store",
-  })
+  const response = await fetchRequisitionPrintResponse(id)
 
   if (!response.ok) {
     let message = "Failed to generate requisition PDF."
@@ -409,7 +429,13 @@ export async function downloadRequisitionPrintPdf(
         message = payload.message
       }
     } catch {
-      // ignore non-JSON error bodies
+      if (response.status === 404) {
+        message =
+          "Print endpoint not found. Deploy the latest API, then try again."
+      } else if (response.status >= 500) {
+        message =
+          "The API failed while generating the PDF. Check the API logs and try again."
+      }
     }
     throw new Error(message)
   }
@@ -430,7 +456,7 @@ export async function downloadRequisitionPrintPdf(
   if (isZip || !isPdf) {
     throw new Error(
       isZip
-        ? "Server returned a ZIP export instead of a print PDF. Redeploy the API with the print endpoint, then try again."
+        ? "Server returned a ZIP export instead of a print PDF. Redeploy the API with the merged print PDF, then try again."
         : "Server returned an invalid PDF. Please try again."
     )
   }
