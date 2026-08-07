@@ -385,15 +385,15 @@ export function getRequisitionPurchaseOrderDownloadUrl(id: number) {
   return `${BASE_PATH}/requisitions/${id}/purchase-order/download`
 }
 
-export function getRequisitionExportUrl(id: number) {
-  return `${BASE_PATH}/requisitions/${id}/export`
+export function getRequisitionPrintUrl(id: number) {
+  return `${BASE_PATH}/requisitions/${id}/print`
 }
 
 export async function downloadRequisitionPrintPdf(
   id: number,
   fallbackFileName = "requisition.pdf"
 ) {
-  const response = await fetch(buildApiUrl(getRequisitionExportUrl(id)), {
+  const response = await fetch(buildApiUrl(getRequisitionPrintUrl(id)), {
     headers: {
       Accept: "application/pdf",
       Authorization: `Bearer ${getToken()}`,
@@ -414,10 +414,31 @@ export async function downloadRequisitionPrintPdf(
     throw new Error(message)
   }
 
+  const buffer = await response.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+
+  // Reject ZIP / non-PDF payloads so we never open or save a broken file.
+  const isPdf =
+    bytes.length >= 5 &&
+    bytes[0] === 0x25 && // %
+    bytes[1] === 0x50 && // P
+    bytes[2] === 0x44 && // D
+    bytes[3] === 0x46 && // F
+    bytes[4] === 0x2d // -
+  const isZip = bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b
+
+  if (isZip || !isPdf) {
+    throw new Error(
+      isZip
+        ? "Server returned a ZIP export instead of a print PDF. Redeploy the API with the print endpoint, then try again."
+        : "Server returned an invalid PDF. Please try again."
+    )
+  }
+
   const disposition = response.headers.get("content-disposition") ?? ""
   const matched = /filename=\"([^\"]+)\"/i.exec(disposition)
   const fileName = matched?.[1] || fallbackFileName
-  const blob = await response.blob()
+  const blob = new Blob([buffer], { type: "application/pdf" })
   const url = URL.createObjectURL(blob)
 
   const printWindow = window.open(url, "_blank", "noopener,noreferrer")
