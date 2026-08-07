@@ -385,6 +385,47 @@ export function getRequisitionPurchaseOrderDownloadUrl(id: number) {
   return `${BASE_PATH}/requisitions/${id}/purchase-order/download`
 }
 
+export function getRequisitionExportUrl(id: number) {
+  return `${BASE_PATH}/requisitions/${id}/export`
+}
+
+export async function downloadRequisitionExport(
+  id: number,
+  fallbackFileName = "requisition-export.zip"
+) {
+  const response = await fetch(buildApiUrl(getRequisitionExportUrl(id)), {
+    headers: {
+      Accept: "application/zip",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    let message = "Failed to export requisition."
+    try {
+      const payload = (await response.json()) as { message?: string }
+      if (payload.message) {
+        message = payload.message
+      }
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new Error(message)
+  }
+
+  const disposition = response.headers.get("content-disposition") ?? ""
+  const matched = /filename=\"([^\"]+)\"/i.exec(disposition)
+  const fileName = matched?.[1] || fallbackFileName
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = url
+  anchor.download = fileName
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
 export async function emailRequisitionPurchaseOrder(
   id: number,
   payload: { message?: string | null } = {}

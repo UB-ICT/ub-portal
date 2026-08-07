@@ -22,6 +22,11 @@ type PdfViewerProps = {
   className?: string
   onRemove?: () => void
   disabled?: boolean
+  /** Custom blob loader (e.g. activity-log attachments). */
+  loadBlob?: () => Promise<Blob>
+  /** Custom download blob loader. Defaults to loadBlob when omitted. */
+  downloadBlob?: () => Promise<Blob>
+  previewDescription?: string
 }
 
 function triggerBlobDownload(blob: Blob, fileName: string) {
@@ -40,6 +45,9 @@ export function PdfViewer({
   className,
   onRemove,
   disabled = false,
+  loadBlob,
+  downloadBlob,
+  previewDescription = "Supplier quote PDF preview",
 }: PdfViewerProps) {
   const [open, setOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -47,6 +55,7 @@ export function PdfViewer({
   const [error, setError] = useState<string | null>(null)
 
   const displayName = fileName || "Quote document.pdf"
+  const canLoadRemote = Boolean(loadBlob || attachmentId)
 
   useEffect(() => {
     if (!open) {
@@ -66,7 +75,7 @@ export function PdfViewer({
         return
       }
 
-      if (!attachmentId) {
+      if (!canLoadRemote) {
         setPreviewUrl(null)
         setIsLoading(false)
         return
@@ -75,7 +84,9 @@ export function PdfViewer({
       setIsLoading(true)
 
       try {
-        const blob = await fetchAttachmentBlob(attachmentId)
+        const blob = loadBlob
+          ? await loadBlob()
+          : await fetchAttachmentBlob(attachmentId!)
 
         if (!active) {
           return
@@ -112,7 +123,7 @@ export function PdfViewer({
 
       setPreviewUrl(null)
     }
-  }, [attachmentId, file, open])
+  }, [attachmentId, canLoadRemote, file, loadBlob, open])
 
   const handleDownload = async () => {
     if (file) {
@@ -120,15 +131,19 @@ export function PdfViewer({
       return
     }
 
-    if (!attachmentId) {
+    if (!canLoadRemote) {
       return
     }
 
-    const blob = await downloadRequisitionAttachment(attachmentId)
+    const blob = downloadBlob
+      ? await downloadBlob()
+      : loadBlob
+        ? await loadBlob()
+        : await downloadRequisitionAttachment(attachmentId!)
     triggerBlobDownload(blob, displayName)
   }
 
-  if (!file && !attachmentId) {
+  if (!file && !canLoadRemote) {
     return null
   }
 
@@ -180,9 +195,7 @@ export function PdfViewer({
         <DialogContent className="flex max-h-[90vh] w-[min(96vw,56rem)] max-w-4xl flex-col gap-3 overflow-hidden p-4 sm:max-w-4xl">
           <DialogHeader className="pr-8">
             <DialogTitle className="truncate">{displayName}</DialogTitle>
-            <DialogDescription>
-              Supplier quote PDF preview
-            </DialogDescription>
+            <DialogDescription>{previewDescription}</DialogDescription>
           </DialogHeader>
 
           <div className="relative min-h-[70vh] flex-1 overflow-hidden rounded-lg border border-border/70 bg-background">

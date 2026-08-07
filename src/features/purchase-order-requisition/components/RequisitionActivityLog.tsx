@@ -1,5 +1,5 @@
-import { MessageSquarePlus } from "lucide-react"
-import { useEffect, useState } from "react"
+import { MessageSquarePlus, Upload, X } from "lucide-react"
+import { useEffect, useId, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { cn } from "@/lib/utils"
@@ -7,10 +7,16 @@ import { useRequisitionLogsStore } from "@/store/requisition-logs-store"
 
 import { RequisitionLogEntryCard } from "./RequisitionLogEntryCard"
 
+const PDF_ACCEPT = "application/pdf,.pdf"
+
 type RequisitionActivityLogProps = {
   requisitionId?: number
   className?: string
   allowComments?: boolean
+}
+
+function isPdfFile(file: File) {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
 }
 
 export function RequisitionActivityLog({
@@ -28,6 +34,9 @@ export function RequisitionActivityLog({
   const error = useRequisitionLogsStore((state) => state.error)
 
   const [comment, setComment] = useState("")
+  const [file, setFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
+  const fileInputId = useId()
 
   useEffect(() => {
     if (!requisitionId) {
@@ -37,6 +46,29 @@ export function RequisitionActivityLog({
     void fetchLogs(requisitionId, true)
   }, [fetchLogs, requisitionId])
 
+  const handleFileChange = (nextFile: File | null) => {
+    setFileError(null)
+
+    if (!nextFile) {
+      setFile(null)
+      return
+    }
+
+    if (!isPdfFile(nextFile)) {
+      setFileError("Only PDF files are allowed.")
+      setFile(null)
+      return
+    }
+
+    if (nextFile.size > 10 * 1024 * 1024) {
+      setFileError("PDF must be 10 MB or smaller.")
+      setFile(null)
+      return
+    }
+
+    setFile(nextFile)
+  }
+
   const handleSubmitComment = async () => {
     if (!requisitionId || !comment.trim()) {
       return
@@ -44,10 +76,13 @@ export function RequisitionActivityLog({
 
     const created = await addComment(requisitionId, {
       comments: comment.trim(),
+      file,
     })
 
     if (created) {
       setComment("")
+      setFile(null)
+      setFileError(null)
     }
   }
 
@@ -67,13 +102,13 @@ export function RequisitionActivityLog({
       <div>
         <h3 className="text-sm font-semibold tracking-tight">Activity log</h3>
         <p className="text-xs text-muted-foreground">
-          Updates, submissions, approvals, rejections, and comments for this
-          requisition.
+          Submissions, approvals, rejections, redirects, and comments for this
+          requisition. Comments may include a supporting PDF.
         </p>
       </div>
 
       {allowComments ? (
-        <div className="space-y-2 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+        <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
           <label
             htmlFor="requisition-activity-comment"
             className="text-xs font-medium uppercase tracking-widest text-muted-foreground"
@@ -88,6 +123,54 @@ export function RequisitionActivityLog({
             placeholder="Leave a note for reviewers or approvers..."
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
           />
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              Supporting PDF{" "}
+              <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
+                (optional)
+              </span>
+            </p>
+            {file ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/10 px-3 py-2 text-sm">
+                <span className="min-w-0 truncate">{file.name}</span>
+                <UBButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFileChange(null)}
+                  aria-label="Remove supporting PDF"
+                >
+                  <X className="size-4" />
+                </UBButton>
+              </div>
+            ) : (
+              <label
+                htmlFor={fileInputId}
+                className="flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-muted/20"
+              >
+                <Upload className="size-4 shrink-0 text-primary/80" />
+                Upload PDF attachment
+              </label>
+            )}
+            <input
+              id={fileInputId}
+              type="file"
+              accept={PDF_ACCEPT}
+              className="sr-only"
+              onChange={(event) => {
+                handleFileChange(event.target.files?.[0] ?? null)
+                event.target.value = ""
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              PDF files only, up to 10 MB.
+            </p>
+            {fileError ? (
+              <p className="text-sm text-destructive">{fileError}</p>
+            ) : null}
+          </div>
+
           <div className="flex justify-end">
             <UBButton
               type="button"

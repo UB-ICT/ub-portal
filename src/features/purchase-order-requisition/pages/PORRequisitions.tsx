@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
+import { Download } from "lucide-react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
@@ -18,7 +19,10 @@ import {
   type StoredRequisitionSelection,
 } from "@/features/purchase-order-requisition/lib/requisition-selection-storage"
 import { UBTimeline } from "@/components/shared/UBTimeline"
-import type { RequisitionRecord } from "@/lib/api/requisitions"
+import {
+  downloadRequisitionExport,
+  type RequisitionRecord,
+} from "@/lib/api/requisitions"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 
 type PanelMode = "create" | "edit"
@@ -63,6 +67,8 @@ export function PORRequisitionsPage() {
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
   const [formInstanceKey, setFormInstanceKey] = useState(() => `new-${Date.now()}`)
   const [hasResolvedSelection, setHasResolvedSelection] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const autosaveRef = useRef<RequisitionFormAutosave | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const initialRequisitionParam = useRef(searchParams.get("requisition"))
@@ -309,6 +315,32 @@ export function PORRequisitionsPage() {
     })
   }
 
+  const handleExport = async () => {
+    if (!selectedRequisitionId) {
+      return
+    }
+
+    setExportError(null)
+    setIsExporting(true)
+
+    try {
+      const number =
+        activeRequisition?.requisition_number ??
+        activeRequisition?.number ??
+        String(selectedRequisitionId)
+      await downloadRequisitionExport(
+        selectedRequisitionId,
+        `requisition-${number}-export.zip`
+      )
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : "Failed to export requisition."
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const pipeline = activeRequisition?.pipeline ?? approvalPipeline
   const timelineSteps = useMemo(
     () => mapPipelineToTimelineSteps(pipeline),
@@ -324,10 +356,27 @@ export function PORRequisitionsPage() {
           Progress is saved as a draft automatically while you work, and when
           you leave this page or refresh.
         </p>
-        <UBButton size="sm" onClick={handleNewRequisition}>
-          New requisition
-        </UBButton>
+        <div className="flex shrink-0 items-center gap-2">
+          {panelMode === "edit" && selectedRequisitionId ? (
+            <UBButton
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleExport()}
+              disabled={isExporting}
+            >
+              <Download className="size-4" data-icon="inline-start" />
+              {isExporting ? "Exporting..." : "Export"}
+            </UBButton>
+          ) : null}
+          <UBButton size="sm" onClick={handleNewRequisition}>
+            New requisition
+          </UBButton>
+        </div>
       </header>
+      {exportError ? (
+        <p className="shrink-0 text-sm text-destructive">{exportError}</p>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 gap-2 overflow-hidden">
         <RequisitionPane
