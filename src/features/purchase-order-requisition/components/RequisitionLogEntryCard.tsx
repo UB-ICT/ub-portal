@@ -1,12 +1,17 @@
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { RequisitionLogEntry } from "@/lib/api/requisition-logs"
+import {
+  downloadRequisitionLogAttachment,
+  fetchRequisitionLogAttachmentBlob,
+} from "@/lib/api/requisition-logs"
 
 import {
   formatRequisitionLogTimestamp,
   getRequisitionLogActionLabel,
   getRequisitionLogActionStyles,
 } from "../lib/requisition-log-utils"
+import { PdfViewer } from "./PdfViewer"
 
 type RequisitionLogEntryCardProps = {
   entry: RequisitionLogEntry
@@ -18,6 +23,7 @@ export function RequisitionLogEntryCard({
   className,
 }: RequisitionLogEntryCardProps) {
   const actorName = entry.user?.name ?? "Unknown user"
+  const hasAttachment = Boolean(entry.has_attachment && entry.file_name)
 
   return (
     <article
@@ -60,6 +66,17 @@ export function RequisitionLogEntryCard({
               : "Comment"}
           </p>
           <p className="mt-1 text-sm text-foreground">{entry.comments}</p>
+        </div>
+      ) : null}
+
+      {hasAttachment ? (
+        <div className="mt-3">
+          <PdfViewer
+            fileName={entry.file_name ?? "Supporting document.pdf"}
+            loadBlob={() => fetchRequisitionLogAttachmentBlob(entry.id)}
+            downloadBlob={() => downloadRequisitionLogAttachment(entry.id)}
+            previewDescription="Supporting document attached to this comment"
+          />
         </div>
       ) : null}
     </article>

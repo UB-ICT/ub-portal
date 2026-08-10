@@ -31,26 +31,74 @@ type RequisitionSupplierQuotesProps = {
 }
 
 function mapAttachmentsToQuotes(
-  attachments: Awaited<
-    ReturnType<
-      ReturnType<typeof useRequisitionQuotesStore.getState>["fetchAttachments"]
+  attachments: NonNullable<
+    Awaited<
+      ReturnType<
+        ReturnType<typeof useRequisitionQuotesStore.getState>["fetchAttachments"]
+      >
     >
-  >
+  >,
+  existingQuotes: SupplierQuoteDraft[] = []
 ): SupplierQuoteDraft[] {
-  return attachments.map((attachment) => ({
-    clientId: `attachment-${attachment.id}`,
-    supplierId: String(attachment.supplier_id),
-    attachmentId: attachment.id,
-    file: null,
-    fileName: attachment.file_name,
-    previewUrl: null,
-    isRecommended: Boolean(attachment.is_recommended),
-    quotedTotal:
-      attachment.quoted_total !== undefined && attachment.quoted_total !== null
-        ? String(attachment.quoted_total)
-        : "",
-    quoteReferenceNumber: attachment.quote_reference_number ?? "",
-  }))
+  return attachments.map((attachment) => {
+    const existing = existingQuotes.find(
+      (quote) =>
+        quote.attachmentId === attachment.id ||
+        quote.supplierId === String(attachment.supplier_id)
+    )
+
+    return {
+      clientId: existing?.clientId ?? `attachment-${attachment.id}`,
+      supplierId: String(attachment.supplier_id),
+      attachmentId: attachment.id,
+      file: existing?.file ?? null,
+      fileName: attachment.file_name || existing?.fileName || "",
+      previewUrl: existing?.previewUrl ?? null,
+      isRecommended:
+        existing?.isRecommended ?? Boolean(attachment.is_recommended),
+      quotedTotal:
+        attachment.quoted_total !== undefined && attachment.quoted_total !== null
+          ? String(attachment.quoted_total)
+          : existing?.quotedTotal || "",
+      quoteReferenceNumber:
+        attachment.quote_reference_number ??
+        existing?.quoteReferenceNumber ??
+        "",
+    }
+  })
+}
+
+function mergeServerAttachments(
+  attachments: NonNullable<
+    Awaited<
+      ReturnType<
+        ReturnType<typeof useRequisitionQuotesStore.getState>["fetchAttachments"]
+      >
+    >
+  >,
+  localQuotes: SupplierQuoteDraft[]
+): SupplierQuoteDraft[] {
+  const fromServer = mapAttachmentsToQuotes(attachments, localQuotes)
+  const serverSupplierIds = new Set(fromServer.map((quote) => quote.supplierId))
+  const serverAttachmentIds = new Set(
+    fromServer
+      .map((quote) => quote.attachmentId)
+      .filter((id): id is number => typeof id === "number")
+  )
+
+  const localOnly = localQuotes.filter((quote) => {
+    if (quote.attachmentId && serverAttachmentIds.has(quote.attachmentId)) {
+      return false
+    }
+
+    if (quote.supplierId && serverSupplierIds.has(quote.supplierId)) {
+      return Boolean(quote.file) && !quote.attachmentId
+    }
+
+    return Boolean(quote.file || quote.fileName || quote.supplierId)
+  })
+
+  return applyRecommendedSupplierDefaults([...fromServer, ...localOnly])
 }
 
 export function RequisitionSupplierQuotes({
@@ -71,106 +119,124 @@ export function RequisitionSupplierQuotes({
   const isLoading = useRequisitionQuotesStore((state) => state.isLoading)
   const storeError = useRequisitionQuotesStore((state) => state.error)
 
-  const hasLoadedAttachments = useRef(false)
+  const loadedForRequisitionRef = useRef<number | null>(null)
   const quotesRef = useRef(quotes)
-  quotesRef.current = quotes
+
+  useEffect(() => {
+    quotesRef.current = quotes
+  }, [quotes])
 
   const emitChange = (nextQuotes: SupplierQuoteDraft[]) => {
+    quotesRef.current = nextQuotes
     onChange(applyRecommendedSupplierDefaults(nextQuotes))
   }
 
+  // Load existing attachments once when opening a requisition.
   useEffect(() => {
-    hasLoadedAttachments.current = false
-  }, [requisitionId])
-
-  useEffect(() => {
-    if (!requisitionId || hasLoadedAttachments.current) {
+    if (!requisitionId) {
       return
     }
+
+    if (loadedForRequisitionRef.current === requisitionId) {
+      return
+    }
+
+    let cancelled = false
+    loadedForRequisitionRef.current = requisitionId
 
     void fetchAttachments(requisitionId, true).then((attachments) => {
-      hasLoadedAttachments.current = true
+      if (cancelled || attachments === null || attachments.length === 0) {
+        return
+      }
 
-      const localQuotes = quotesRef.current
-      // Server attachments are authoritative. Keep only local work that is not
-      // already on the server. Drop stale rows whose attachmentId was deleted
-      // (e.g. old autosave duplicates still sitting in localStorage drafts).
-      const pendingOrUnsynced = localQuotes.filter((quote) => {
-        if (quote.attachmentId) {
-          return false
-        }
+      const local = quotesRef.current
+      const localHasDocuments = local.some(
+        (quote) => quote.file || quote.attachmentId || quote.fileName
+      )
 
-        if (quote.file && quote.supplierId) {
-          return !attachments.some(
-            (attachment) => String(attachment.supplier_id) === quote.supplierId
+      if (localHasDocuments) {
+        const usedAttachmentIds = new Set<number>()
+        const patched = local.map((quote) => {
+          const match = attachments.find(
+            (attachment) =>
+              quote.attachmentId === attachment.id ||
+              (quote.supplierId !== "" &&
+                String(attachment.supplier_id) === quote.supplierId)
           )
-        }
+          if (!match) {
+            return quote
+          }
+          usedAttachmentIds.add(match.id)
+          return {
+            ...quote,
+            attachmentId: match.id,
+            fileName: quote.fileName || match.file_name || "",
+            file: quote.file,
+            previewUrl: quote.previewUrl,
+            isRecommended:
+              quote.isRecommended || Boolean(match.is_recommended),
+            quotedTotal:
+              quote.quotedTotal ||
+              (match.quoted_total != null ? String(match.quoted_total) : ""),
+            quoteReferenceNumber:
+              quote.quoteReferenceNumber ||
+              match.quote_reference_number ||
+              "",
+          }
+        })
 
-        if (!quote.supplierId) {
-          return false
-        }
+        const extras = attachments
+          .filter((attachment) => !usedAttachmentIds.has(attachment.id))
+          .map((attachment) => mapAttachmentsToQuotes([attachment], [])[0])
 
-        // Supplier chosen locally but no uploaded quote for that supplier yet.
-        return !attachments.some(
-          (attachment) => String(attachment.supplier_id) === quote.supplierId
-        )
-      })
-
-      if (attachments.length > 0) {
-        emitChange([
-          ...mapAttachmentsToQuotes(attachments),
-          ...pendingOrUnsynced,
-        ])
+        emitChange(applyRecommendedSupplierDefaults([...patched, ...extras]))
         return
       }
 
-      if (
-        pendingOrUnsynced.length > 0 ||
-        localQuotes.some((quote) => quote.supplierId || quote.attachmentId)
-      ) {
-        emitChange(
-          pendingOrUnsynced.length > 0 ? pendingOrUnsynced : localQuotes
-        )
-        return
-      }
-
-      // Read-only viewers should not get an empty upload row.
-      emitChange(disabled ? [] : [createEmptySupplierQuote()])
+      emitChange(mergeServerAttachments(attachments, local))
     })
-  }, [disabled, fetchAttachments, onChange, requisitionId])
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchAttachments, requisitionId])
 
   const updateQuote = (clientId: string, nextQuote: SupplierQuoteDraft) => {
+    const currentQuotes = quotesRef.current
+
+    let nextQuotes: SupplierQuoteDraft[]
     if (nextQuote.isRecommended) {
-      emitChange(
-        quotes.map((quote) =>
-          quote.clientId === clientId
-            ? nextQuote
-            : { ...quote, isRecommended: false }
-        )
+      nextQuotes = currentQuotes.map((quote) =>
+        quote.clientId === clientId
+          ? nextQuote
+          : { ...quote, isRecommended: false }
       )
-      return
+    } else {
+      nextQuotes = currentQuotes.map((quote) =>
+        quote.clientId === clientId ? nextQuote : quote
+      )
     }
 
-    emitChange(
-      quotes.map((quote) => (quote.clientId === clientId ? nextQuote : quote))
-    )
+    emitChange(nextQuotes)
   }
 
   const removeQuote = async (quote: SupplierQuoteDraft) => {
     if (quote.attachmentId) {
       const deleted = await deleteQuote(quote.attachmentId)
-
       if (!deleted) {
         return
       }
     }
 
     revokeSupplierQuotePreview(quote)
-    emitChange(quotes.filter((item) => item.clientId !== quote.clientId))
+    emitChange(
+      quotesRef.current.filter((item) => item.clientId !== quote.clientId)
+    )
   }
 
   const addQuote = () => {
-    emitChange([...quotes, createEmptySupplierQuote()])
+    emitChange([...quotesRef.current, createEmptySupplierQuote()])
   }
 
   const usedSupplierIds = quotes
@@ -213,15 +279,15 @@ export function RequisitionSupplierQuotes({
               in green.
             </p>
           ) : null}
+          {!disabled && !requisitionId ? (
+            <p className="mt-1 text-xs text-amber-800">
+              Save the draft once (or wait for autosave) before uploading quote
+              PDFs so they can be stored on the server.
+            </p>
+          ) : null}
         </div>
         {!disabled ? (
-          <UBButton
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addQuote}
-            disabled={isLoading}
-          >
+          <UBButton type="button" variant="outline" size="sm" onClick={addQuote}>
             <Plus className="size-4" data-icon="inline-start" />
             Add quote
           </UBButton>
@@ -244,7 +310,8 @@ export function RequisitionSupplierQuotes({
               quote={quote}
               onChange={(nextQuote) => updateQuote(quote.clientId, nextQuote)}
               onRemove={() => void removeQuote(quote)}
-              disabled={disabled || isLoading}
+              requisitionId={requisitionId}
+              disabled={disabled}
               showRecommendedToggle={!disabled && showRecommendedToggle}
               excludeSupplierIds={usedSupplierIds.filter(
                 (supplierId) => supplierId !== quote.supplierId
@@ -269,7 +336,7 @@ export function RequisitionSupplierQuotes({
               onQuoteWaiverReasonChange?.(event.target.value)
             }
             rows={3}
-            disabled={disabled || isLoading}
+            disabled={disabled}
             placeholder="Explain why fewer than three supplier quotes are being submitted..."
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
           />

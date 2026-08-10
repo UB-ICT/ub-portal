@@ -256,7 +256,7 @@ export function RequisitionLineItemsTable({
                       <td className={getStripedCellClassName(index, stripedRows)}>
                         <input
                           type="number"
-                          step={1}
+                          step="any"
                           aria-label="Quantity"
                           className={inputClassName}
                           value={Number.isNaN(item.quantity) ? "-" : item.quantity}

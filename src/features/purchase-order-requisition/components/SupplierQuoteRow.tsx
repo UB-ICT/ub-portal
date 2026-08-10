@@ -1,11 +1,13 @@
 import { Check, Upload, X } from "lucide-react"
-import { useId } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
 import { cn } from "@/lib/utils"
+import { useRequisitionQuotesStore } from "@/store/requisition-quotes-store"
 
 import {
+  mapSupplierQuoteToUploadMeta,
   revokeSupplierQuotePreview,
   type SupplierQuoteDraft,
 } from "../lib/supplier-quotes"
@@ -18,31 +20,161 @@ type SupplierQuoteRowProps = {
   quote: SupplierQuoteDraft
   onChange: (quote: SupplierQuoteDraft) => void
   onRemove: () => void
+  requisitionId?: number
   disabled?: boolean
   showRecommendedToggle?: boolean
   excludeSupplierIds?: string[]
-  uploadError?: string | null
 }
 
 function isPdfFile(file: File) {
-  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  return (
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+  )
 }
 
 export function SupplierQuoteRow({
   quote,
   onChange,
   onRemove,
+  requisitionId,
   disabled = false,
   showRecommendedToggle = true,
   excludeSupplierIds = [],
-  uploadError,
 }: SupplierQuoteRowProps) {
-  const inputId = useId()
+  const enqueueAndUploadQuote = useRequisitionQuotesStore(
+    (state) => state.enqueueAndUploadQuote
+  )
+  const lastUploaded = useRequisitionQuotesStore(
+    (state) => state.lastUploadedByClientId[quote.clientId]
+  )
+  const activeRequisitionIdFromStore = useRequisitionQuotesStore(
+    (state) => state.activeRequisitionId
+  )
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const requisitionIdRef = useRef(requisitionId)
+  requisitionIdRef.current = requisitionId
+  const quoteRef = useRef(quote)
+  quoteRef.current = quote
+
+  // Keep the selected File outside React parent races (module store + local).
+  const [localFile, setLocalFile] = useState<File | null>(quote.file)
+  const [localFileName, setLocalFileName] = useState(quote.fileName || "")
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(
+    quote.previewUrl
+  )
+  const [pickerError, setPickerError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const localFileRef = useRef<File | null>(localFile)
+  localFileRef.current = localFile
+
+  // Adopt server attachment id when the store finishes a POST for this row.
+  useEffect(() => {
+    if (!lastUploaded || quote.attachmentId === lastUploaded.attachmentId) {
+      return
+    }
+    onChange({
+      ...quoteRef.current,
+      attachmentId: lastUploaded.attachmentId,
+      fileName: lastUploaded.fileName || quoteRef.current.fileName,
+      file: localFileRef.current ?? quoteRef.current.file,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastUploaded, quote.attachmentId])
+
+  useEffect(() => {
+    if (quote.file && quote.file !== localFileRef.current) {
+      setLocalFile(quote.file)
+      setLocalFileName(quote.fileName || quote.file.name)
+      if (quote.previewUrl) {
+        setLocalPreviewUrl(quote.previewUrl)
+      }
+    } else if (quote.fileName && !localFileName) {
+      setLocalFileName(quote.fileName)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quote.attachmentId, quote.file, quote.fileName, quote.previewUrl])
+
+  const startUpload = async (file: File, supplierId: string) => {
+    const activeRequisitionId =
+      requisitionIdRef.current ??
+      useRequisitionQuotesStore.getState().activeRequisitionId
+
+    if (!activeRequisitionId) {
+      setUploadError(
+        "Waiting for draft save… the PDF will upload automatically once the requisition number appears."
+      )
+      return
+    }
+
+    if (quoteRef.current.attachmentId) {
+      return
+    }
+
+    setIsUploading(true)
+    setUploadError(null)
+
+    const attachment = await enqueueAndUploadQuote({
+      clientId: quote.clientId,
+      requisitionId: activeRequisitionId,
+      supplierId: Number(supplierId),
+      file,
+      meta: mapSupplierQuoteToUploadMeta(quoteRef.current),
+    })
+
+    setIsUploading(false)
+
+    if (!attachment) {
+      setUploadError(
+        useRequisitionQuotesStore.getState().error ||
+          "Failed to upload supplier quote."
+      )
+      return
+    }
+
+    setLocalFileName(attachment.file_name || file.name)
+    onChange({
+      ...quoteRef.current,
+      attachmentId: attachment.id,
+      fileName: attachment.file_name || file.name,
+      file,
+      previewUrl: localPreviewUrl,
+      supplierId: String(attachment.supplier_id || supplierId),
+    })
+  }
+
+  // When the draft id appears after the user already picked a PDF, POST it.
+  useEffect(() => {
+    const id = requisitionId ?? activeRequisitionIdFromStore
+    if (disabled || !id || quote.attachmentId) {
+      return
+    }
+    const file = localFileRef.current
+    if (file && quote.supplierId) {
+      void startUpload(file, quote.supplierId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRequisitionIdFromStore, requisitionId])
+
+  const inputsDisabled = disabled || isUploading
+
+  const clearLocalDocument = () => {
+    if (localPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(localPreviewUrl)
+    }
+    setLocalFile(null)
+    setLocalFileName("")
+    setLocalPreviewUrl(null)
+  }
 
   const handleFileChange = (file: File | null) => {
     revokeSupplierQuotePreview(quote)
+    setPickerError(null)
+    setUploadError(null)
 
     if (!file) {
+      clearLocalDocument()
       onChange({
         ...quote,
         file: null,
@@ -54,24 +186,58 @@ export function SupplierQuoteRow({
     }
 
     if (!isPdfFile(file)) {
+      setPickerError("Only PDF files are allowed.")
       return
     }
+
+    if (!quote.supplierId) {
+      setPickerError("Select a supplier before uploading a quote PDF.")
+      return
+    }
+
+    if (localPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(localPreviewUrl)
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    localFileRef.current = file
+    setLocalFile(file)
+    setLocalFileName(file.name)
+    setLocalPreviewUrl(previewUrl)
 
     onChange({
       ...quote,
       file,
       fileName: file.name,
-      previewUrl: URL.createObjectURL(file),
+      previewUrl,
       attachmentId: undefined,
     })
+
+    // POST immediately — do not wait for a useEffect / parent state round-trip.
+    void startUpload(file, quote.supplierId)
   }
 
-  const handleRemoveFile = () => {
-    handleFileChange(null)
+  const openFilePicker = () => {
+    if (inputsDisabled) {
+      return
+    }
+
+    if (!quote.supplierId) {
+      setPickerError("Select a supplier before uploading a quote PDF.")
+      return
+    }
+
+    setPickerError(null)
+    fileInputRef.current?.click()
   }
 
-  const hasDocument = Boolean(quote.file || quote.attachmentId)
+  const hasDocument = Boolean(
+    localFile || quote.attachmentId || localFileName || quote.fileName
+  )
+  const displayFileName =
+    localFileName || quote.fileName || localFile?.name || "Uploaded quote"
   const isPreferred = quote.isRecommended
+  const displayError = uploadError || pickerError
 
   return (
     <div
@@ -101,8 +267,16 @@ export function SupplierQuoteRow({
 
           <SupplierQuoteSelect
             value={quote.supplierId}
-            onValueChange={(supplierId) => onChange({ ...quote, supplierId })}
-            disabled={disabled}
+            onValueChange={(supplierId) => {
+              const next = { ...quote, supplierId }
+              onChange(next)
+              // If a PDF was chosen before supplier (shouldn't happen) or id
+              // just became available, try upload.
+              if (localFileRef.current && requisitionIdRef.current) {
+                void startUpload(localFileRef.current, supplierId)
+              }
+            }}
+            disabled={inputsDisabled}
             excludeSupplierIds={excludeSupplierIds}
           />
 
@@ -113,7 +287,7 @@ export function SupplierQuoteRow({
               onChange({ ...quote, quoteReferenceNumber: event.target.value })
             }
             placeholder="e.g. Q-2026-0142"
-            disabled={disabled}
+            disabled={inputsDisabled}
           />
 
           <UBInput
@@ -126,7 +300,7 @@ export function SupplierQuoteRow({
               onChange({ ...quote, quotedTotal: event.target.value })
             }
             placeholder="0.00"
-            disabled={disabled}
+            disabled={inputsDisabled}
           />
 
           <div className="flex flex-col justify-end">
@@ -135,7 +309,7 @@ export function SupplierQuoteRow({
                 type="button"
                 role="radio"
                 aria-checked={isPreferred}
-                disabled={disabled}
+                disabled={inputsDisabled}
                 onClick={() => {
                   if (!isPreferred) {
                     onChange({ ...quote, isRecommended: true })
@@ -146,7 +320,7 @@ export function SupplierQuoteRow({
                   isPreferred
                     ? "border-emerald-600 bg-emerald-600 text-white"
                     : "border-input bg-background text-foreground hover:border-emerald-500/50 hover:bg-emerald-50/60",
-                  disabled && "cursor-not-allowed opacity-50"
+                  inputsDisabled && "cursor-not-allowed opacity-50"
                 )}
               >
                 {isPreferred ? (
@@ -162,13 +336,22 @@ export function SupplierQuoteRow({
           </div>
 
           <div className="w-full md:col-span-2 xl:col-span-4">
-            <label
-              htmlFor={disabled ? undefined : inputId}
-              className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground"
-            >
+            <p className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
               Quote PDF
-            </label>
-            {disabled ? (
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={PDF_ACCEPT}
+              className="hidden"
+              disabled={inputsDisabled}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null
+                handleFileChange(file)
+                event.target.value = ""
+              }}
+            />
+            {inputsDisabled && !isUploading ? (
               <div
                 className={cn(
                   "flex min-h-10 items-center gap-2 rounded-lg border border-solid border-input bg-muted/20 px-3 py-2 text-sm",
@@ -176,37 +359,34 @@ export function SupplierQuoteRow({
                 )}
               >
                 <Upload className="size-4 shrink-0 text-primary/80" aria-hidden />
-                {hasDocument
-                  ? quote.fileName || "Uploaded quote"
-                  : "No PDF attached"}
+                {hasDocument ? displayFileName : "No PDF attached"}
               </div>
             ) : (
               <>
-                <label
-                  htmlFor={inputId}
+                <UBButton
+                  type="button"
+                  variant="outline"
                   className={cn(
-                    "flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-muted/20",
-                    hasDocument && "border-solid"
+                    "flex h-auto min-h-10 w-full items-center justify-center gap-2 border-dashed px-3 py-2 text-sm font-normal",
+                    hasDocument && "border-solid",
+                    isUploading && "opacity-80"
                   )}
+                  disabled={isUploading}
+                  onClick={openFilePicker}
                 >
                   <Upload className="size-4 shrink-0 text-primary/80" />
-                  {hasDocument
-                    ? quote.fileName || "Uploaded quote"
-                    : "Upload PDF quote"}
-                </label>
-                <input
-                  id={inputId}
-                  type="file"
-                  accept={PDF_ACCEPT}
-                  className="sr-only"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null
-                    handleFileChange(file)
-                    event.target.value = ""
-                  }}
-                />
+                  {isUploading
+                    ? `Uploading ${displayFileName}...`
+                    : hasDocument
+                      ? displayFileName
+                      : "Upload PDF quote"}
+                </UBButton>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  PDF files only, up to 10 MB.
+                  {isUploading
+                    ? "Please wait while the quotation PDF is uploaded."
+                    : !requisitionId
+                      ? "Waiting for draft save before uploading…"
+                      : "PDF files only, up to 10 MB. Select a supplier first."}
                 </p>
               </>
             )}
@@ -219,6 +399,7 @@ export function SupplierQuoteRow({
             variant="ghost"
             size="sm"
             onClick={onRemove}
+            disabled={isUploading}
             aria-label="Remove supplier quote"
             className="shrink-0"
           >
@@ -227,17 +408,23 @@ export function SupplierQuoteRow({
         ) : null}
       </div>
 
-      {uploadError ? (
-        <p className="text-sm text-destructive">{uploadError}</p>
+      {displayError ? (
+        <p className="text-sm text-destructive">{displayError}</p>
       ) : null}
 
       {hasDocument ? (
         <PdfViewer
-          file={quote.file}
+          file={localFile ?? quote.file}
           attachmentId={quote.attachmentId}
-          fileName={quote.fileName}
-          onRemove={disabled ? undefined : handleRemoveFile}
-          disabled={disabled}
+          fileName={displayFileName}
+          onRemove={
+            inputsDisabled
+              ? undefined
+              : () => {
+                  handleFileChange(null)
+                }
+          }
+          disabled={inputsDisabled}
         />
       ) : null}
     </div>

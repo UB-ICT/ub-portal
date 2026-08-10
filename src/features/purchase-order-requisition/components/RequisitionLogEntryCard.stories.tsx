@@ -72,7 +72,7 @@ const meta = {
   component: RequisitionLogEntryCard,
   tags: ["autodocs"],
   parameters: componentParameters(
-    "Single activity log entry with action badge, actor, timestamp, summary, and optional comment."
+    "Single activity log entry with action badge, actor, timestamp, summary, optional comment, and optional supporting PDF (View / Download)."
   ),
   decorators: [withPanel("max-w-3xl space-y-4 p-6")],
 } satisfies Meta<typeof RequisitionLogEntryCard>
@@ -99,4 +99,27 @@ export const RejectedWithNote: Story = {
 
 export const CommentOnly: Story = {
   args: { entry: mockEntries[4] },
+}
+
+export const CommentWithSupportingPdf: Story = {
+  name: "Comment with supporting PDF (View / Download)",
+  args: {
+    entry: {
+      ...mockEntries[4],
+      comments: "Uploaded revised cost estimate for the preferred supplier.",
+      file_name: "revised-cost-estimate.pdf",
+      has_attachment: true,
+    },
+  },
+  beforeEach: () => {
+    window.localStorage.setItem("ub-portal.access-token", "storybook-token")
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Posted activity-log comments with a supporting PDF show the same PdfViewer actions (View preview dialog and Download) used for supplier quote files.",
+      },
+    },
+  },
 }

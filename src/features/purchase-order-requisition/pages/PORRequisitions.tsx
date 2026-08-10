@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, useSearchParams } from "react-router-dom"
+import { Printer } from "lucide-react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
@@ -18,7 +19,10 @@ import {
   type StoredRequisitionSelection,
 } from "@/features/purchase-order-requisition/lib/requisition-selection-storage"
 import { UBTimeline } from "@/components/shared/UBTimeline"
-import type { RequisitionRecord } from "@/lib/api/requisitions"
+import {
+  downloadRequisitionPrintPdf,
+  type RequisitionRecord,
+} from "@/lib/api/requisitions"
 import { useRequisitionsStore } from "@/store/requisitions-store"
 
 type PanelMode = "create" | "edit"
@@ -63,6 +67,8 @@ export function PORRequisitionsPage() {
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<number | null>(null)
   const [formInstanceKey, setFormInstanceKey] = useState(() => `new-${Date.now()}`)
   const [hasResolvedSelection, setHasResolvedSelection] = useState(false)
+  const [isPrinting, setIsPrinting] = useState(false)
+  const [printError, setPrintError] = useState<string | null>(null)
   const autosaveRef = useRef<RequisitionFormAutosave | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const initialRequisitionParam = useRef(searchParams.get("requisition"))
@@ -309,6 +315,34 @@ export function PORRequisitionsPage() {
     })
   }
 
+  const handlePrintRequisition = async () => {
+    if (!selectedRequisitionId) {
+      return
+    }
+
+    setPrintError(null)
+    setIsPrinting(true)
+
+    try {
+      const number =
+        activeRequisition?.requisition_number ??
+        activeRequisition?.number ??
+        String(selectedRequisitionId)
+      await downloadRequisitionPrintPdf(
+        selectedRequisitionId,
+        `requisition-${number}.pdf`
+      )
+    } catch (error) {
+      setPrintError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate requisition PDF."
+      )
+    } finally {
+      setIsPrinting(false)
+    }
+  }
+
   const pipeline = activeRequisition?.pipeline ?? approvalPipeline
   const timelineSteps = useMemo(
     () => mapPipelineToTimelineSteps(pipeline),
@@ -354,6 +388,24 @@ export function PORRequisitionsPage() {
                 <p className="text-xs text-muted-foreground">
                   Edit the selected requisition and save your changes.
                 </p>
+                {selectedRequisitionId ? (
+                  <UBButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="ml-auto"
+                    onClick={() => void handlePrintRequisition()}
+                    disabled={isPrinting}
+                  >
+                    <Printer className="size-4" data-icon="inline-start" />
+                    {isPrinting ? "Preparing..." : "Print requisition"}
+                  </UBButton>
+                ) : null}
+                {printError ? (
+                  <p className="basis-full text-sm text-destructive">
+                    {printError}
+                  </p>
+                ) : null}
               </div>
             ) : (
               <p className="mt-0.5 text-xs text-muted-foreground">

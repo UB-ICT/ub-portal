@@ -385,6 +385,110 @@ export function getRequisitionPurchaseOrderDownloadUrl(id: number) {
   return `${BASE_PATH}/requisitions/${id}/purchase-order/download`
 }
 
+export function getRequisitionPrintUrl(id: number) {
+  return `${BASE_PATH}/requisitions/${id}/print`
+}
+
+export function getRequisitionExportUrl(id: number) {
+  return `${BASE_PATH}/requisitions/${id}/export`
+}
+
+async function fetchRequisitionPrintResponse(id: number) {
+  const headers = {
+    Accept: "application/pdf",
+    Authorization: `Bearer ${getToken()}`,
+  }
+
+  const printResponse = await fetch(buildApiUrl(getRequisitionPrintUrl(id)), {
+    headers,
+    cache: "no-store",
+  })
+
+  // Older API deploys only expose /export; fall back when /print is missing.
+  if (printResponse.status === 404) {
+    return fetch(buildApiUrl(getRequisitionExportUrl(id)), {
+      headers,
+      cache: "no-store",
+    })
+  }
+
+  return printResponse
+}
+
+export async function downloadRequisitionPrintPdf(
+  id: number,
+  fallbackFileName = "requisition.pdf"
+) {
+  const response = await fetchRequisitionPrintResponse(id)
+
+  if (!response.ok) {
+    let message = "Failed to generate requisition PDF."
+    try {
+      const payload = (await response.json()) as { message?: string }
+      if (payload.message) {
+        message = payload.message
+      }
+    } catch {
+      if (response.status === 404) {
+        message =
+          "Print endpoint not found. Deploy the latest API, then try again."
+      } else if (response.status >= 500) {
+        message =
+          "The API failed while generating the PDF. Check the API logs and try again."
+      }
+    }
+    throw new Error(message)
+  }
+
+  const buffer = await response.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+
+  // Reject ZIP / non-PDF payloads so we never open or save a broken file.
+  const isPdf =
+    bytes.length >= 5 &&
+    bytes[0] === 0x25 && // %
+    bytes[1] === 0x50 && // P
+    bytes[2] === 0x44 && // D
+    bytes[3] === 0x46 && // F
+    bytes[4] === 0x2d // -
+  const isZip = bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b
+
+  if (isZip || !isPdf) {
+    throw new Error(
+      isZip
+        ? "Server returned a ZIP export instead of a print PDF. Redeploy the API with the merged print PDF, then try again."
+        : "Server returned an invalid PDF. Please try again."
+    )
+  }
+
+  const disposition = response.headers.get("content-disposition") ?? ""
+  const matched = /filename=\"([^\"]+)\"/i.exec(disposition)
+  const fileName = matched?.[1] || fallbackFileName
+  const blob = new Blob([buffer], { type: "application/pdf" })
+  const url = URL.createObjectURL(blob)
+
+  const printWindow = window.open(url, "_blank", "noopener,noreferrer")
+  if (printWindow) {
+    const triggerPrint = () => {
+      try {
+        printWindow.focus()
+        printWindow.print()
+      } catch {
+        // ignore
+      }
+    }
+    printWindow.addEventListener("load", triggerPrint)
+    window.setTimeout(triggerPrint, 750)
+  } else {
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = fileName
+    anchor.click()
+  }
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 export async function emailRequisitionPurchaseOrder(
   id: number,
   payload: { message?: string | null } = {}
