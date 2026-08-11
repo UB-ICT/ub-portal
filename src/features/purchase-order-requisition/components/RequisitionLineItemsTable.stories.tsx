@@ -7,7 +7,6 @@ import {
 } from "@/components/shared/storybook"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 
-import type { DiscountType } from "../lib/line-pricing"
 import {
   createEmptyLineItem,
   RequisitionLineItemsTable,
@@ -40,6 +39,7 @@ const sampleItems: RequisitionLineItemDraft[] = [
     description: "Computer Supplies",
     quantity: 5,
     unit_cost: 350,
+    total: 1750,
     gst_applicable: true,
     comments: "Dell preferred",
   },
@@ -50,6 +50,7 @@ const sampleItems: RequisitionLineItemDraft[] = [
     description: "Other Office Equipment",
     quantity: 10,
     unit_cost: 85,
+    total: 850,
     gst_applicable: false,
     comments: "",
   },
@@ -60,6 +61,7 @@ const sampleItems: RequisitionLineItemDraft[] = [
     description: "Maintenance of Computer Hardware",
     quantity: 6,
     unit_cost: 130,
+    total: 780,
     gst_applicable: true,
     comments: "Dual display support",
   },
@@ -68,31 +70,19 @@ const sampleItems: RequisitionLineItemDraft[] = [
 function StoryTable(
   props: Omit<
     ComponentProps<typeof RequisitionLineItemsTable>,
-    | "items"
-    | "onChange"
-    | "discountType"
-    | "discountValue"
-    | "onDiscountTypeChange"
-    | "onDiscountValueChange"
-    | "budgetAccounts"
+    "items" | "onChange" | "budgetAccounts"
   > & {
     initialItems?: RequisitionLineItemDraft[]
   }
 ) {
   const { initialItems = sampleItems, ...args } = props
   const [items, setItems] = useState(initialItems)
-  const [discountType, setDiscountType] = useState<DiscountType>("percent")
-  const [discountValue, setDiscountValue] = useState(10)
 
   return (
     <RequisitionLineItemsTable
       {...args}
       items={items}
       onChange={setItems}
-      discountType={discountType}
-      discountValue={discountValue}
-      onDiscountTypeChange={setDiscountType}
-      onDiscountValueChange={setDiscountValue}
       budgetAccounts={sampleAccounts}
     />
   )
@@ -103,7 +93,7 @@ const meta = {
   component: RequisitionLineItemsTable,
   tags: ["autodocs"],
   parameters: componentParameters(
-    "Editable line items with optional GST, distributed invoice discount, and totals."
+    "Editable line items: quantity and total in, unit cost and GST computed."
   ),
   decorators: [withPanel("max-w-6xl space-y-6 p-6")],
   argTypes: {

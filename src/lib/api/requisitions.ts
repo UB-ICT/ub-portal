@@ -70,7 +70,6 @@ export type RequisitionLineItem = RequisitionLineItemInput & {
   line_item_number?: string | null
   description?: string | null
   subtotal?: number | string
-  discount_amount?: number | string
   gst_amount?: number | string
   total: number | string
   requisition_id: number
@@ -121,9 +120,6 @@ export type RequisitionRecord = {
   status_id: number
   currency_id: number
   total: number | string
-  discount_type?: "none" | "percent" | "amount" | null
-  discount_value?: number | string | null
-  discount_amount?: number | string | null
   stage_id: number
   priority: RequisitionPriority
   description?: string | null
@@ -173,8 +169,6 @@ export type CreateRequisitionPayload = {
   requires_downpayment?: boolean
   quote_waiver_reason?: string | null
   reminder_date?: string | null
-  discount_type?: "none" | "percent" | "amount"
-  discount_value?: number
   suppliers?: RequisitionSupplierInput[]
   items: RequisitionLineItemInput[]
   tag_ids?: number[]

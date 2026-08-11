@@ -2,14 +2,13 @@ import { Plus, Trash2 } from "lucide-react"
 import { useMemo, type ReactNode } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
-import { UBInput, UBNativeSelect } from "@/components/shared/UBInput"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { cn } from "@/lib/utils"
 
 import {
   calculateLinePricing,
   DEFAULT_GST_RATE_PERCENT,
-  type DiscountType,
+  roundMoney,
 } from "../lib/line-pricing"
 import { ChartOfAccountCombobox } from "./ChartOfAccountCombobox"
 
@@ -20,6 +19,7 @@ export type RequisitionLineItemDraft = {
   description: string
   quantity: number
   unit_cost: number
+  total: number
   gst_applicable: boolean
   comments: string
 }
@@ -32,6 +32,7 @@ export function createEmptyLineItem(): RequisitionLineItemDraft {
     description: "",
     quantity: 1,
     unit_cost: 0,
+    total: 0,
     gst_applicable: false,
     comments: "",
   }
@@ -45,32 +46,16 @@ function formatCurrency(amount: number) {
   }).format(amount)
 }
 
-/** @deprecated Prefer calculateLinePricing — kept for callers expecting qty×cost. */
-export function calculateLineTotal(item: RequisitionLineItemDraft) {
-  return item.quantity * item.unit_cost
-}
-
 export function calculateRequisitionTotalFromLineItems(
   items: RequisitionLineItemDraft[],
-  discountType: DiscountType = "none",
-  discountValue = 0,
   gstRatePercent = DEFAULT_GST_RATE_PERCENT
 ) {
-  return calculateLinePricing(
-    items,
-    discountType,
-    discountValue,
-    gstRatePercent
-  ).total
+  return calculateLinePricing(items, gstRatePercent).total
 }
 
 type RequisitionLineItemsTableProps = {
   items: RequisitionLineItemDraft[]
   onChange: (items: RequisitionLineItemDraft[]) => void
-  discountType: DiscountType
-  discountValue: number
-  onDiscountTypeChange: (type: DiscountType) => void
-  onDiscountValueChange: (value: number) => void
   gstRatePercent?: number
   budgetAccounts?: ChartOfAccount[]
   isLoadingBudgetAccounts?: boolean
@@ -99,10 +84,6 @@ function getStripedCellClassName(index: number, stripedRows: boolean) {
 export function RequisitionLineItemsTable({
   items,
   onChange,
-  discountType,
-  discountValue,
-  onDiscountTypeChange,
-  onDiscountValueChange,
   gstRatePercent = DEFAULT_GST_RATE_PERCENT,
   budgetAccounts = [],
   isLoadingBudgetAccounts = false,
@@ -114,9 +95,8 @@ export function RequisitionLineItemsTable({
   stripedRows = true,
 }: RequisitionLineItemsTableProps) {
   const pricing = useMemo(
-    () =>
-      calculateLinePricing(items, discountType, discountValue, gstRatePercent),
-    [items, discountType, discountValue, gstRatePercent]
+    () => calculateLinePricing(items, gstRatePercent),
+    [items, gstRatePercent]
   )
 
   const updateItem = (
@@ -126,6 +106,27 @@ export function RequisitionLineItemsTable({
     onChange(
       items.map((item) => (item.id === id ? { ...item, ...patch } : item))
     )
+  }
+
+  const updateQuantity = (item: RequisitionLineItemDraft, quantity: number) => {
+    updateItem(item.id, {
+      quantity,
+      total: roundMoney(quantity * item.unit_cost),
+    })
+  }
+
+  const updateUnitCost = (item: RequisitionLineItemDraft, unitCost: number) => {
+    updateItem(item.id, {
+      unit_cost: unitCost,
+      total: roundMoney(item.quantity * unitCost),
+    })
+  }
+
+  const updateTotal = (item: RequisitionLineItemDraft, total: number) => {
+    updateItem(item.id, {
+      total,
+      unit_cost: item.quantity !== 0 ? roundMoney(total / item.quantity) : 0,
+    })
   }
 
   const removeItem = (id: string) => {
@@ -177,7 +178,7 @@ export function RequisitionLineItemsTable({
         </p>
       ) : null}
       <p className="text-xs text-muted-foreground">
-        GST rate: {gstRatePercent}% (applied after discount on checked lines)
+        GST rate: {gstRatePercent}% (applied to the line total on checked lines)
       </p>
 
       <div className="overflow-hidden rounded-xl border border-border">
@@ -189,11 +190,10 @@ export function RequisitionLineItemsTable({
                 <th className="min-w-32 px-2 py-2 font-medium">Notes</th>
                 <th className="w-20 px-2 py-2 font-medium">Qty</th>
                 <th className="w-28 px-2 py-2 font-medium">Unit cost</th>
-                <th className="w-28 px-2 py-2 font-medium">Subtotal</th>
-                <th className="w-28 px-2 py-2 font-medium">Discount</th>
+                <th className="w-28 px-2 py-2 font-medium">Total</th>
                 <th className="w-16 px-2 py-2 font-medium">GST</th>
                 <th className="w-28 px-2 py-2 font-medium">GST amt</th>
-                <th className="w-28 px-2 py-2 font-medium">Total</th>
+                <th className="w-28 px-2 py-2 font-medium">Line total</th>
                 <th className="w-10 px-2 py-2" aria-label="Actions" />
               </tr>
             </thead>
@@ -201,7 +201,7 @@ export function RequisitionLineItemsTable({
               {items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={9}
                     className="px-2 py-6 text-center text-sm text-muted-foreground"
                   >
                     No line items yet. Add at least one item to continue.
@@ -262,9 +262,7 @@ export function RequisitionLineItemsTable({
                           value={Number.isNaN(item.quantity) ? "-" : item.quantity}
                           onChange={(event) => {
                             const raw = event.target.value
-                            updateItem(item.id, {
-                              quantity: raw === "" ? 0 : Number(raw),
-                            })
+                            updateQuantity(item, raw === "" ? 0 : Number(raw))
                           }}
                           disabled={disabled}
                         />
@@ -278,25 +276,30 @@ export function RequisitionLineItemsTable({
                           className={inputClassName}
                           value={item.unit_cost}
                           onChange={(event) =>
-                            updateItem(item.id, {
-                              unit_cost: Math.max(
-                                0,
-                                Number(event.target.value) || 0
-                              ),
-                            })
+                            updateUnitCost(
+                              item,
+                              Math.max(0, Number(event.target.value) || 0)
+                            )
                           }
                           disabled={disabled}
                         />
                       </td>
                       <td className={getStripedCellClassName(index, stripedRows)}>
-                        <span className="block px-1 py-1.5 tabular-nums">
-                          {formatCurrency(priced?.subtotal ?? 0)}
-                        </span>
-                      </td>
-                      <td className={getStripedCellClassName(index, stripedRows)}>
-                        <span className="block px-1 py-1.5 tabular-nums text-muted-foreground">
-                          {formatCurrency(priced?.discount_amount ?? 0)}
-                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          aria-label="Total"
+                          className={inputClassName}
+                          value={item.total}
+                          onChange={(event) =>
+                            updateTotal(
+                              item,
+                              Math.max(0, Number(event.target.value) || 0)
+                            )
+                          }
+                          disabled={disabled}
+                        />
                       </td>
                       <td className={getStripedCellClassName(index, stripedRows)}>
                         <label className="flex items-center justify-center gap-2 py-1.5">
@@ -346,53 +349,12 @@ export function RequisitionLineItemsTable({
 
         {items.length > 0 ? (
           <div className="space-y-3 border-t border-border bg-muted/20 px-3 py-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <UBNativeSelect
-                label="Invoice discount"
-                options={[
-                  { value: "none", label: "None" },
-                  { value: "percent", label: "Percent (%)" },
-                  { value: "amount", label: "Fixed amount" },
-                ]}
-                value={discountType}
-                onChange={(event) =>
-                  onDiscountTypeChange(event.target.value as DiscountType)
-                }
-                disabled={disabled}
-              />
-              <UBInput
-                label={
-                  discountType === "percent"
-                    ? "Discount %"
-                    : discountType === "amount"
-                      ? "Discount amount"
-                      : "Discount value"
-                }
-                type="number"
-                min={0}
-                step="0.01"
-                value={discountType === "none" ? 0 : discountValue}
-                onChange={(event) =>
-                  onDiscountValueChange(
-                    Math.max(0, Number(event.target.value) || 0)
-                  )
-                }
-                disabled={disabled || discountType === "none"}
-              />
-            </div>
-
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="space-y-1 text-sm">
                 <p className="text-muted-foreground">
                   Subtotal:{" "}
                   <span className="font-medium text-foreground tabular-nums">
                     {formatCurrency(pricing.lines_subtotal)}
-                  </span>
-                </p>
-                <p className="text-muted-foreground">
-                  Discount:{" "}
-                  <span className="font-medium text-foreground tabular-nums">
-                    −{formatCurrency(pricing.discount_amount)}
                   </span>
                 </p>
                 <p className="text-muted-foreground">
@@ -448,7 +410,7 @@ export function mapCompleteLineItemsForApi(items: RequisitionLineItemDraft[]) {
       (item) =>
         item.chart_of_account_id !== null &&
         Number.isFinite(item.quantity) &&
-        item.unit_cost >= 0
+        item.total >= 0
     )
   )
 }
@@ -461,7 +423,7 @@ export function mapDraftLineItemsForApi(items: RequisitionLineItemDraft[]) {
         item.chart_of_account_id !== null ||
         item.comments.trim() !== "" ||
         (Number.isFinite(item.quantity) && item.quantity !== 0) ||
-        item.unit_cost > 0 ||
+        item.total > 0 ||
         item.gst_applicable
     )
     .map((item) => ({
@@ -481,7 +443,7 @@ export function isLineItemsValid(items: RequisitionLineItemDraft[]) {
         item.chart_of_account_id !== null &&
         Number.isFinite(item.quantity) &&
         item.quantity !== 0 &&
-        item.unit_cost >= 0
+        item.total >= 0
     )
   )
 }
