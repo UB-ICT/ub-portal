@@ -1,8 +1,10 @@
+import { X } from "lucide-react"
 import { useState, type FormEvent } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
 import { UBSelect, type UBSelectOption } from "@/components/shared/UBSelect"
+import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -38,18 +40,25 @@ export function UserFormDialog({
   const createUser = useAdminUsersStore((state) => state.createUser)
   const updateUser = useAdminUsersStore((state) => state.updateUser)
   const assignRole = useAdminUsersStore((state) => state.assignRole)
+  const removeRole = useAdminUsersStore((state) => state.removeRole)
+  const isSavingRoles = useAdminUsersStore((state) => state.isSaving)
   const error = useAdminUsersStore((state) => state.error)
 
   const roles = useAdminRolesStore((state) => state.roles)
 
   const isEdit = Boolean(user)
 
+  const assignedRoleIds = new Set(user?.roles.map((role) => role.id))
+  const availableRoles = roles.filter((role) => !assignedRoleIds.has(role.id))
+
   const [name, setName] = useState(user?.name ?? "")
   const [email, setEmail] = useState(user?.email ?? "")
   const [status, setStatus] = useState(user?.status ?? "active")
   // Initial roles to attach right after creation - only relevant in create
-  // mode. Editing an existing user's roles happens in UserRolesDialog instead.
+  // mode. Editing an existing user's roles happens inline below instead.
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
+  // Role to attach next, chosen from the "add role" select in edit mode.
+  const [roleToAdd, setRoleToAdd] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
   // Local flag (rather than relying solely on the store's isSaving) so the
   // form stays disabled through the whole create -> attach-roles sequence,
@@ -63,6 +72,18 @@ export function UserFormDialog({
         ? current.filter((id) => id !== roleId)
         : [...current, roleId]
     )
+  }
+
+  const handleAddRole = async () => {
+    if (!user || !roleToAdd) {
+      return
+    }
+
+    const added = await assignRole(user.id, roleToAdd)
+
+    if (added) {
+      setRoleToAdd("")
+    }
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -111,7 +132,7 @@ export function UserFormDialog({
           <DialogTitle>{isEdit ? "Edit user" : "Add new user"}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update this user's account details."
+              ? "Update this user's account details and roles."
               : "Create a new account in the portal."}
           </DialogDescription>
         </DialogHeader>
@@ -173,6 +194,62 @@ export function UserFormDialog({
                   })}
                 </div>
               )}
+            </div>
+          ) : null}
+
+          {isEdit && user ? (
+            <div>
+              <label className="mb-2 block text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                Roles
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                {user.roles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No roles assigned.
+                  </p>
+                ) : (
+                  user.roles.map((role) => (
+                    <Badge key={role.id} variant="secondary" className="gap-1 pr-1">
+                      {role.role_name}
+                      <button
+                        type="button"
+                        onClick={() => void removeRole(user.id, role.id)}
+                        disabled={isSavingRoles}
+                        aria-label={`Remove ${role.role_name}`}
+                        className="rounded-full p-0.5 hover:bg-black/10 disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-2 flex items-end gap-2">
+                <UBSelect
+                  label="Add role"
+                  value={roleToAdd}
+                  onValueChange={setRoleToAdd}
+                  options={availableRoles.map((role) => ({
+                    value: role.id,
+                    label: role.role_name,
+                  }))}
+                  placeholder={
+                    availableRoles.length ? "Select a role" : "All roles assigned"
+                  }
+                  disabled={availableRoles.length === 0 || isSavingRoles}
+                  className="flex-1"
+                />
+                <UBButton
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleAddRole()}
+                  disabled={!roleToAdd || isSavingRoles}
+                >
+                  Add
+                </UBButton>
+              </div>
             </div>
           ) : null}
 
