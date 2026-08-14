@@ -106,9 +106,13 @@ export const RequesterDashboard: React.FC<RequesterDashboardProps> = ({
 
   const totalRecords = forms.length
   const totalPages = Math.max(1, Math.ceil(totalRecords / FORMS_PER_PAGE))
+
+  React.useEffect(() => {
+    setCurrentPage((page) => (page > totalPages ? totalPages : page))
+  }, [totalPages])
+
   const startIndex = (currentPage - 1) * FORMS_PER_PAGE
   const paginatedForms = forms.slice(startIndex, startIndex + FORMS_PER_PAGE)
-
   return (
     <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-2">
       <div className="border-b border-border pb-5">

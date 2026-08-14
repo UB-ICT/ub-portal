@@ -55,11 +55,9 @@ export const RunningBalanceChart: React.FC<RunningBalanceChartProps> = ({
     )
   }
 
-  const costCenterIds = Array.from(
-    new Set(data.map((point) => point.cost_center_id))
-  )
-  const isMultiCostCenter = costCenterIds.length > 1
-  const dates = Array.from(new Set(data.map((point) => point.date))).sort()
+const costCenterIds = Array.from(
+  new Set(data.map((point) => point.cost_center_id))
+).sort((a, b) => a - b)
 
   let option: EChartsOption
 
