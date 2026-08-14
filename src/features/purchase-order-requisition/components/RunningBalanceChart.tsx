@@ -25,7 +25,8 @@ function formatCurrency(amount: number) {
 }
 
 function formatAxisDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  const [year, month,day] = dateString.split("-").map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
     month: "short",
     day: "2-digit",
   })
