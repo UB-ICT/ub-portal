@@ -2,11 +2,10 @@ import type { RequisitionPriority } from "@/lib/api/requisitions"
 import type { RequisitionTag } from "@/lib/api/tags"
 
 import type { RequisitionLineItemDraft } from "../components/RequisitionLineItemsTable"
-import type { DiscountType } from "../lib/line-pricing"
 import type { SupplierQuoteDraft } from "../lib/supplier-quotes"
 
 export type RequisitionDraftSnapshot = {
-  version: 1
+  version: 3
   updatedAt: number
   requisitionId: number | null
   currencyId: string
@@ -17,8 +16,6 @@ export type RequisitionDraftSnapshot = {
   requiresDownpayment: boolean
   reminderDate: string
   quoteWaiverReason: string
-  discountType: DiscountType
-  discountValue: number
   activityComment: string
   selectedTagIds: number[]
   selectedTags: RequisitionTag[]
@@ -41,7 +38,7 @@ export function writeRequisitionDraftSnapshot(
 ) {
   try {
     const payload: RequisitionDraftSnapshot = {
-      version: 1,
+      version: 3,
       updatedAt: Date.now(),
       requisitionId: requisitionId ?? null,
       ...snapshot,
@@ -74,7 +71,7 @@ export function readRequisitionDraftSnapshot(
       return null
     }
     const parsed = JSON.parse(raw) as RequisitionDraftSnapshot
-    if (parsed?.version !== 1) {
+    if (parsed?.version !== 3) {
       return null
     }
     return parsed

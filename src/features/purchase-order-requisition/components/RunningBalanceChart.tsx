@@ -25,8 +25,8 @@ function formatCurrency(amount: number) {
 }
 
 function formatAxisDate(dateString: string) {
-  const [year, month,day] = dateString.split("-").map(Number)
-  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+  const [year, month, day] = dateString.split("-").map(Number)
+  return new Date(year, (month ?? 1) - 1, day ?? 1).toLocaleDateString("en-US", {
     month: "short",
     day: "2-digit",
   })
@@ -55,11 +55,9 @@ export const RunningBalanceChart: React.FC<RunningBalanceChartProps> = ({
     )
   }
 
-  const costCenterIds = Array.from(
-    new Set(data.map((point) => point.cost_center_id))
-  )
-  const isMultiCostCenter = costCenterIds.length > 1
-  const dates = Array.from(new Set(data.map((point) => point.date))).sort()
+const costCenterIds = Array.from(
+  new Set(data.map((point) => point.cost_center_id))
+).sort((a, b) => a - b)
 
   let option: EChartsOption
 

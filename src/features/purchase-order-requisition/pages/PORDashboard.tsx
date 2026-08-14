@@ -46,10 +46,17 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   })
 
   // Trailing 12 months, ending today — matches the backend's own 366-day cap.
-  const balanceDateTo = new Date().toISOString().slice(0, 10)
-  const balanceDateFrom = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10)
+  const formatLocalIsoDate = (date: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date)
+
+  const balanceDateTo = formatLocalIsoDate(new Date())
+  const balanceDateFrom = formatLocalIsoDate(
+    new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+  )
 
   const balanceHistoryQuery = useQuery({
     queryKey: ["balance-over-time", balanceDateFrom, balanceDateTo],
