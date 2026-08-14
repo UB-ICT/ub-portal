@@ -246,7 +246,7 @@ export const RequesterDashboard: React.FC<RequesterDashboardProps> = ({
                     key={form.id}
                     className="group transition-colors hover:bg-muted/30"
                   >
-                    <td className="cursor-pointer py-4">
+                    <td className="py-4">
                       <RequisitionNumberBadge
                         number={form.number}
                         status={mapApiStatusToCardStatus(
