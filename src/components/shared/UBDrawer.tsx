@@ -75,12 +75,14 @@ export function UBDrawer({
   const applicationMenu = useApplicationMenuStore((state) => state.applicationMenu)
   const isLoadingMenu = useApplicationMenuStore((state) => state.isLoading)
   const menuError = useApplicationMenuStore((state) => state.error)
+  const isOverridden = itemsOverride !== undefined
   const items = itemsOverride ?? storeDrawerItems
   const activeItemId = useMemo(
     () => resolveActiveDrawerItemId(items, location.pathname),
     [items, location.pathname]
   )
-  const applicationLabel = applicationMenu?.label ?? appLabel ?? "UB Portal"
+  const activeApplicationMenu = isOverridden ? undefined : applicationMenu
+  const applicationLabel = activeApplicationMenu?.label ?? appLabel ?? "UB Portal"
 
   useEffect(() => {
     if (open === undefined) {
@@ -198,8 +200,8 @@ export function UBDrawer({
       >
         <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
           <MenuIcon
-            icon={applicationMenu?.icon}
-            label={applicationMenu?.label}
+            icon={activeApplicationMenu?.icon}
+            label={activeApplicationMenu?.label ?? appLabel}
             className="size-5"
           />
         </div>
@@ -255,9 +257,9 @@ export function UBDrawer({
       aria-label="Application navigation"
       className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto p-3"
     >
-      {isLoadingMenu && items.length === 0 ? (
+      {!isOverridden && isLoadingMenu && items.length === 0 ? (
         <p className="px-2 py-3 text-sm text-muted-foreground">Loading menu...</p>
-      ) : menuError && items.length === 0 ? (
+      ) : !isOverridden && menuError && items.length === 0 ? (
         <p className="px-2 py-3 text-sm text-destructive">{menuError}</p>
       ) : items.length === 0 ? (
         <p className="px-2 py-3 text-sm text-muted-foreground">

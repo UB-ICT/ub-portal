@@ -316,7 +316,10 @@ export function UBHeader({
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {applications.map((application) => {
-                      const Icon = resolveMenuIcon(application.icon)
+                      const Icon = resolveMenuIcon(
+                        application.icon,
+                        application.label
+                      )
 
                       return (
                         <UBIconTileButton
