@@ -109,9 +109,10 @@ export function RequisitionLineItemsTable({
   }
 
   const updateQuantity = (item: RequisitionLineItemDraft, quantity: number) => {
+    const safeQuantity = Number.isFinite(quantity) ? Math.max(0, quantity) : 0
     updateItem(item.id, {
-      quantity,
-      total: roundMoney(quantity * item.unit_cost),
+      quantity: safeQuantity,
+      total: roundMoney(safeQuantity * item.unit_cost),
     })
   }
 
@@ -125,7 +126,7 @@ export function RequisitionLineItemsTable({
   const updateTotal = (item: RequisitionLineItemDraft, total: number) => {
     updateItem(item.id, {
       total,
-      unit_cost: item.quantity !== 0 ? roundMoney(total / item.quantity) : 0,
+      unit_cost: item.quantity !== 0 ? total / item.quantity : 0,
     })
   }
 
