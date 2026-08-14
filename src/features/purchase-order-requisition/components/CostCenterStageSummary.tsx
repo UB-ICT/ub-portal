@@ -140,8 +140,7 @@ export const CostCenterStageSummaryTable: React.FC<
 
 // Dashboard teaser: shows the grand total and a "View All" button that
 // opens the full cross-tab table in a dialog, keeping the dashboard compact
-// for the Purchase Officer/Super Admin roles that see this section.
-export const CostCenterStageSummaryCard: React.FC = () => {
+// while still allowing users to inspect the detailed breakdown when needed.
   const [open, setOpen] = React.useState(false)
   const { data, isLoading, error } = useQuery({
     queryKey: ["cost-center-stage-summary"],
@@ -158,7 +157,11 @@ export const CostCenterStageSummaryCard: React.FC = () => {
   }
 
   if (error instanceof ApiError && error.status === 403) {
-    return null
+    return (
+      <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
+        Cost center summary is not available for your current role.
+      </div>
+    )
   }
 
   if (error) {
