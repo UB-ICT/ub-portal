@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Pencil,
   RotateCcw,
-  Shield,
   Trash2,
   User as UserIcon,
 } from "lucide-react"
@@ -23,7 +22,6 @@ type UsersTableProps = {
   // out from under themselves.
   currentUserEmail?: string | null
   onEdit: (user: AdminUserRecord) => void
-  onManageRoles: (user: AdminUserRecord) => void
   onToggleStatus: (user: AdminUserRecord) => void
   onDelete: (user: AdminUserRecord) => void
 }
@@ -116,7 +114,6 @@ export function UsersTable({
   isLoading = false,
   currentUserEmail,
   onEdit,
-  onManageRoles,
   onToggleStatus,
   onDelete,
 }: UsersTableProps) {
@@ -246,18 +243,9 @@ export function UsersTable({
                     size="sm"
                     variant="ghost"
                     onClick={() => onEdit(row)}
-                    aria-label={`Edit ${row.name}`}
+                    aria-label={`Edit ${row.name} and manage their roles`}
                   >
                     <Pencil className="size-4" />
-                  </UBButton>
-                  <UBButton
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onManageRoles(row)}
-                    aria-label={`Manage roles for ${row.name}`}
-                  >
-                    <Shield className="size-4" />
                   </UBButton>
                   <UBButton
                     type="button"

@@ -5,7 +5,6 @@ import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
 import { UBSelect, type UBSelectOption } from "@/components/shared/UBSelect"
 import { UserFormDialog } from "@/features/identitiy-cloud/components/UserFormDialog"
-import { UserRolesDialog } from "@/features/identitiy-cloud/components/UserRolesDialog"
 import { UsersTable } from "@/features/identitiy-cloud/components/UsersTable"
 import { useProtectedPortalSession } from "@/hooks/useProtectedPortalSession"
 import type { AdminUserRecord } from "@/lib/api/admin-users"
@@ -29,16 +28,14 @@ export const AdminUsersPage = () => {
   const fetchRoles = useAdminRolesStore((state) => state.fetchRoles)
 
   const [userDialogOpen, setUserDialogOpen] = useState(false)
-  // When set, the dialog edits this user; null means "create" mode.
-  const [editingUser, setEditingUser] = useState<AdminUserRecord | null>(null)
+  // Holds an id rather than a snapshot so the dialog reflects role
+  // attach/detach changes live, without needing to close and reopen it.
+  // Null means "create" mode.
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const editingUser = users.find((user) => user.id === editingUserId) ?? null
   // Bumped every time the dialog opens, forcing it to remount so its form
   // fields start fresh instead of carrying over the previous attempt.
   const [userDialogKey, setUserDialogKey] = useState(0)
-
-  // Holds an id rather than a snapshot so the dialog reflects role
-  // attach/detach changes live, without needing to close and reopen it.
-  const [rolesUserId, setRolesUserId] = useState<string | null>(null)
-  const rolesUser = users.find((user) => user.id === rolesUserId) ?? null
 
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -109,19 +106,15 @@ export const AdminUsersPage = () => {
   }
 
   const handleOpenAddUser = () => {
-    setEditingUser(null)
+    setEditingUserId(null)
     setUserDialogKey((key) => key + 1)
     setUserDialogOpen(true)
   }
 
   const handleEditUser = (user: AdminUserRecord) => {
-    setEditingUser(user)
+    setEditingUserId(user.id)
     setUserDialogKey((key) => key + 1)
     setUserDialogOpen(true)
-  }
-
-  const handleManageRoles = (user: AdminUserRecord) => {
-    setRolesUserId(user.id)
   }
 
   const handleToggleStatus = async (user: AdminUserRecord) => {
@@ -241,7 +234,6 @@ export const AdminUsersPage = () => {
             isLoading={isLoading}
             currentUserEmail={currentUser?.email}
             onEdit={handleEditUser}
-            onManageRoles={handleManageRoles}
             onToggleStatus={(user) => void handleToggleStatus(user)}
             onDelete={(user) => void handleDeleteUser(user)}
           />
@@ -253,16 +245,6 @@ export const AdminUsersPage = () => {
         open={userDialogOpen}
         user={editingUser}
         onOpenChange={setUserDialogOpen}
-      />
-
-      <UserRolesDialog
-        open={rolesUserId !== null}
-        user={rolesUser}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRolesUserId(null)
-          }
-        }}
       />
     </div>
   )
