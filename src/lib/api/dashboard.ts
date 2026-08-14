@@ -72,9 +72,34 @@ type CostCenterStageSummaryApiResponse = CostCenterStageSummary & {
   success: boolean
 }
 
+// Shape of `GET requisitions/balance-over-time`. "Spent" = requisitions the
+// Purchase Officer has Closed — see the backend controller for why Closed is
+// the proxy for "approved by the purchase officer".
+export type BalanceOverTimePoint = {
+  date: string // ISO date, e.g. "2026-07-01"
+  cost_center_id: number
+  cost_center_name?: string
+  spent_cumulative: number
+  allocated: number
+  balance: number
+}
+
+type BalanceOverTimeApiResponse = {
+  success: boolean
+  data: BalanceOverTimePoint[]
+  message?: string
+}
+
+export type FetchBalanceOverTimeParams = {
+  dateFrom: string
+  dateTo: string
+  costCenterId?: number
+}
+
 const BASE_PATH = "requisitionSystem/requisitions/dashboard-metrics"
 const COST_CENTER_STAGE_SUMMARY_PATH =
   "requisitionSystem/requisitions/summary-by-cost-center"
+const BALANCE_OVER_TIME_PATH = "requisitionSystem/requisitions/balance-over-time"
 
 function getToken(token = readStoredAccessToken()) {
   if (!token) {
@@ -118,6 +143,35 @@ export async function fetchCostCenterStageSummary() {
     data: response.data,
     totals: response.totals,
   }
+}
+
+/**
+ * Fetch cumulative spend vs. allocated budget, grouped by day and cost
+ * center. Omit `costCenterId` to get every cost center the current user is
+ * assigned to (global roles must pass it explicitly).
+ */
+export async function fetchBalanceOverTime({
+  dateFrom,
+  dateTo,
+  costCenterId,
+}: FetchBalanceOverTimeParams) {
+  const params = new URLSearchParams()
+  params.set("date_from", dateFrom)
+  params.set("date_to", dateTo)
+
+  if (costCenterId !== undefined) {
+    params.set("cost_center_id", String(costCenterId))
+  }
+
+  const response = await apiRequest<BalanceOverTimeApiResponse>(
+    `${BALANCE_OVER_TIME_PATH}?${params.toString()}`,
+    {
+      method: "GET",
+      token: getToken(),
+    }
+  )
+
+  return response.data
 }
 
 /**

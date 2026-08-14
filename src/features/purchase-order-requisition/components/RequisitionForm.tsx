@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils"
 import { fetchGstRate } from "@/lib/api/requisition-settings"
 import { useRequisitionQuotesStore } from "@/store/requisition-quotes-store"
 import { useRequisitionsStore } from "@/store/requisitions-store"
-import type { DiscountType } from "../lib/line-pricing"
 import { DEFAULT_GST_RATE_PERCENT } from "../lib/line-pricing"
 import { normalizeRequisitionPriority } from "../lib/requisition-priorities"
 import {
@@ -69,6 +68,9 @@ function mapApiItemsToDrafts(
       item.chart_of_account?.description ?? item.description ?? "",
     quantity: Number(item.quantity),
     unit_cost: Number(item.unit_cost),
+    total: Number(
+      item.subtotal ?? Number(item.quantity) * Number(item.unit_cost)
+    ),
     gst_applicable: Boolean(item.gst_applicable),
     comments: item.comments ?? "",
   }))
@@ -280,8 +282,6 @@ export function RequisitionForm({
   const [lineItems, setLineItems] = useState<RequisitionLineItemDraft[]>([
     createEmptyLineItem(),
   ])
-  const [discountType, setDiscountType] = useState<DiscountType>("none")
-  const [discountValue, setDiscountValue] = useState(0)
   const [gstRatePercent, setGstRatePercent] = useState(DEFAULT_GST_RATE_PERCENT)
   const [formError, setFormError] = useState<string | null>(null)
   const [isEditable, setIsEditable] = useState(true)
@@ -399,10 +399,6 @@ export function RequisitionForm({
         ? mapApiItemsToDrafts(requisition.items)
         : [createEmptyLineItem()]
     )
-    setDiscountType(
-      (requisition.discount_type as DiscountType | null | undefined) ?? "none"
-    )
-    setDiscountValue(Number(requisition.discount_value ?? 0))
     setIsEditable(
       canCostCenterEditRequisition(
         requisition.status?.name,
@@ -475,8 +471,6 @@ export function RequisitionForm({
         setRequiresDownpayment(snapshot.requiresDownpayment)
         setReminderDate(snapshot.reminderDate)
         setQuoteWaiverReason(snapshot.quoteWaiverReason)
-        setDiscountType(snapshot.discountType)
-        setDiscountValue(snapshot.discountValue)
         if (snapshot.selectedTags.length > 0) {
           setSelectedTags(snapshot.selectedTags)
         }
@@ -542,8 +536,6 @@ export function RequisitionForm({
     setRequiresDownpayment(snapshot.requiresDownpayment)
     setReminderDate(snapshot.reminderDate)
     setQuoteWaiverReason(snapshot.quoteWaiverReason)
-    setDiscountType(snapshot.discountType)
-    setDiscountValue(snapshot.discountValue)
     setActivityComment(snapshot.activityComment)
     setSelectedTags(snapshot.selectedTags)
     setLineItems(
@@ -663,8 +655,6 @@ export function RequisitionForm({
   const showSubmitAction = canSubmitRequisition(statusLabel, mode)
   const requisitionTotal = calculateRequisitionTotalFromLineItems(
     lineItems,
-    discountType,
-    discountValue,
     gstRatePercent
   )
   const actionButtonsDisabled =
@@ -730,8 +720,6 @@ export function RequisitionForm({
         ? mapSupplierQuotesToPayload(supplierQuotes)
         : mapDraftSupplierQuotesToPayload(supplierQuotes),
       items,
-      discount_type: discountType,
-      discount_value: discountType === "none" ? 0 : discountValue,
       tag_ids: selectedTags.map((tag) => tag.id),
       submit: shouldSubmit,
     }
@@ -747,8 +735,6 @@ export function RequisitionForm({
       requiresDownpayment,
       reminderDate,
       quoteWaiverReason,
-      discountType,
-      discountValue,
       activityComment,
       selectedTagIds: selectedTags.map((tag) => tag.id),
       selectedTags,
@@ -855,8 +841,6 @@ export function RequisitionForm({
         requiresDownpayment,
         reminderDate,
         quoteWaiverReason,
-        discountType,
-        discountValue,
         activityComment,
         selectedTagIds: selectedTags.map((tag) => tag.id),
         selectedTags,
@@ -991,8 +975,6 @@ export function RequisitionForm({
     createRequisition,
     currencyId,
     description,
-    discountType,
-    discountValue,
     expectedDeliveryDate,
     fetchLogs,
     isEditable,
@@ -1024,8 +1006,6 @@ export function RequisitionForm({
     activityComment,
     currencyId,
     description,
-    discountType,
-    discountValue,
     expectedDeliveryDate,
     isRecurring,
     lineItems,
@@ -1137,8 +1117,6 @@ export function RequisitionForm({
     costCenterId,
     currencyId,
     description,
-    discountType,
-    discountValue,
     expectedDeliveryDate,
     isEditable,
     isRecurring,
@@ -1378,10 +1356,6 @@ export function RequisitionForm({
       <RequisitionLineItemsTable
         items={lineItems}
         onChange={setLineItems}
-        discountType={discountType}
-        discountValue={discountValue}
-        onDiscountTypeChange={setDiscountType}
-        onDiscountValueChange={setDiscountValue}
         gstRatePercent={gstRatePercent}
         budgetAccounts={lineItemAccountOptions}
         isLoadingBudgetAccounts={isLoadingBudgetAccounts}

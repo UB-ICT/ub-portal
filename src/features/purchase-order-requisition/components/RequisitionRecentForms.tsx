@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Clock, ChevronLeft, ChevronRight } from "lucide-react"
+import { Clock, ChevronLeft, ChevronRight, Info } from "lucide-react"
 import { fetchAllForms } from "@/lib/api/dashboard"
 import { useNavigate } from "react-router-dom"
 
@@ -123,8 +123,24 @@ export const RecentFormsTable: React.FC = () => {
                 <th className="pt-2 pb-3">Time at My Stage</th>
               ) : (
                 <>
-                  <th className="pt-2 pb-3">Processing Time</th>
-                  <th className="pt-2 pb-3">Approval Time</th>
+                  <th className="pt-2 pb-3">
+                    <span
+                      className="inline-flex cursor-help items-center gap-1"
+                      title="Time from submission to final approval or rejection. Blank while the requisition is still in progress."
+                    >
+                      Processing Time
+                      <Info className="size-3 text-muted-foreground/70" />
+                    </span>
+                  </th>
+                  <th className="pt-2 pb-3">
+                    <span
+                      className="inline-flex cursor-help items-center gap-1"
+                      title="Time from submission to the most recent approval signature. Blank until at least one approval has been given."
+                    >
+                      Approval Time
+                      <Info className="size-3 text-muted-foreground/70" />
+                    </span>
+                  </th>
                 </>
               )}
             </tr>

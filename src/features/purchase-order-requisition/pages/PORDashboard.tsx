@@ -1,17 +1,72 @@
 import React from "react"
+import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { fetchDashboardMetrics } from "@/lib/api/dashboard"
+import {
+  fetchAllForms,
+  fetchBalanceOverTime,
+  fetchCostCenterStageSummary,
+  fetchDashboardMetrics,
+} from "@/lib/api/dashboard"
+import { ApiError } from "@/lib/api/client"
 import { UBCard } from "../../../components/shared/UBCard"
 import { RecentFormsTable } from "../components/RequisitionRecentForms"
 import { CostCenterStageSummaryTable } from "../components/CostCenterStageSummary"
+import { RequesterDashboard } from "../components/RequesterDashboard"
 
 interface PORDashboardPageProps {}
 
 export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
+  const navigate = useNavigate()
+
   // 🔄 Fetch metrics dynamically isolated by the user's session token
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard-metrics"],
     queryFn: fetchDashboardMetrics,
+  })
+
+  const backendRole = data?.roleContext ?? "requester"
+
+  // Differentiate between management workflows and standard requester profiles
+  const isWorkflowLayout = backendRole !== "requester"
+
+  // The requester dashboard is the only consumer of these two queries at this
+  // level — the workflow layout's RecentFormsTable/CostCenterStageSummaryTable
+  // below fetch for themselves — so keep them idle until we know the role.
+  const formsQuery = useQuery({
+    queryKey: ["recent-forms"],
+    queryFn: fetchAllForms,
+    enabled: !isWorkflowLayout && !isLoading,
+  })
+
+  const costCenterSummaryQuery = useQuery({
+    queryKey: ["cost-center-stage-summary"],
+    queryFn: fetchCostCenterStageSummary,
+    retry: false,
+    enabled: !isWorkflowLayout && !isLoading,
+  })
+
+  // Trailing 12 months, ending today — matches the backend's own 366-day cap.
+  const formatLocalIsoDate = (date: Date) =>
+    new Intl.DateTimeFormat("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date)
+
+  const balanceDateTo = formatLocalIsoDate(new Date())
+  const balanceDateFrom = formatLocalIsoDate(
+    new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+  )
+
+  const balanceHistoryQuery = useQuery({
+    queryKey: ["balance-over-time", balanceDateFrom, balanceDateTo],
+    queryFn: () =>
+      fetchBalanceOverTime({
+        dateFrom: balanceDateFrom,
+        dateTo: balanceDateTo,
+      }),
+    retry: false,
+    enabled: !isWorkflowLayout && !isLoading,
   })
 
   if (isLoading) {
@@ -31,11 +86,49 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   }
 
   const activeMetrics = data?.metrics ?? {}
-  console.log("Active Metrics:", activeMetrics) // Debugging: Log the metrics to verify structure and values
-  const backendRole = data?.roleContext ?? "requester"
-  
-  // Differentiate between management workflows and standard requester profiles
-  const isWorkflowLayout = backendRole !== "requester"
+
+  if (!isWorkflowLayout) {
+    // Cost center summary is optional for a requester (they may have none
+    // assigned) — a 403 means "nothing to show", not a real error.
+    const costCenterSummaryForbidden =
+      costCenterSummaryQuery.error instanceof ApiError &&
+      costCenterSummaryQuery.error.status === 403
+
+    return (
+      <RequesterDashboard
+        metrics={{
+          draft: activeMetrics.draft,
+          pending: activeMetrics.pending,
+          approved: activeMetrics.approved,
+          rejected: activeMetrics.rejected,
+        }}
+        forms={formsQuery.data}
+        isFormsLoading={formsQuery.isLoading}
+        formsError={
+          formsQuery.error ? (formsQuery.error as Error).message : null
+        }
+        onViewAllForms={() => navigate("/requisitions/forms")}
+        costCenterStages={costCenterSummaryQuery.data?.stages}
+        costCenterRows={costCenterSummaryQuery.data?.data}
+        costCenterTotals={costCenterSummaryQuery.data?.totals}
+        isCostCenterSummaryLoading={costCenterSummaryQuery.isLoading}
+        costCenterSummaryError={
+          costCenterSummaryQuery.error && !costCenterSummaryForbidden
+            ? (costCenterSummaryQuery.error as Error).message
+            : null
+        }
+        balanceHistory={balanceHistoryQuery.data}
+        isBalanceHistoryLoading={balanceHistoryQuery.isLoading}
+        balanceHistoryError={
+          balanceHistoryQuery.error
+            ? (balanceHistoryQuery.error as Error).message
+            : null
+        }
+        // monthlySpend intentionally omitted: no backend endpoint exists yet
+        // for a month-bucketed spend report.
+      />
+    )
+  }
 
   // Director/Dean approves requisitions directly and never handles supplier requests
   const showSupplierCard = backendRole !== "director-dean"
@@ -86,66 +179,40 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
 
       {/* 🎴 Secure Grid Layout rendering exactly what your account permits */}
       <div>
-        {isWorkflowLayout ? (
-          <div
-            className={`grid gap-6 sm:grid-cols-2 ${showSupplierCard ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}
-          >
-            {/* 🏛️ MANAGEMENT WORKFLOW CARD DECK (Exact color matching to your image) */}
-            <UBCard
-              subtitle="Awaiting My Action"
-              title={String(activeMetrics.awaiting_my_action ?? 0)}
-              description="Ready for your review"
-              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-amber-500"
-            />
+        <div
+          className={`grid gap-6 sm:grid-cols-2 ${showSupplierCard ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}
+        >
+          {/* 🏛️ MANAGEMENT WORKFLOW CARD DECK (Exact color matching to your image) */}
+          <UBCard
+            subtitle="Awaiting My Action"
+            title={String(activeMetrics.awaiting_my_action ?? 0)}
+            description="Ready for your review"
+            className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-amber-500"
+          />
 
-            <UBCard
-              subtitle="In Pipeline"
-              title={String(activeMetrics.in_pipeline ?? 0)}
-              description="All active forms"
-              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-blue-600"
-            />
+          <UBCard
+            subtitle="In Pipeline"
+            title={String(activeMetrics.in_pipeline ?? 0)}
+            description="All active forms"
+            className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-blue-600"
+          />
 
-            <UBCard
-              subtitle="Approved This Month"
-              title={String(activeMetrics.approved_this_month ?? 0)}
-              description="Fully cleared"
-              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-emerald-600"
-            />
+          <UBCard
+            subtitle="Approved This Month"
+            title={String(activeMetrics.approved_this_month ?? 0)}
+            description="Fully cleared"
+            className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-emerald-600"
+          />
 
-            {showSupplierCard && (
-              <UBCard
-                subtitle="Supplier Requests"
-                title={String(activeMetrics.supplier_requests ?? 0)}
-                description={getSupplierCardDescription(backendRole)}
-                className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-purple-600"
-              />
-            )}
-          </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* 📝 NATIVE REQUESTER CARD DECK (Exact color matching to your image) */}
+          {showSupplierCard && (
             <UBCard
-              subtitle="In Review"
-              title={String(activeMetrics.pending ?? 0)}
-              description="Awaiting Director/Dean's approval"
-              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-amber-500"
+              subtitle="Supplier Requests"
+              title={String(activeMetrics.supplier_requests ?? 0)}
+              description={getSupplierCardDescription(backendRole)}
+              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-purple-600"
             />
-
-            <UBCard
-              subtitle="Approved"
-              title={String(activeMetrics.approved ?? 0)}
-              description="Cleared for PO"
-              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-emerald-600"
-            />
-
-            <UBCard
-              subtitle="Rejected"
-              title={String(activeMetrics.rejected ?? 0)}
-              description="Needs follow-up"
-              className="[&>h3]:text-4xl [&>h3]:font-bold [&>h3]:text-red-600"
-            />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {canViewCostCenterSummary && <CostCenterStageSummaryTable />}
