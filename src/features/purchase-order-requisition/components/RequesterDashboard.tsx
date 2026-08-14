@@ -67,8 +67,12 @@ function getStageBadgeStyles(stage: string) {
 }
 
 function formatDate(dateString: string) {
-  const value = dateString.length === 10 ? `${dateString}T00:00:00` : dateString
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+  const [year, month, day] = dateString.split("-").map(Number)
+  return new Date(year, (month ?? 1) - 1, day ?? 1).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  })
 }
 
 function formatCurrency(amount: number) {
@@ -246,7 +250,7 @@ export const RequesterDashboard: React.FC<RequesterDashboardProps> = ({
                     key={form.id}
                     className="group transition-colors hover:bg-muted/30"
                   >
-                    <td className="cursor-pointer py-4">
+                    <td className="py-4">
                       <RequisitionNumberBadge
                         number={form.number}
                         status={mapApiStatusToCardStatus(

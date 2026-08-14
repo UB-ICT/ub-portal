@@ -25,8 +25,11 @@ function formatCurrency(amount: number) {
 }
 
 function formatAxisDate(dateString: string) {
-  const value = dateString.length === 10 ? `${dateString}T00:00:00` : dateString
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "2-digit" })
+  const [year, month, day] = dateString.split("-").map(Number)
+  return new Date(year, (month ?? 1) - 1, day ?? 1).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+  })
 }
 
 export const RunningBalanceChart: React.FC<RunningBalanceChartProps> = ({
