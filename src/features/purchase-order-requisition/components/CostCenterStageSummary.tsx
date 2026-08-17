@@ -1,6 +1,10 @@
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { fetchCostCenterStageSummary } from "@/lib/api/dashboard"
+import {
+  fetchCostCenterStageSummary,
+  type CostCenterStageSummaryRow,
+  type StageSummary,
+} from "@/lib/api/dashboard"
 import { ApiError } from "@/lib/api/client"
 import { UBButton } from "@/components/shared/UBButton"
 import {
@@ -27,6 +31,12 @@ export const CostCenterStageSummaryTable: React.FC<
     retry: false,
   })
 
+// Presentational table, reused by the self-fetching CostCenterStageSummaryTable
+// below as well as by role-specific dashboards (e.g. RequesterDashboard) that
+// already have this data as props.
+export const CostCenterStageSummaryView: React.FC<
+  CostCenterStageSummaryViewProps
+> = ({ stages = [], rows = [], totals, isLoading = false, error = null }) => {
   if (isLoading) {
     return (
       <div className="animate-pulse rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
@@ -35,17 +45,10 @@ export const CostCenterStageSummaryTable: React.FC<
     )
   }
 
-  // This view is restricted to Purchase Officers/Super Admins; the dashboard
-  // page already hides it for other roles, but if that role signal is ever
-  // wrong, silently render nothing rather than showing a scary error box.
-  if (error instanceof ApiError && error.status === 403) {
-    return null
-  }
-
   if (error) {
     return (
       <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
-        Error loading cost center summary: {(error as Error).message}
+        Error loading cost center summary: {error}
       </div>
     )
   }
