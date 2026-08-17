@@ -6,6 +6,8 @@ import {
   type StageSummary,
 } from "@/lib/api/dashboard"
 import { ApiError } from "@/lib/api/client"
+import { UBTable, type ColumnDef } from "@/components/shared/UBTable"
+import { cn } from "@/lib/utils"
 
 export type CostCenterStageSummaryViewProps = {
   stages?: StageSummary[]
@@ -14,6 +16,12 @@ export type CostCenterStageSummaryViewProps = {
   isLoading?: boolean
   error?: string | null
 }
+
+// Synthetic row appended to the table data to render the "All Cost Centers"
+// totals as a bolded last row, since UBTable has no separate footer slot.
+type TableRow = CostCenterStageSummaryRow & { isTotal?: boolean }
+
+const TOTALS_ROW_ID = -1
 
 // Presentational table, reused by the self-fetching CostCenterStageSummaryTable
 // below as well as by role-specific dashboards (e.g. RequesterDashboard) that
@@ -37,6 +45,61 @@ export const CostCenterStageSummaryView: React.FC<
     )
   }
 
+  const tableRows: TableRow[] =
+    rows.length > 0 && totals
+      ? [
+          ...rows,
+          {
+            cost_center_id: TOTALS_ROW_ID,
+            cost_center_name: "All Cost Centers",
+            stages: totals.by_stage,
+            total: totals.grand_total,
+            isTotal: true,
+          },
+        ]
+      : rows
+
+  const columns: ColumnDef<TableRow>[] = [
+    {
+      header: "Cost Center",
+      accessor: "cost_center_name",
+      mobile: true,
+      render: (value, row) => (
+        <span className={cn(row.isTotal && "font-bold text-foreground")}>
+          {String(value)}
+        </span>
+      ),
+    },
+    ...stages.map(
+      (stage): ColumnDef<TableRow> => ({
+        header: stage.name,
+        accessor: "total",
+        className: "text-right",
+        render: (_value, row) => (
+          <span className={cn(row.isTotal && "font-bold text-foreground")}>
+            {row.stages[stage.id] ?? 0}
+          </span>
+        ),
+      })
+    ),
+    {
+      header: "Total",
+      accessor: "total",
+      className: "text-right",
+      mobile: true,
+      render: (value, row) => (
+        <span
+          className={cn(
+            "font-bold",
+            row.isTotal ? "text-foreground" : "text-foreground/90"
+          )}
+        >
+          {String(value)}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <div className="rounded-2xl border bg-card p-6 shadow-sm">
       <div className="flex items-center justify-between pb-4">
@@ -50,65 +113,18 @@ export const CostCenterStageSummaryView: React.FC<
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-sm text-muted-foreground">
-          <thead>
-            <tr className="border-b border-border text-xs font-semibold tracking-wider text-muted-foreground/70 uppercase">
-              <th className="pt-2 pb-3">Cost Center</th>
-              {stages.map((stage) => (
-                <th key={stage.id} className="pt-2 pb-3 text-right">
-                  {stage.name}
-                </th>
-              ))}
-              <th className="pt-2 pb-3 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rows.length > 0 ? (
-              rows.map((row) => (
-                <tr
-                  key={row.cost_center_id}
-                  className="transition-colors hover:bg-muted/30"
-                >
-                  <td className="py-4 font-semibold text-foreground/90">
-                    {row.cost_center_name}
-                  </td>
-                  {stages.map((stage) => (
-                    <td key={stage.id} className="py-4 text-right">
-                      {row.stages[stage.id] ?? 0}
-                    </td>
-                  ))}
-                  <td className="py-4 text-right font-bold text-foreground">
-                    {row.total}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={stages.length + 2}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  No requisitions found for your cost centers.
-                </td>
-              </tr>
-            )}
-          </tbody>
-          {rows.length > 0 && totals && (
-            <tfoot>
-              <tr className="border-t border-border font-semibold text-foreground">
-                <td className="pt-3">All Cost Centers</td>
-                {stages.map((stage) => (
-                  <td key={stage.id} className="pt-3 text-right">
-                    {totals.by_stage[stage.id] ?? 0}
-                  </td>
-                ))}
-                <td className="pt-3 text-right">{totals.grand_total}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
+      {rows.length > 0 ? (
+        <UBTable<TableRow>
+          columns={columns}
+          data={tableRows}
+          rowKey="cost_center_id"
+          striped={false}
+        />
+      ) : (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          No requisitions found for your cost centers.
+        </p>
+      )}
     </div>
   )
 }
