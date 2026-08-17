@@ -2,6 +2,7 @@ import { Plus } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
+import { UBPageHeader } from "@/components/shared/UBPageHeader"
 import type { Supplier } from "@/lib/api/suppliers"
 import { useSuppliersStore } from "@/store/suppliers-store"
 
@@ -78,18 +79,16 @@ export function PORSuppliersPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight">Suppliers</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage vendor records and finance approvals.
-          </p>
-        </div>
-        <UBButton size="sm" onClick={handleAddSupplier}>
-          <Plus className="size-4" data-icon="inline-start" />
-          Add supplier
-        </UBButton>
-      </header>
+      <UBPageHeader
+        title="Suppliers"
+        description="Manage vendor records and finance approvals."
+        actions={
+          <UBButton size="sm" onClick={handleAddSupplier}>
+            <Plus className="size-4" data-icon="inline-start" />
+            Add supplier
+          </UBButton>
+        }
+      />
 
       <SearchSuppliers onSearch={setSearchCriteria} />
 

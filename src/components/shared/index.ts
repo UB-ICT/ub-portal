@@ -6,6 +6,9 @@ export { UBHeader } from "./UBHeader"
 export { UBCard } from "./UBCard"
 export type { UBCardProps } from "./UBCard"
 
+export { UBPageHeader } from "./UBPageHeader"
+export type { UBPageHeaderProps } from "./UBPageHeader"
+
 export { UBInput, UBNativeSelect, UBTextarea } from "./UBInput"
 export type { UBInputProps, UBNativeSelectProps, UBTextareaProps } from "./UBInput"
 
