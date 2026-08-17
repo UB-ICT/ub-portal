@@ -48,6 +48,7 @@ export function ApplicationLayout() {
       userEmail={user.email}
       userImageSrc={user.profile_picture}
       showAdminActions={showAdminActions}
+      showSearch={false}
       onLogout={handleLogout}
     >
       <Outlet />
