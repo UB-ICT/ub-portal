@@ -73,8 +73,9 @@ export const CostCenterStageSummaryView: React.FC<
     ...stages.map(
       (stage): ColumnDef<TableRow> => ({
         header: stage.name,
-        accessor: "total",
+        accessor: "stages",
         className: "text-right",
+        mobile: false,
         render: (_value, row) => (
           <span className={cn(row.isTotal && "font-bold text-foreground")}>
             {row.stages[stage.id] ?? 0}
