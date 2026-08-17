@@ -3,7 +3,7 @@ import type * as React from "react"
 import { cn } from "@/lib/utils"
 
 export type ColumnDef<T> = {
-  header: string
+  header: React.ReactNode
   accessor: keyof T
   render?: (value: T[keyof T], row: T) => React.ReactNode
   className?: string
