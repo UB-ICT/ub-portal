@@ -221,6 +221,7 @@ export const RecentFormsView: React.FC<RecentFormsViewProps> = ({
           data={paginatedForms}
           rowKey="id"
           striped={false}
+          className="border-0 bg-transparent"
         />
       ) : (
         <p className="py-8 text-center text-sm text-muted-foreground">
