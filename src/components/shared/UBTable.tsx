@@ -57,9 +57,9 @@ export function UBTable<T extends Record<string, any>>({
               >
                 {mobileColumns.map((column, colIndex) => (
                   <div key={colIndex} className="space-y-1">
-                    <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                       {column.header}
-                    </p>
+                    </div>
                     <p
                       className={cn(
                         "text-sm font-medium text-foreground",
