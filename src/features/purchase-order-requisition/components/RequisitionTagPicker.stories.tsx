@@ -1,10 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { useState } from "react"
 
-import {
-  componentParameters,
-  withPanel,
-} from "@/components/shared/storybook"
+import { componentParameters, withPanel } from "@/components/shared/storybook"
 import type { RequisitionTag } from "@/lib/api/tags"
 import { RequisitionTagPicker } from "./RequisitionTagPicker"
 
@@ -14,7 +11,7 @@ const sampleTags: RequisitionTag[] = [
 ]
 
 const meta = {
-  title: "POR/RequisitionTagPicker",
+  title: "Purchase Order Requisition/RequisitionTagPicker",
   component: RequisitionTagPicker,
   tags: ["autodocs"],
   parameters: componentParameters(
