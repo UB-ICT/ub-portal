@@ -20,7 +20,7 @@ export function UBPageHeader({
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <div className="mt-1 text-sm text-muted-foreground">{description}</div>
         ) : null}
       </div>
     )
@@ -31,7 +31,7 @@ export function UBPageHeader({
       <div>
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
         {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <div className="text-sm text-muted-foreground">{description}</div>
         ) : null}
       </div>
       {actions}
