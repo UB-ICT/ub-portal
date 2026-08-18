@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { Clock, ChevronLeft, ChevronRight, Info } from "lucide-react"
 
 import { UBCard } from "@/components/shared/UBCard"
+import { UBPageHeader } from "@/components/shared/UBPageHeader"
 import type {
   CostCenterStageSummaryRow,
   DashboardMetrics,
@@ -115,14 +116,11 @@ export const RequesterDashboard: React.FC<RequesterDashboardProps> = ({
   const paginatedForms = forms.slice(startIndex, startIndex + FORMS_PER_PAGE)
   return (
     <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-2">
-      <div className="border-b border-border pb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          My Requisitions
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Welcome back. Here&apos;s where your requisitions stand.
-        </p>
-      </div>
+      <UBPageHeader
+        variant="dashboard"
+        title="My Requisitions"
+        description="Welcome back. Here's where your requisitions stand."
+      />
 
       {metricsError ? (
         <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
