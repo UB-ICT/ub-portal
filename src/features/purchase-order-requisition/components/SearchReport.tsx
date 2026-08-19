@@ -6,8 +6,17 @@ import type { RequisitionReportFilters } from "@/lib/api/reports"
 import { useCostCentersStore } from "@/store/cost-centers-store"
 import { useSuppliersStore } from "@/store/suppliers-store"
 import { cn } from "@/lib/utils"
+import { REQUISITION_STATUS_LABELS } from "../lib/requisition-status"
 
 import { getSelectableSuppliers } from "../lib/supplier-admin-utils"
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All statuses" },
+  ...Object.entries(REQUISITION_STATUS_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  })),
+] as const
 
 const SORT_FIELD_OPTIONS = [
   { value: "number", label: "Requisition number" },
@@ -27,6 +36,7 @@ type ReportFormValues = {
   dateTo: string
   costCenterId: string
   supplierId: string
+  status: string
   number: string
   amountMin: string
   amountMax: string
@@ -48,6 +58,7 @@ const INITIAL_VALUES: ReportFormValues = {
   ...defaultDateRange(),
   costCenterId: "",
   supplierId: "",
+  status: "",
   number: "",
   amountMin: "",
   amountMax: "",
@@ -108,6 +119,9 @@ export function SearchReport({
         ? Number(values.costCenterId)
         : undefined,
       supplierId: values.supplierId ? Number(values.supplierId) : undefined,
+      status: values.status
+        ? (values.status as RequisitionReportFilters["status"])
+        : undefined,
       number: values.number.trim() || undefined,
       amountMin: values.amountMin ? Number(values.amountMin) : undefined,
       amountMax: values.amountMax ? Number(values.amountMax) : undefined,
@@ -149,6 +163,12 @@ export function SearchReport({
           options={supplierOptions}
           value={values.supplierId}
           onChange={(event) => update({ supplierId: event.target.value })}
+        />
+        <UBNativeSelect
+          label="Status"
+          options={[...STATUS_OPTIONS]}
+          value={values.status}
+          onChange={(event) => update({ status: event.target.value })}
         />
         <UBInput
           label="Requisition number"
