@@ -11,20 +11,12 @@ export type RequisitionReportSortField =
   | "supplier"
   | "status"
 
-export type RequisitionReportStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "in-review"
-  | "cancelled"
-  | "closed"
-
 export type RequisitionReportFilters = {
   dateFrom: string
   dateTo: string
   supplierId?: number
   costCenterId?: number
-  status?: RequisitionReportStatus
+  statusId?: number
   number?: string
   amountMin?: number
   amountMax?: number
@@ -54,8 +46,8 @@ function buildReportQueryString(filters: RequisitionReportFilters) {
     params.set("cost_center_id", String(filters.costCenterId))
   }
 
-  if (filters.status) {
-    params.set("status", filters.status)
+  if (filters.statusId) {
+    params.set("status_id", String(filters.statusId))
   }
 
   if (filters.number) {

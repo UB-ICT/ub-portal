@@ -4,19 +4,11 @@ import { UBButton } from "@/components/shared/UBButton"
 import { UBInput, UBNativeSelect } from "@/components/shared/UBInput"
 import type { RequisitionReportFilters } from "@/lib/api/reports"
 import { useCostCentersStore } from "@/store/cost-centers-store"
+import { useStatusesStore } from "@/store/statuses-store"
 import { useSuppliersStore } from "@/store/suppliers-store"
 import { cn } from "@/lib/utils"
-import { REQUISITION_STATUS_LABELS } from "../lib/requisition-status"
 
 import { getSelectableSuppliers } from "../lib/supplier-admin-utils"
-
-const STATUS_OPTIONS = [
-  { value: "", label: "All statuses" },
-  ...Object.entries(REQUISITION_STATUS_LABELS).map(([value, label]) => ({
-    value,
-    label,
-  })),
-] as const
 
 const SORT_FIELD_OPTIONS = [
   { value: "number", label: "Requisition number" },
@@ -36,7 +28,7 @@ type ReportFormValues = {
   dateTo: string
   costCenterId: string
   supplierId: string
-  status: string
+  statusId: string
   number: string
   amountMin: string
   amountMax: string
@@ -58,7 +50,7 @@ const INITIAL_VALUES: ReportFormValues = {
   ...defaultDateRange(),
   costCenterId: "",
   supplierId: "",
-  status: "",
+  statusId: "",
   number: "",
   amountMin: "",
   amountMax: "",
@@ -85,11 +77,14 @@ export function SearchReport({
   const fetchCostCenters = useCostCentersStore(
     (state) => state.fetchCostCenters
   )
+  const statuses = useStatusesStore((state) => state.statuses)
+  const fetchStatuses = useStatusesStore((state) => state.fetchStatuses)
 
   useEffect(() => {
     void fetchSuppliers()
     void fetchCostCenters()
-  }, [fetchSuppliers, fetchCostCenters])
+    void fetchStatuses()
+  }, [fetchSuppliers, fetchCostCenters, fetchStatuses])
 
   const supplierOptions = [
     { value: "", label: "All suppliers" },
@@ -107,6 +102,14 @@ export function SearchReport({
     })),
   ]
 
+  const statusOptions = [
+    { value: "", label: "All statuses" },
+    ...statuses.map((status) => ({
+      value: String(status.id),
+      label: status.name,
+    })),
+  ]
+
   const update = (patch: Partial<ReportFormValues>) => {
     setValues((current) => ({ ...current, ...patch }))
   }
@@ -119,9 +122,7 @@ export function SearchReport({
         ? Number(values.costCenterId)
         : undefined,
       supplierId: values.supplierId ? Number(values.supplierId) : undefined,
-      status: values.status
-        ? (values.status as RequisitionReportFilters["status"])
-        : undefined,
+      statusId: values.statusId ? Number(values.statusId) : undefined,
       number: values.number.trim() || undefined,
       amountMin: values.amountMin ? Number(values.amountMin) : undefined,
       amountMax: values.amountMax ? Number(values.amountMax) : undefined,
@@ -166,9 +167,9 @@ export function SearchReport({
         />
         <UBNativeSelect
           label="Status"
-          options={[...STATUS_OPTIONS]}
-          value={values.status}
-          onChange={(event) => update({ status: event.target.value })}
+          options={statusOptions}
+          value={values.statusId}
+          onChange={(event) => update({ statusId: event.target.value })}
         />
         <UBInput
           label="Requisition number"
