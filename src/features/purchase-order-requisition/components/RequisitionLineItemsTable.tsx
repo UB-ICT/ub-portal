@@ -351,7 +351,13 @@ export function RequisitionLineItemsTable({
         {items.length > 0 ? (
           <div className="space-y-3 border-t border-border bg-muted/20 px-3 py-3">
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <div className="space-y-1 text-sm">
+              <div
+                className="min-w-56 space-y-1 rounded-lg border border-border/70 bg-background px-3 py-2 text-sm shadow-sm"
+                aria-label="Requisition totals"
+              >
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  Totals
+                </p>
                 <p className="text-muted-foreground">
                   Subtotal:{" "}
                   <span className="font-medium text-foreground tabular-nums">
@@ -359,7 +365,7 @@ export function RequisitionLineItemsTable({
                   </span>
                 </p>
                 <p className="text-muted-foreground">
-                  GST:{" "}
+                  GST ({gstRatePercent}%):{" "}
                   <span className="font-medium text-foreground tabular-nums">
                     {formatCurrency(pricing.gst_total)}
                   </span>
@@ -384,7 +390,7 @@ export function RequisitionLineItemsTable({
                     Add line
                   </UBButton>
                 ) : null}
-                {footerActions}
+                {!disabled ? footerActions : null}
               </div>
             </div>
           </div>

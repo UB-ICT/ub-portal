@@ -226,7 +226,9 @@ export function PORRequisitionsPage() {
     void runAfterAutosave(() => {
       setSelectedRequisitionId(id)
       setPanelMode("edit")
-      setFormInstanceKey(`r-${id}`)
+      // Remount even when re-selecting the same id so reviewers pick up
+      // cost-center resubmits instead of keeping a stale form instance.
+      setFormInstanceKey(`r-${id}-${Date.now()}`)
       persistSelection({ mode: "edit", requisitionId: id })
     })
   }

@@ -145,6 +145,8 @@ export type RequisitionRecord = {
   can_close?: boolean
   pipeline?: Pipeline
   current_stage_sequence?: number
+  created_at?: string
+  updated_at?: string
   tags?: Array<{
     id: number
     name: string

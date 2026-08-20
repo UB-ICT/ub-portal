@@ -24,6 +24,8 @@ type RequisitionSupplierQuotesProps = {
   quoteWaiverReason?: string
   onQuoteWaiverReasonChange?: (reason: string) => void
   requisitionId?: number
+  /** When this changes, attachments are force-refetched from the server. */
+  refreshKey?: string | null
   requisitionTotal?: number
   disabled?: boolean
   className?: string
@@ -107,6 +109,7 @@ export function RequisitionSupplierQuotes({
   quoteWaiverReason = "",
   onQuoteWaiverReasonChange,
   requisitionId,
+  refreshKey = null,
   requisitionTotal = 0,
   disabled = false,
   className,
@@ -119,7 +122,7 @@ export function RequisitionSupplierQuotes({
   const isLoading = useRequisitionQuotesStore((state) => state.isLoading)
   const storeError = useRequisitionQuotesStore((state) => state.error)
 
-  const loadedForRequisitionRef = useRef<number | null>(null)
+  const loadedKeyRef = useRef<string | null>(null)
   const quotesRef = useRef(quotes)
 
   useEffect(() => {
@@ -131,21 +134,37 @@ export function RequisitionSupplierQuotes({
     onChange(applyRecommendedSupplierDefaults(nextQuotes))
   }
 
-  // Load existing attachments once when opening a requisition.
+  // Load attachments when opening a requisition or when the server revision changes.
   useEffect(() => {
     if (!requisitionId) {
       return
     }
 
-    if (loadedForRequisitionRef.current === requisitionId) {
+    const loadKey = `${requisitionId}:${refreshKey ?? ""}`
+    if (loadedKeyRef.current === loadKey) {
       return
     }
 
     let cancelled = false
-    loadedForRequisitionRef.current = requisitionId
+    loadedKeyRef.current = loadKey
 
     void fetchAttachments(requisitionId, true).then((attachments) => {
-      if (cancelled || attachments === null || attachments.length === 0) {
+      if (cancelled || attachments === null) {
+        return
+      }
+
+      // Locked/review views should always prefer the server payload so
+      // reviewers do not keep stale quoted totals after a resubmit.
+      if (disabled) {
+        emitChange(
+          attachments.length > 0
+            ? mergeServerAttachments(attachments, [])
+            : [createEmptySupplierQuote()]
+        )
+        return
+      }
+
+      if (attachments.length === 0) {
         return
       }
 
@@ -200,7 +219,7 @@ export function RequisitionSupplierQuotes({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchAttachments, requisitionId])
+  }, [disabled, fetchAttachments, refreshKey, requisitionId])
 
   const updateQuote = (clientId: string, nextQuote: SupplierQuoteDraft) => {
     const currentQuotes = quotesRef.current

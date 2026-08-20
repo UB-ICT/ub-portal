@@ -31,8 +31,8 @@ import {
 } from "../lib/supplier-quotes"
 
 import {
-  createEmptyLineItem,
   calculateRequisitionTotalFromLineItems,
+  createEmptyLineItem,
   isLineItemsValid,
   mapDraftLineItemsForApi,
   mapLineItemsForApi,
@@ -252,6 +252,9 @@ export function RequisitionForm({
   const isReviewing = useRequisitionsStore((state) => state.isReviewing)
   const error = useRequisitionsStore((state) => state.error)
   const fetchFormData = useRequisitionsStore((state) => state.fetchFormData)
+  const selectedRequisition = useRequisitionsStore(
+    (state) => state.selectedRequisition
+  )
   const fetchRequisitionById = useRequisitionsStore(
     (state) => state.fetchRequisitionById
   )
@@ -320,6 +323,8 @@ export function RequisitionForm({
   const supplierQuotesRef = useRef(supplierQuotes)
   const skipNextServerHydrationRef = useRef(false)
   const persistedRequisitionIdRef = useRef<number | null>(requisitionId ?? null)
+  const hydratedUpdatedAtRef = useRef<string | null>(null)
+  const [serverRevision, setServerRevision] = useState<string | null>(null)
   const [draftRequisitionId, setDraftRequisitionId] = useState<number | null>(
     requisitionId ?? null
   )
@@ -428,6 +433,9 @@ export function RequisitionForm({
     )
     setActivityComment("")
     setFormError(null)
+    const nextRevision = requisition.updated_at ?? null
+    hydratedUpdatedAtRef.current = nextRevision
+    setServerRevision(nextRevision)
     endQuietUpdate()
   }
 
@@ -454,9 +462,30 @@ export function RequisitionForm({
 
         applyRequisitionState(requisition)
 
-        // Overlay any newer local draft so incomplete fields survive navigation.
+        // Local draft overlays are only for in-progress editable work.
+        // Applying them on locked review stages was showing reviewers stale
+        // fields after the cost center had already resubmitted updates.
+        const editable = canCostCenterEditRequisition(
+          requisition.status?.name,
+          requisition.is_editable
+        )
+        if (!editable) {
+          clearRequisitionDraftSnapshot(requisitionId)
+          return
+        }
+
         const snapshot = readRequisitionDraftSnapshot(requisitionId)
         if (!snapshot) {
+          return
+        }
+
+        const serverUpdatedAt = Date.parse(requisition.updated_at ?? "")
+        if (
+          Number.isFinite(serverUpdatedAt) &&
+          snapshot.updatedAt < serverUpdatedAt
+        ) {
+          // Server is newer than the local draft — drop the stale snapshot.
+          clearRequisitionDraftSnapshot(requisitionId)
           return
         }
 
@@ -477,11 +506,6 @@ export function RequisitionForm({
         if (snapshot.lineItems.length > 0) {
           setLineItems(snapshot.lineItems)
         }
-        // Never restore attachment-backed quotes from localStorage — the
-        // attachments API is source of truth. Only keep incomplete local rows
-        // (supplier chosen, PDF not uploaded yet) so draft progress survives.
-        // Critical: never replace live rows that still hold a File / attachment
-        // with a File-stripped snapshot — that is what made uploads vanish.
         const pendingLocalQuotes = snapshot.supplierQuotes.filter(
           (quote) => quote.supplierId && !quote.attachmentId
         )
@@ -556,6 +580,41 @@ export function RequisitionForm({
     isDirtyRef.current = true
     setIsDirty(true)
   }, [requisitionId, fetchRequisitionById])
+
+  // When the page refetches the open requisition (focus/visibility), re-apply
+  // server fields for reviewers so they do not keep a stale in-memory form.
+  useEffect(() => {
+    if (!requisitionId || !selectedRequisition) {
+      return
+    }
+
+    if (selectedRequisition.id !== requisitionId) {
+      return
+    }
+
+    // Wait for the initial hydrate so a leftover list row cannot paint first.
+    if (hydratedUpdatedAtRef.current === null) {
+      return
+    }
+
+    const nextUpdatedAt = selectedRequisition.updated_at ?? null
+    if (!nextUpdatedAt || nextUpdatedAt === hydratedUpdatedAtRef.current) {
+      return
+    }
+
+    const editable = canCostCenterEditRequisition(
+      selectedRequisition.status?.name,
+      selectedRequisition.is_editable
+    )
+    // Never clobber an editable cost-center form from a background refetch —
+    // autosave bumps updated_at and would wipe in-progress quote Files.
+    if (editable) {
+      return
+    }
+
+    applyRequisitionState(selectedRequisition)
+    clearRequisitionDraftSnapshot(requisitionId)
+  }, [requisitionId, selectedRequisition])
 
   useEffect(() => {
     if (!requisitionId && assignedCostCenter) {
@@ -1329,6 +1388,7 @@ export function RequisitionForm({
         quoteWaiverReason={quoteWaiverReason}
         onQuoteWaiverReasonChange={setQuoteWaiverReason}
         requisitionId={requisitionId ?? draftRequisitionId ?? undefined}
+        refreshKey={serverRevision}
         requisitionTotal={requisitionTotal}
         disabled={quotesDisabled}
       />
@@ -1427,7 +1487,10 @@ export function RequisitionForm({
       ) : null}
 
       {mode === "edit" && requisitionId ? (
-        <RequisitionActivityLog requisitionId={requisitionId} />
+        <RequisitionActivityLog
+          requisitionId={requisitionId}
+          refreshKey={serverRevision}
+        />
       ) : null}
     </div>
   )

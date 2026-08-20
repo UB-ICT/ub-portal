@@ -16,6 +16,8 @@ type RequisitionActivityLogProps = {
   allowComments?: boolean
   /** Seed a supporting PDF in the composer (Storybook / tests). */
   initialSupportingFile?: File | null
+  /** When this changes, logs are force-refetched from the server. */
+  refreshKey?: string | null
 }
 
 function isPdfFile(file: File) {
@@ -29,6 +31,7 @@ export function RequisitionActivityLog({
   className,
   allowComments = true,
   initialSupportingFile = null,
+  refreshKey = null,
 }: RequisitionActivityLogProps) {
   const fetchLogs = useRequisitionLogsStore((state) => state.fetchLogs)
   const addComment = useRequisitionLogsStore((state) => state.addComment)
@@ -51,7 +54,7 @@ export function RequisitionActivityLog({
     }
 
     void fetchLogs(requisitionId, true)
-  }, [fetchLogs, requisitionId])
+  }, [fetchLogs, refreshKey, requisitionId])
 
   const handleFileChange = (nextFile: File | null) => {
     setFileError(null)
