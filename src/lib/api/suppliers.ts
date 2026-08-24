@@ -26,10 +26,31 @@ export type Supplier = {
   status_id?: number | null
   approved_by_user_id?: string | null
   status?: SupplierStatus | null
+  payment_term_id?: number | null
+  prepared_by?: string | null
+  address?: { id: number; street: string } | null
+  bank_account?: {
+    id: number
+    bank_id: number
+    account_number: string
+    routing_number?: string | null
+    bank?: { id: number; name: string }
+  } | null
+  payment_term?: PaymentTerm | null
 }
 
 export type SupplierListMeta = {
   can_review_suppliers: boolean
+}
+
+export type Bank = {
+  id: number
+  name: string
+}
+
+export type PaymentTerm = {
+  id: number
+  name: string
 }
 
 export type CreateSupplierQuickPayload = {
@@ -48,6 +69,10 @@ export type CreateSupplierPayload = {
   email: string
   TAX: string
   notes?: string
+  payment_term_id?: number
+  prepared_by?: string
+  address?: { street: string }
+  bank?: { bank_id: number; account_number?: string; routing_number?: string }
 }
 
 export type UpdateSupplierPayload = CreateSupplierPayload
@@ -108,7 +133,10 @@ export async function createSupplier(payload: CreateSupplierPayload) {
   return response.data
 }
 
-export async function updateSupplier(id: number, payload: UpdateSupplierPayload) {
+export async function updateSupplier(
+  id: number,
+  payload: UpdateSupplierPayload
+) {
   const response = await request<Supplier>(`${BASE_PATH}/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
@@ -125,7 +153,10 @@ export async function deleteSupplier(id: number) {
   return response.data
 }
 
-export async function approveSupplier(id: number, payload?: SupplierReviewPayload) {
+export async function approveSupplier(
+  id: number,
+  payload?: SupplierReviewPayload
+) {
   const response = await request<Supplier>(`${BASE_PATH}/${id}/approve`, {
     method: "POST",
     body: JSON.stringify(payload ?? {}),
@@ -134,7 +165,10 @@ export async function approveSupplier(id: number, payload?: SupplierReviewPayloa
   return response.data
 }
 
-export async function rejectSupplier(id: number, payload?: SupplierReviewPayload) {
+export async function rejectSupplier(
+  id: number,
+  payload?: SupplierReviewPayload
+) {
   const response = await request<Supplier>(`${BASE_PATH}/${id}/reject`, {
     method: "POST",
     body: JSON.stringify(payload ?? {}),
@@ -148,5 +182,15 @@ export async function activateSupplier(id: number) {
     method: "POST",
   })
 
+  return response.data
+}
+
+export async function fetchBanks() {
+  const response = await request<Bank[]>("/requisitionSystem/banks")
+  return response.data
+}
+
+export async function fetchPaymentTerms() {
+  const response = await request<PaymentTerm[]>("/requisitionSystem/paymentTerms")
   return response.data
 }
