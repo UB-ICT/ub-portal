@@ -20,6 +20,9 @@ export type {
   UBSelectProps,
 } from "./UBSelect"
 
+export { UBRadioButton } from "./UBRadioButton"
+export type { UBRadioOption, UBRadioButtonProps } from "./UBRadioButton"
+
 export { UBTable } from "./UBTable"
 export type { UBTableProps, ColumnDef } from "./UBTable"
 
