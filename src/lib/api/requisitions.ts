@@ -159,6 +159,7 @@ export type RequisitionSupplierInput = {
   is_recommended: boolean
   quoted_total?: number | null
   quote_reference_number?: string | null
+  attachment_id?: number | null
 }
 
 export type CreateRequisitionPayload = {

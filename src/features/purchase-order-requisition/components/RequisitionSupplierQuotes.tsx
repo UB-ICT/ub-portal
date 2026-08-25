@@ -51,7 +51,9 @@ function mapAttachmentsToQuotes(
 
     return {
       clientId: existing?.clientId ?? `attachment-${attachment.id}`,
-      supplierId: String(attachment.supplier_id),
+      // Keep the form's selected supplier when the same PDF is rematched by
+      // attachment id. Attachment.supplier_id can lag behind the pivot.
+      supplierId: existing?.supplierId || String(attachment.supplier_id),
       attachmentId: attachment.id,
       file: existing?.file ?? null,
       fileName: attachment.file_name || existing?.fileName || "",
@@ -172,8 +174,9 @@ export function RequisitionSupplierQuotes({
       const localHasDocuments = local.some(
         (quote) => quote.file || quote.attachmentId || quote.fileName
       )
+      const localHasSuppliers = local.some((quote) => quote.supplierId !== "")
 
-      if (localHasDocuments) {
+      if (localHasDocuments || localHasSuppliers) {
         const usedAttachmentIds = new Set<number>()
         const patched = local.map((quote) => {
           const match = attachments.find(
@@ -192,8 +195,7 @@ export function RequisitionSupplierQuotes({
             fileName: quote.fileName || match.file_name || "",
             file: quote.file,
             previewUrl: quote.previewUrl,
-            isRecommended:
-              quote.isRecommended || Boolean(match.is_recommended),
+            isRecommended: quote.isRecommended,
             quotedTotal:
               quote.quotedTotal ||
               (match.quoted_total != null ? String(match.quoted_total) : ""),
@@ -206,7 +208,25 @@ export function RequisitionSupplierQuotes({
 
         const extras = attachments
           .filter((attachment) => !usedAttachmentIds.has(attachment.id))
-          .map((attachment) => mapAttachmentsToQuotes([attachment], [])[0])
+          .map((attachment) => {
+            const openQuote = patched.find(
+              (quote) =>
+                quote.supplierId !== "" &&
+                !quote.attachmentId &&
+                !quote.file &&
+                !quote.fileName
+            )
+
+            if (openQuote) {
+              usedAttachmentIds.add(attachment.id)
+              openQuote.attachmentId = attachment.id
+              openQuote.fileName = attachment.file_name || openQuote.fileName
+              return null
+            }
+
+            return mapAttachmentsToQuotes([attachment], [])[0]
+          })
+          .filter((quote): quote is SupplierQuoteDraft => quote != null)
 
         emitChange(applyRecommendedSupplierDefaults([...patched, ...extras]))
         return

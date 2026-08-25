@@ -126,27 +126,120 @@ export function isSupplierQuotesValid(
   )
 }
 
+function mapQuoteToSupplierPayload(quote: SupplierQuoteDraft) {
+  return {
+    supplier_id: Number(quote.supplierId),
+    is_recommended: quote.isRecommended,
+    quoted_total: quote.quotedTotal ? Number(quote.quotedTotal) : null,
+    quote_reference_number: quote.quoteReferenceNumber.trim() || null,
+    attachment_id: quote.attachmentId ?? null,
+  }
+}
+
 export function mapSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {
   return applyRecommendedSupplierDefaults(quotes)
     .filter(isCompleteSupplierQuote)
-    .map((quote) => ({
-      supplier_id: Number(quote.supplierId),
-      is_recommended: quote.isRecommended,
-      quoted_total: quote.quotedTotal ? Number(quote.quotedTotal) : null,
-      quote_reference_number: quote.quoteReferenceNumber.trim() || null,
-    }))
+    .map(mapQuoteToSupplierPayload)
 }
 
 /** Draft saves keep supplier selections even before a PDF is attached. */
 export function mapDraftSupplierQuotesToPayload(quotes: SupplierQuoteDraft[]) {
   return applyRecommendedSupplierDefaults(quotes)
     .filter((quote) => quote.supplierId !== "")
-    .map((quote) => ({
-      supplier_id: Number(quote.supplierId),
-      is_recommended: quote.isRecommended,
-      quoted_total: quote.quotedTotal ? Number(quote.quotedTotal) : null,
-      quote_reference_number: quote.quoteReferenceNumber.trim() || null,
-    }))
+    .map(mapQuoteToSupplierPayload)
+}
+
+type QuoteSourceSupplier = {
+  id: number
+  pivot?: {
+    is_recommended?: boolean
+    quoted_total?: number | string | null
+    quote_reference_number?: string | null
+  }
+}
+
+type QuoteSourceAttachment = {
+  id: number
+  supplier_id: number
+  file_name?: string
+  is_recommended?: boolean
+  quoted_total?: number | string | null
+  quote_reference_number?: string | null
+}
+
+function quoteFromSupplier(
+  supplier: QuoteSourceSupplier,
+  attachment?: QuoteSourceAttachment
+): SupplierQuoteDraft {
+  return {
+    clientId: attachment
+      ? `attachment-${attachment.id}`
+      : `supplier-${supplier.id}`,
+    supplierId: String(supplier.id),
+    attachmentId: attachment?.id,
+    file: null,
+    fileName: attachment?.file_name ?? "",
+    previewUrl: null,
+    isRecommended: Boolean(supplier.pivot?.is_recommended),
+    quotedTotal:
+      supplier.pivot?.quoted_total != null
+        ? String(supplier.pivot.quoted_total)
+        : "",
+    quoteReferenceNumber: supplier.pivot?.quote_reference_number ?? "",
+  }
+}
+
+/**
+ * Rebuild quote rows from the requisition pivot (selected suppliers) and
+ * attach PDFs onto those rows. Leftover PDFs whose supplier was changed after
+ * upload are bound 1:1 onto quotes that still have no file.
+ */
+export function mapRequisitionQuotesFromRecord(requisition: {
+  suppliers?: QuoteSourceSupplier[]
+  attachments?: QuoteSourceAttachment[]
+}): SupplierQuoteDraft[] {
+  const remainingAttachments = [...(requisition.attachments ?? [])]
+  const suppliers = requisition.suppliers ?? []
+
+  const quotes = suppliers.map((supplier) => {
+    const attachmentIndex = remainingAttachments.findIndex(
+      (attachment) => attachment.supplier_id === supplier.id
+    )
+    const attachment =
+      attachmentIndex >= 0
+        ? remainingAttachments.splice(attachmentIndex, 1)[0]
+        : undefined
+
+    return quoteFromSupplier(supplier, attachment)
+  })
+
+  for (const attachment of remainingAttachments) {
+    const openQuote = quotes.find((quote) => !quote.attachmentId)
+
+    if (openQuote) {
+      openQuote.attachmentId = attachment.id
+      openQuote.fileName = attachment.file_name || openQuote.fileName
+      openQuote.clientId = `attachment-${attachment.id}`
+      continue
+    }
+
+    quotes.push({
+      clientId: `attachment-${attachment.id}`,
+      supplierId: String(attachment.supplier_id),
+      attachmentId: attachment.id,
+      file: null,
+      fileName: attachment.file_name ?? "",
+      previewUrl: null,
+      isRecommended: Boolean(attachment.is_recommended),
+      quotedTotal:
+        attachment.quoted_total != null ? String(attachment.quoted_total) : "",
+      quoteReferenceNumber: attachment.quote_reference_number ?? "",
+    })
+  }
+
+  return applyRecommendedSupplierDefaults(
+    quotes.length > 0 ? quotes : [createEmptySupplierQuote()]
+  )
 }
 
 export function mapSupplierQuoteToUploadMeta(

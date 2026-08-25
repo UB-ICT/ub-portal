@@ -25,6 +25,7 @@ import {
   applyRecommendedSupplierDefaults,
   createEmptySupplierQuote,
   mapDraftSupplierQuotesToPayload,
+  mapRequisitionQuotesFromRecord,
   mapSupplierQuotesToPayload,
   validateSupplierQuotes,
   type SupplierQuoteDraft,
@@ -404,6 +405,21 @@ export function RequisitionForm({
         ? mapApiItemsToDrafts(requisition.items)
         : [createEmptyLineItem()]
     )
+    replaceSupplierQuotes((current) => {
+      const isPlaceholder =
+        current.length === 0 ||
+        (current.length === 1 &&
+          !current[0].supplierId &&
+          !current[0].attachmentId &&
+          !current[0].file &&
+          !current[0].fileName)
+
+      if (!isPlaceholder) {
+        return current
+      }
+
+      return mapRequisitionQuotesFromRecord(requisition)
+    })
     setIsEditable(
       canCostCenterEditRequisition(
         requisition.status?.name,
