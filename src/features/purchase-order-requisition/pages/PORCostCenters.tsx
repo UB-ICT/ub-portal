@@ -2,7 +2,6 @@ import { Plus } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
-import { UBPageHeader } from "@/components/shared/UBPageHeader"
 import type { CostCenter } from "@/lib/api/requisitions"
 import { useCostCentersStore } from "@/store/cost-centers-store"
 
@@ -64,16 +63,19 @@ export function PORCostCentersPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <UBPageHeader
-        title="Cost centers"
-        description="Manage departments used for requisitions, budgets, and user assignments."
-        actions={
-          <UBButton size="sm" onClick={handleAdd}>
-            <Plus className="size-4" data-icon="inline-start" />
-            Add cost center
-          </UBButton>
-        }
-      />
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Cost centers</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage departments used for requisitions, budgets, and user
+            assignments.
+          </p>
+        </div>
+        <UBButton size="sm" onClick={handleAdd}>
+          <Plus className="size-4" data-icon="inline-start" />
+          Add cost center
+        </UBButton>
+      </header>
 
       <SearchCostCenters onSearch={setSearchCriteria} />
 

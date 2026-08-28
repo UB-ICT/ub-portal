@@ -2,7 +2,6 @@ import { Plus } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
-import { UBPageHeader } from "@/components/shared/UBPageHeader"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { useChartOfAccountsStore } from "@/store/chart-of-accounts-store"
 
@@ -70,16 +69,19 @@ export function PORAccountsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <UBPageHeader
-        title="Accounts"
-        description="Manage chart of account numbers and descriptions, including nested child accounts under a parent."
-        actions={
-          <UBButton size="sm" onClick={handleAddAccount}>
-            <Plus className="size-4" data-icon="inline-start" />
-            Add account
-          </UBButton>
-        }
-      />
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Accounts</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage chart of account numbers and descriptions, including nested
+            child accounts under a parent.
+          </p>
+        </div>
+        <UBButton size="sm" onClick={handleAddAccount}>
+          <Plus className="size-4" data-icon="inline-start" />
+          Add account
+        </UBButton>
+      </header>
 
       <SearchAccounts onSearch={setSearchCriteria} />
 

@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput, UBNativeSelect, UBTextarea } from "@/components/shared/UBInput"
-import { UBPageHeader } from "@/components/shared/UBPageHeader"
 import type { BudgetRecord, BudgetYear } from "@/lib/api/budgets"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { useBudgetsStore } from "@/store/budgets-store"
@@ -288,36 +287,38 @@ export function PORBudgetsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <UBPageHeader
-        title="Budget"
-        description="Prepare, compare, submit, and approve cost center budgets by year."
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {panelMode !== "list" ? (
-              <UBButton
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setPanelMode("list")
-                  resetEditor()
-                }}
-              >
-                Back to list
-              </UBButton>
-            ) : canCreateBudget ? (
-              <UBButton size="sm" onClick={openCreate}>
-                <Plus className="size-4" data-icon="inline-start" />
-                New budget
-              </UBButton>
-            ) : isCostCenterUser ? (
-              <p className="max-w-sm text-right text-xs text-muted-foreground">
-                New budgets open when the budget officer requests submissions
-                for a year.
-              </p>
-            ) : null}
-          </div>
-        }
-      />
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Budget</h1>
+          <p className="text-sm text-muted-foreground">
+            Prepare, compare, submit, and approve cost center budgets by year.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {panelMode !== "list" ? (
+            <UBButton
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setPanelMode("list")
+                resetEditor()
+              }}
+            >
+              Back to list
+            </UBButton>
+          ) : canCreateBudget ? (
+            <UBButton size="sm" onClick={openCreate}>
+              <Plus className="size-4" data-icon="inline-start" />
+              New budget
+            </UBButton>
+          ) : isCostCenterUser ? (
+            <p className="max-w-sm text-right text-xs text-muted-foreground">
+              New budgets open when the budget officer requests submissions for
+              a year.
+            </p>
+          ) : null}
+        </div>
+      </header>
 
       {panelMode === "list" ? (
         <>

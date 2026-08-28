@@ -9,7 +9,6 @@ import {
 } from "@/lib/api/dashboard"
 import { ApiError } from "@/lib/api/client"
 import { UBCard } from "../../../components/shared/UBCard"
-import { UBPageHeader } from "../../../components/shared/UBPageHeader"
 import { RecentFormsTable } from "../components/RequisitionRecentForms"
 import { CostCenterStageSummaryTable } from "../components/CostCenterStageSummary"
 import { RequesterDashboard } from "../components/RequesterDashboard"
@@ -166,18 +165,17 @@ export const PORDashboardPage: React.FC<PORDashboardPageProps> = () => {
   return (
     <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-2">
       {/* 🧭 Clean Header Banner */}
-      <UBPageHeader
-        variant="dashboard"
-        title="Purchase Order Requisitions"
-        description={
-          <>
-            Welcome back. Tracking metrics active for:{" "}
-            <span className="font-semibold text-primary">
-              {formatRoleName(backendRole)}
-            </span>
-          </>
-        }
-      />
+      <div className="border-b border-border pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          Purchase Order Requisitions
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Welcome back. Tracking metrics active for:{" "}
+          <span className="font-semibold text-primary">
+            {formatRoleName(backendRole)}
+          </span>
+        </p>
+      </div>
 
       {/* 🎴 Secure Grid Layout rendering exactly what your account permits */}
       <div>

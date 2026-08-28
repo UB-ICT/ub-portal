@@ -3,7 +3,7 @@ import type * as React from "react"
 import { cn } from "@/lib/utils"
 
 export type ColumnDef<T> = {
-  header: string
+  header: React.ReactNode
   accessor: keyof T
   render?: (value: T[keyof T], row: T) => React.ReactNode
   className?: string
@@ -57,9 +57,9 @@ export function UBTable<T extends Record<string, any>>({
               >
                 {mobileColumns.map((column, colIndex) => (
                   <div key={colIndex} className="space-y-1">
-                    <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    <div className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                       {column.header}
-                    </p>
+                    </div>
                     <p
                       className={cn(
                         "text-sm font-medium text-foreground",

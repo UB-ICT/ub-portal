@@ -43,7 +43,6 @@ export function PortalLayout() {
     <PortalShellLayout
       userName={user.name}
       userEmail={user.email}
-      userImageSrc={user.profile_picture}
       showAdminActions={showAdminActions}
       onLogout={handleLogout}
     >

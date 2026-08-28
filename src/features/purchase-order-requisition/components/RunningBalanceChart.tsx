@@ -59,9 +59,6 @@ const costCenterIds = Array.from(
   new Set(data.map((point) => point.cost_center_id))
 ).sort((a, b) => a - b)
 
-  const dates = Array.from(new Set(data.map((point) => point.date))).sort()
-  const isMultiCostCenter = costCenterIds.length > 1
-
   let option: EChartsOption
 
   if (!isMultiCostCenter && dates.length > 0) {

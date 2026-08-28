@@ -11,7 +11,6 @@ import { useEffect, useMemo, useState, type FormEvent } from "react"
 
 import { UBButton } from "@/components/shared/UBButton"
 import { UBInput } from "@/components/shared/UBInput"
-import { UBPageHeader } from "@/components/shared/UBPageHeader"
 import { UBPipelineFlow } from "@/components/shared/UBPipelineFlow"
 import {
   Dialog,
@@ -282,16 +281,18 @@ export function PORPipelinesPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
-      <UBPageHeader
-        title="Pipelines"
-        description="Configure approval pipelines, stage order, and stage assignees."
-        actions={
-          <UBButton size="sm" onClick={openCreatePipeline}>
-            <Plus className="size-4" data-icon="inline-start" />
-            Add pipeline
-          </UBButton>
-        }
-      />
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Pipelines</h1>
+          <p className="text-sm text-muted-foreground">
+            Configure approval pipelines, stage order, and stage assignees.
+          </p>
+        </div>
+        <UBButton size="sm" onClick={openCreatePipeline}>
+          <Plus className="size-4" data-icon="inline-start" />
+          Add pipeline
+        </UBButton>
+      </header>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 

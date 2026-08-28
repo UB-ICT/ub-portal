@@ -78,9 +78,7 @@ export function canAddLineItemsToRequisition(
     return true
   }
 
-  const normalized = statusName?.toLowerCase() ?? ""
-
-  return normalized === "draft" || normalized === "cost center review"
+  return (statusName?.toLowerCase() ?? "") === "draft"
 }
 
 export function canSubmitRequisition(
