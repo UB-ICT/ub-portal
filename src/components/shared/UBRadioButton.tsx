@@ -61,6 +61,7 @@ export function UBRadioButton({
                 id={optionId}
                 value={option.value}
                 disabled={option.disabled}
+                aria-invalid={Boolean(error)}
                 className="mt-0.5"
               />
               <label htmlFor={optionId} className="text-sm leading-none">
