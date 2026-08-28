@@ -152,7 +152,21 @@ export const RecentFormsTable: React.FC = () => {
                   key={form.id}
                   className="group transition-colors hover:bg-muted/30"
                 >
-                  <td className="cursor-pointer py-4">
+                  <td
+                    className="cursor-pointer py-4"
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`Open requisition ${form.number}`}
+                    onClick={() =>
+                      navigate(`/requisitions/forms?requisition=${form.id}`)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        navigate(`/requisitions/forms?requisition=${form.id}`)
+                      }
+                    }}
+                  >
                     <RequisitionNumberBadge
                       number={form.number}
                       status={mapApiStatusToCardStatus(
