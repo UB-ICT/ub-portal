@@ -14,6 +14,7 @@ import { PORAccountsPage } from "@/features/purchase-order-requisition/pages/POR
 import { PORBudgetsPage } from "@/features/purchase-order-requisition/pages/PORBudgets"
 import { PORCostCentersPage } from "@/features/purchase-order-requisition/pages/PORCostCenters"
 import { PORPipelinesPage } from "@/features/purchase-order-requisition/pages/PORPipelines"
+import { PORReportsPage } from "@/features/purchase-order-requisition/pages/PORReports"
 import { PORRequisitionsPage } from "@/features/purchase-order-requisition/pages/PORRequisitions"
 import { AdminApplicationsPage } from "@/features/identitiy-cloud/pages/AdminApplications"
 import { AdminDashboard } from "@/features/identitiy-cloud/pages/AdminDashboard"
@@ -73,6 +74,10 @@ export const router = createBrowserRouter([
               {
                 path: "pipelines",
                 element: <PORPipelinesPage />,
+              },
+              {
+                path: "reports",
+                element: <PORReportsPage />,
               },
             ],
           },

@@ -1,6 +1,7 @@
 import React from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 
+import { UBPageHeader } from "@/components/shared/UBPageHeader"
 import { fetchDashboardMetrics } from "@/lib/api/dashboard"
 import {
   downloadRequisitionReport,
@@ -60,15 +61,11 @@ export const PORReportsPage: React.FC = () => {
   }
 
   return (
-    <div className="h-full min-h-0 w-full space-y-6 overflow-y-auto p-2">
-      <div className="border-b border-border pb-5">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Monthly Requisition Report
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Filter and export requisitions to Excel.
-        </p>
-      </div>
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto">
+      <UBPageHeader
+        title="Requisition Report"
+        description="Filter requisitions by status, cost center, supplier, and date, then export to Excel."
+      />
 
       <SearchReport
         onGenerate={(filters) => downloadMutation.mutate(filters)}

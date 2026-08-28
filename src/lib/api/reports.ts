@@ -16,6 +16,7 @@ export type RequisitionReportFilters = {
   dateTo: string
   supplierId?: number
   costCenterId?: number
+  statusId?: number
   number?: string
   amountMin?: number
   amountMax?: number
@@ -43,6 +44,10 @@ function buildReportQueryString(filters: RequisitionReportFilters) {
 
   if (filters.costCenterId) {
     params.set("cost_center_id", String(filters.costCenterId))
+  }
+
+  if (filters.statusId) {
+    params.set("status_id", String(filters.statusId))
   }
 
   if (filters.number) {
