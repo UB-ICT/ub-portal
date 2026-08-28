@@ -34,7 +34,7 @@ export type Supplier = {
     bank_id: number
     account_number: string
     routing_number?: string | null
-    bank?: { id: number; name: string }
+    bank?: Bank
   } | null
   payment_term?: PaymentTerm | null
 }
