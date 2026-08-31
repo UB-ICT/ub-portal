@@ -11,6 +11,7 @@ node_modules
 dist
 storybook-static
 dist-ssr
+public/firebase-messaging-sw.js
 
 # Environment files (.env.localhost.local etc. for machine-specific overrides)
 .env

@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom"
 
+import { FcmNotificationListener } from "@/components/notifications/FcmNotificationListener"
 import { StatusScreen } from "@/components/layout/StatusScreen"
 import {
   getAuthErrorMessage,
@@ -54,5 +55,10 @@ export function ProtectedRoute() {
     )
   }
 
-  return <Outlet />
+  return (
+    <>
+      <FcmNotificationListener />
+      <Outlet />
+    </>
+  )
 }

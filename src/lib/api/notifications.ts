@@ -86,3 +86,18 @@ export async function markAllNotificationsRead(
 
   await apiRequest("/notifications/read-all", { method: "POST", token })
 }
+
+export async function registerDeviceToken(
+  deviceToken: string,
+  token = readStoredAccessToken()
+) {
+  if (!token) {
+    return
+  }
+
+  await apiRequest("/notifications/device-token", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ device_token: deviceToken }),
+  })
+}
