@@ -93,7 +93,7 @@ const meta = {
   component: RequisitionLineItemsTable,
   tags: ["autodocs"],
   parameters: componentParameters(
-    "Editable line items: quantity and total in, unit cost and GST computed."
+    "Editable line items with sortable, resizable columns (UBDataTable). Quantity and total in, unit cost and GST computed."
   ),
   decorators: [withPanel("max-w-6xl space-y-6 p-6")],
   argTypes: {

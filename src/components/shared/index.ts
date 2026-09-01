@@ -26,6 +26,14 @@ export type { UBRadioOption, UBRadioButtonProps } from "./UBRadioButton"
 export { UBTable } from "./UBTable"
 export type { UBTableProps, ColumnDef } from "./UBTable"
 
+export { UBDataTable } from "./data-table"
+export type {
+  DataTableColumnDef,
+  UBDataTableProps,
+  DataTableSortState,
+  SortDirection,
+} from "./data-table"
+
 export { UBTimeline } from "./UBTimeline"
 export type { UBTimelineProps, UBTimelineStep } from "./UBTimeline"
 

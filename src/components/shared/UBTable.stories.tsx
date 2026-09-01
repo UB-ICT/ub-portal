@@ -397,7 +397,7 @@ export const BasicTable: Story = {
       <div>
         <h3 className="text-lg font-semibold">Simple Data Table</h3>
         <p className="text-sm text-muted-foreground">
-          Basic example with simple data
+          Basic example with sortable, resizable columns (via UBDataTable).
         </p>
       </div>
       <UBTable<SimpleData>
