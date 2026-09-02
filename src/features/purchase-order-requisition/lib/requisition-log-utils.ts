@@ -9,6 +9,8 @@ export const REQUISITION_LOG_ACTION_LABELS: Record<RequisitionLogAction, string>
     rejected: "Rejected",
     comment: "Comment",
     cost_center_review: "Cost Center Review",
+    forwarded_for_review: "Forwarded for Review",
+    delegated_review_submitted: "Delegated Review Submitted",
     cancelled: "Cancelled",
     closed: "Closed",
   }
@@ -29,6 +31,10 @@ export function getRequisitionLogActionStyles(action: RequisitionLogAction) {
       return "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-200"
     case "cost_center_review":
       return "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-200"
+    case "forwarded_for_review":
+      return "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-200"
+    case "delegated_review_submitted":
+      return "border-cyan-200 bg-cyan-50 text-cyan-800 dark:border-cyan-900 dark:bg-cyan-950 dark:text-cyan-200"
     case "cancelled":
       return "border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
     case "closed":
@@ -70,6 +76,9 @@ export function canCostCenterEditRequisition(
   return normalized === "draft" || normalized === "cost center review"
 }
 
+/** Operations pipeline sequence for Director / Head of Department approval. */
+export const DIRECTOR_APPROVAL_STAGE_SEQUENCE = 2
+
 export function canAddLineItemsToRequisition(
   statusName?: string | null,
   mode: "create" | "edit" = "edit"
@@ -81,6 +90,33 @@ export function canAddLineItemsToRequisition(
   const normalized = statusName?.toLowerCase() ?? ""
 
   return normalized === "draft" || normalized === "cost center review"
+}
+
+export function canRemoveLineItemsFromRequisition(
+  statusName?: string | null,
+  mode: "create" | "edit" = "edit",
+  currentStageSequence?: number | null
+) {
+  if (mode === "create") {
+    return true
+  }
+
+  const normalized = statusName?.toLowerCase() ?? ""
+
+  if (normalized === "draft") {
+    return true
+  }
+
+  // Cost center may remove lines only while the requisition has not moved past
+  // the head-of-department (Director) stage — e.g. sent back before HOD approval.
+  if (normalized === "cost center review") {
+    const sequence =
+      currentStageSequence ?? DIRECTOR_APPROVAL_STAGE_SEQUENCE
+
+    return sequence <= DIRECTOR_APPROVAL_STAGE_SEQUENCE
+  }
+
+  return false
 }
 
 export function canSubmitRequisition(

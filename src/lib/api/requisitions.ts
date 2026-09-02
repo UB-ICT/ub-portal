@@ -115,6 +115,8 @@ export type RequisitionRecord = {
   has_purchase_order_file?: boolean
   preferred_supplier_email?: string | null
   cost_center_id: number
+  reviewing_cost_center_id?: number | null
+  is_delegated_cost_center_review?: boolean
   pipeline_id?: number | null
   date_prepared: string
   status_id: number
@@ -132,6 +134,7 @@ export type RequisitionRecord = {
   suppliers?: RequisitionSupplierPivot[]
   attachments?: RequisitionAttachment[]
   cost_center?: CostCenter
+  reviewing_cost_center?: CostCenter | null
   status?: RequisitionStatusRecord
   stage?: RequisitionStageRecord
   is_editable?: boolean

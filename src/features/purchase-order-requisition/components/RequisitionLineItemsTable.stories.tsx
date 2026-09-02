@@ -105,6 +105,10 @@ const meta = {
       control: "boolean",
       description: "Show the add line item action.",
     },
+    allowRemoveItems: {
+      control: "boolean",
+      description: "Show the remove line item action.",
+    },
     disabled: {
       control: "boolean",
       description: "Disable all line item inputs and actions.",
@@ -113,6 +117,7 @@ const meta = {
   args: {
     stripedRows: true,
     allowAddItems: true,
+    allowRemoveItems: true,
     disabled: false,
   },
 } satisfies Meta<typeof RequisitionLineItemsTable>
@@ -135,6 +140,7 @@ export const StripedRowsDisabled: Story = {
 export const SubmittedNoNewItems: Story = {
   args: {
     allowAddItems: false,
+    allowRemoveItems: false,
     stripedRows: true,
   },
   render: (args) => <StoryTable {...args} />,
@@ -150,6 +156,7 @@ export const ReadOnly: Story = {
   args: {
     disabled: true,
     allowAddItems: false,
+    allowRemoveItems: false,
     stripedRows: true,
   },
   render: (args) => <StoryTable {...args} />,

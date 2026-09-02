@@ -1,7 +1,10 @@
 import { Plus, Trash2 } from "lucide-react"
 import { useMemo, type ReactNode } from "react"
 
-import { UBDataTable } from "@/components/shared/data-table"
+import {
+  UBDataTable,
+  type DataTableColumnDef,
+} from "@/components/shared/data-table"
 import { UBButton } from "@/components/shared/UBButton"
 import type { ChartOfAccount } from "@/lib/api/chart-of-accounts"
 import { cn } from "@/lib/utils"
@@ -65,6 +68,7 @@ type RequisitionLineItemsTableProps = {
   className?: string
   disabled?: boolean
   allowAddItems?: boolean
+  allowRemoveItems?: boolean
   stripedRows?: boolean
 }
 
@@ -86,6 +90,7 @@ export function RequisitionLineItemsTable({
   className,
   disabled = false,
   allowAddItems = true,
+  allowRemoveItems = true,
   stripedRows = true,
 }: RequisitionLineItemsTableProps) {
   const pricing = useMemo(
@@ -159,8 +164,8 @@ export function RequisitionLineItemsTable({
     [items, pricing.items]
   )
 
-  const columns = useMemo(
-    () => [
+  const columns = useMemo(() => {
+    const baseColumns: DataTableColumnDef<RequisitionLineItemDraft>[] = [
       {
         id: "account",
         header: "Budget line item",
@@ -170,29 +175,45 @@ export function RequisitionLineItemsTable({
         disableTruncate: true,
         sortValue: (row: RequisitionLineItemDraft) =>
           row.account_no || row.description,
-        render: (_value: unknown, row: RequisitionLineItemDraft) => (
-          <ChartOfAccountCombobox
-            label="Budget line item"
-            hideLabel
-            value={
-              row.chart_of_account_id ? String(row.chart_of_account_id) : ""
-            }
-            primaryField="account_no"
-            accounts={budgetAccounts}
-            loading={isLoadingBudgetAccounts}
-            emptyMessage="No active budget accounts match."
-            placeholder="Select budget line item..."
-            inputClassName={inputClassName}
-            disabled={disabled || !canSelectBudgetLine}
-            onSelect={(account) =>
-              updateItem(row.id, {
-                chart_of_account_id: account.id,
-                account_no: account.account_no,
-                description: account.description,
-              })
-            }
-          />
-        ),
+        render: (_value: unknown, row: RequisitionLineItemDraft) => {
+          if (disabled || !canSelectBudgetLine) {
+            const label = row.account_no
+              ? row.description
+                ? `${row.account_no} — ${row.description}`
+                : row.account_no
+              : row.description || "—"
+
+            return (
+              <span className="block px-2 py-1.5 text-sm text-foreground">
+                {label}
+              </span>
+            )
+          }
+
+          return (
+            <ChartOfAccountCombobox
+              label="Budget line item"
+              hideLabel
+              value={
+                row.chart_of_account_id ? String(row.chart_of_account_id) : ""
+              }
+              primaryField="account_no"
+              accounts={budgetAccounts}
+              loading={isLoadingBudgetAccounts}
+              emptyMessage="No active budget accounts match."
+              placeholder="Select budget line item..."
+              inputClassName={inputClassName}
+              disabled={disabled || !canSelectBudgetLine}
+              onSelect={(account) =>
+                updateItem(row.id, {
+                  chart_of_account_id: account.id,
+                  account_no: account.account_no,
+                  description: account.description,
+                })
+              }
+            />
+          )
+        },
       },
       {
         id: "comments",
@@ -337,7 +358,10 @@ export function RequisitionLineItemsTable({
           </span>
         ),
       },
-      {
+    ]
+
+    if (allowRemoveItems) {
+      baseColumns.push({
         id: "actions",
         header: "",
         accessor: "id" as const,
@@ -359,18 +383,20 @@ export function RequisitionLineItemsTable({
             <Trash2 className="size-4 text-destructive" />
           </UBButton>
         ),
-      },
-    ],
-    [
-      budgetAccounts,
-      canSelectBudgetLine,
-      disabled,
-      inputClassName,
-      isLoadingBudgetAccounts,
-      items.length,
-      pricedByItemId,
-    ]
-  )
+      })
+    }
+
+    return baseColumns
+  }, [
+    allowRemoveItems,
+    budgetAccounts,
+    canSelectBudgetLine,
+    disabled,
+    inputClassName,
+    isLoadingBudgetAccounts,
+    items.length,
+    pricedByItemId,
+  ])
 
   const footer =
     items.length > 0 ? (
@@ -500,7 +526,7 @@ export function mapDraftLineItemsForApi(items: RequisitionLineItemDraft[]) {
       (item) =>
         item.chart_of_account_id !== null ||
         item.comments.trim() !== "" ||
-        (Number.isFinite(item.quantity) && item.quantity !== 0) ||
+        item.unit_cost > 0 ||
         item.total > 0 ||
         item.gst_applicable
     )

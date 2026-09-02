@@ -52,6 +52,7 @@ import { mapApiStatusToCardStatus, toDateInputValue } from "../lib/requisition-m
 import {
   canAddLineItemsToRequisition,
   canCostCenterEditRequisition,
+  canRemoveLineItemsFromRequisition,
   canSubmitRequisition,
 } from "../lib/requisition-log-utils"
 import { useRequisitionLogsStore } from "@/store/requisition-logs-store"
@@ -272,6 +273,9 @@ export function RequisitionForm({
   const [costCenterId, setCostCenterId] = useState<number | null>(null)
   const [statusLabel, setStatusLabel] = useState("")
   const [stageLabel, setStageLabel] = useState("")
+  const [currentStageSequence, setCurrentStageSequence] = useState<number | null>(
+    null
+  )
   const [currencyId, setCurrencyId] = useState("")
   const [priority, setPriority] = useState<RequisitionPriority>("standard")
   const [description, setDescription] = useState("")
@@ -384,6 +388,7 @@ export function RequisitionForm({
     setCostCenterId(requisition.cost_center_id)
     setStatusLabel(requisition.status?.name ?? "")
     setStageLabel(requisition.stage?.name ?? "")
+    setCurrentStageSequence(requisition.current_stage_sequence ?? null)
     setCurrencyId(String(requisition.currency_id))
     setPriority(normalizeRequisitionPriority(requisition.priority))
     setDescription(requisition.description ?? "")
@@ -766,6 +771,11 @@ export function RequisitionForm({
   // section was preventing the file input from firing and the POST never ran.
   const quotesDisabled = isTerminalRequisition || (mode === "edit" && !isEditable)
   const canAddLineItems = canAddLineItemsToRequisition(statusLabel, mode)
+  const canRemoveLineItems = canRemoveLineItemsFromRequisition(
+    statusLabel,
+    mode,
+    currentStageSequence
+  )
   const showSubmitAction = canSubmitRequisition(statusLabel, mode)
   const requisitionTotal = calculateRequisitionTotalFromLineItems(
     lineItems,
@@ -995,6 +1005,7 @@ export function RequisitionForm({
       setReferenceNumber(requisition.requisition_number ?? requisition.number)
       setStatusLabel(requisition.status?.name ?? "")
       setStageLabel(requisition.stage?.name ?? "")
+      setCurrentStageSequence(requisition.current_stage_sequence ?? null)
       if (pendingQuoteUploadsRemain) {
         isDirtyRef.current = true
         setIsDirty(true)
@@ -1301,6 +1312,15 @@ export function RequisitionForm({
             edited again when the status is set to Cost Center Review.
           </div>
         ) : null}
+        {mode === "edit" &&
+        selectedRequisition?.is_delegated_cost_center_review &&
+        selectedRequisition.reviewing_cost_center ? (
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-100">
+            {isEditable
+              ? `You are completing a delegated review for ${selectedRequisition.reviewing_cost_center.name}. The owning cost center remains ${selectedRequisition.cost_center?.name ?? "unchanged"}.`
+              : `${selectedRequisition.reviewing_cost_center.name} is currently reviewing this requisition on behalf of the budget officer. The owning cost center remains ${selectedRequisition.cost_center?.name ?? "unchanged"}.`}
+          </div>
+        ) : null}
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {referenceNumber ? (
           <div className="flex flex-col justify-end md:col-span-2 xl:col-span-4">
@@ -1477,6 +1497,7 @@ export function RequisitionForm({
         budgetAccountsError={budgetAccountsError}
         disabled={isFormDisabled}
         allowAddItems={canAddLineItems}
+        allowRemoveItems={canRemoveLineItems}
         footerActions={
           <>
             <UBButton

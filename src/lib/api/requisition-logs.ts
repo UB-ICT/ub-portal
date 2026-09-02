@@ -10,6 +10,8 @@ export type RequisitionLogAction =
   | "rejected"
   | "comment"
   | "cost_center_review"
+  | "forwarded_for_review"
+  | "delegated_review_submitted"
   | "cancelled"
   | "closed"
 

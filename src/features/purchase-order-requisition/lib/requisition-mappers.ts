@@ -85,6 +85,13 @@ export function mergeRequisitionRecord(
       incoming.suppliers !== undefined ? incoming.suppliers : previous.suppliers,
     tags: incoming.tags !== undefined ? incoming.tags : previous.tags,
     cost_center: incoming.cost_center ?? previous.cost_center,
+    reviewing_cost_center:
+      incoming.reviewing_cost_center ?? previous.reviewing_cost_center,
+    reviewing_cost_center_id:
+      incoming.reviewing_cost_center_id ?? previous.reviewing_cost_center_id,
+    is_delegated_cost_center_review:
+      incoming.is_delegated_cost_center_review ??
+      previous.is_delegated_cost_center_review,
     status: incoming.status ?? previous.status,
     stage: incoming.stage ?? previous.stage,
     pipeline: incoming.pipeline ?? previous.pipeline,
