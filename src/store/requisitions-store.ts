@@ -25,6 +25,7 @@ import {
 } from "@/lib/api/requisitions"
 import { fetchPipelines } from "@/lib/api/pipelines"
 import { readStoredAccessToken } from "@/lib/auth/storage"
+import { mergeRequisitionRecord } from "@/features/purchase-order-requisition/lib/requisition-mappers"
 
 type RequisitionsState = {
   requisitions: RequisitionRecord[]
@@ -111,6 +112,16 @@ const initialState = {
 let listFetchPromise: Promise<RequisitionRecord[]> | null = null
 let formDataFetchPromise: Promise<void> | null = null
 let pipelineFetchPromise: Promise<Pipeline | null> | null = null
+let latestDetailFetchId: number | null = null
+
+function upsertRequisitionInList(
+  requisitions: RequisitionRecord[],
+  requisition: RequisitionRecord
+) {
+  return requisitions.map((item) =>
+    item.id === requisition.id ? mergeRequisitionRecord(item, requisition) : item
+  )
+}
 
 export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
   ...initialState,
@@ -163,34 +174,35 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
       return null
     }
 
+    latestDetailFetchId = id
     set({ isLoadingSelected: true, error: null })
 
     try {
       const requisition = await fetchRequisition(id)
+
+      if (latestDetailFetchId !== id) {
+        return requisition
+      }
+
       set((state) => ({
         selectedRequisition: requisition,
         // Keep the sidebar list in sync with the latest detail payload.
-        requisitions: state.requisitions.map((item) =>
-          item.id === requisition.id
-            ? {
-                ...item,
-                ...requisition,
-              }
-            : item
-        ),
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
         isLoadingSelected: false,
         error: null,
       }))
       return requisition
     } catch (error) {
-      set({
-        selectedRequisition: null,
-        isLoadingSelected: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to load requisition.",
-      })
+      if (latestDetailFetchId === id) {
+        set({
+          selectedRequisition: null,
+          isLoadingSelected: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to load requisition.",
+        })
+      }
       return null
     }
   },
@@ -228,10 +240,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await updateRequisition(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isSaving: silent ? state.isSaving : false,
         error: null,
       }))
@@ -253,10 +266,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await approveRequisition(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isReviewing: false,
         error: null,
       }))
@@ -278,10 +292,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await rejectRequisition(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isReviewing: false,
         error: null,
       }))
@@ -303,10 +318,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await requestRequisitionReview(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isReviewing: false,
         error: null,
       }))
@@ -328,10 +344,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await cancelRequisition(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isReviewing: false,
         error: null,
       }))
@@ -353,10 +370,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await closeRequisition(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isReviewing: false,
         error: null,
       }))
@@ -378,10 +396,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await updateRequisitionPurchaseOrderNumber(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isSavingPurchaseOrder: false,
         error: null,
       }))
@@ -407,10 +426,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
         purchaseOrderNumber
       )
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isSavingPurchaseOrder: false,
         error: null,
       }))
@@ -432,10 +452,11 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     try {
       const requisition = await emailRequisitionPurchaseOrder(id, payload)
       set((state) => ({
-        requisitions: state.requisitions.map((item) =>
-          item.id === id ? requisition : item
+        requisitions: upsertRequisitionInList(state.requisitions, requisition),
+        selectedRequisition: mergeRequisitionRecord(
+          state.selectedRequisition,
+          requisition
         ),
-        selectedRequisition: requisition,
         isEmailingPurchaseOrder: false,
         error: null,
       }))
@@ -579,6 +600,7 @@ export const useRequisitionsStore = create<RequisitionsState>((set, get) => ({
     listFetchPromise = null
     formDataFetchPromise = null
     pipelineFetchPromise = null
+    latestDetailFetchId = null
     set(initialState)
   },
 }))

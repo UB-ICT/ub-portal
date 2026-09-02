@@ -63,3 +63,30 @@ export function toDateInputValue(value: string) {
 
   return parsed.toISOString().slice(0, 10)
 }
+
+/** Keep nested detail when a slim list/mutation payload omits relations. */
+export function mergeRequisitionRecord(
+  previous: RequisitionRecord | null | undefined,
+  incoming: RequisitionRecord
+): RequisitionRecord {
+  if (!previous || previous.id !== incoming.id) {
+    return incoming
+  }
+
+  return {
+    ...previous,
+    ...incoming,
+    items: incoming.items !== undefined ? incoming.items : previous.items,
+    attachments:
+      incoming.attachments !== undefined
+        ? incoming.attachments
+        : previous.attachments,
+    suppliers:
+      incoming.suppliers !== undefined ? incoming.suppliers : previous.suppliers,
+    tags: incoming.tags !== undefined ? incoming.tags : previous.tags,
+    cost_center: incoming.cost_center ?? previous.cost_center,
+    status: incoming.status ?? previous.status,
+    stage: incoming.stage ?? previous.stage,
+    pipeline: incoming.pipeline ?? previous.pipeline,
+  }
+}

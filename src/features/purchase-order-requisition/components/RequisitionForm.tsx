@@ -400,12 +400,31 @@ export function RequisitionForm({
         ? toDateInputValue(requisition.reminder_date)
         : ""
     )
-    setLineItems(
-      requisition.items?.length
-        ? mapApiItemsToDrafts(requisition.items)
-        : [createEmptyLineItem()]
-    )
+    setLineItems((current) => {
+      if (requisition.items !== undefined) {
+        return requisition.items.length
+          ? mapApiItemsToDrafts(requisition.items)
+          : [createEmptyLineItem()]
+      }
+
+      return current.length > 0 ? current : [createEmptyLineItem()]
+    })
     replaceSupplierQuotes((current) => {
+      const hasServerQuoteData =
+        requisition.suppliers !== undefined ||
+        requisition.attachments !== undefined
+
+      if (hasServerQuoteData) {
+        const fromServer = mapRequisitionQuotesFromRecord(requisition)
+        if (
+          fromServer.some(
+            (quote) => quote.supplierId || quote.attachmentId || quote.fileName
+          )
+        ) {
+          return fromServer
+        }
+      }
+
       const isPlaceholder =
         current.length === 0 ||
         (current.length === 1 &&
@@ -440,13 +459,17 @@ export function RequisitionForm({
     setCanEmailPurchaseOrder(Boolean(requisition.can_email_purchase_order))
     setCanCancelRequisition(Boolean(requisition.can_cancel))
     setCanCloseRequisition(Boolean(requisition.can_close))
-    setSelectedTags(
-      (requisition.tags ?? []).map((tag) => ({
-        id: tag.id,
-        name: tag.name,
-        cost_center_id: tag.cost_center_id ?? requisition.cost_center_id,
-      }))
-    )
+    setSelectedTags((current) => {
+      if (requisition.tags !== undefined) {
+        return requisition.tags.map((tag) => ({
+          id: tag.id,
+          name: tag.name,
+          cost_center_id: tag.cost_center_id ?? requisition.cost_center_id,
+        }))
+      }
+
+      return current
+    })
     setActivityComment("")
     setFormError(null)
     const nextRevision = requisition.updated_at ?? null
@@ -472,7 +495,10 @@ export function RequisitionForm({
       }
 
       void fetchRequisitionById(requisitionId).then((requisition) => {
-        if (!requisition) {
+        if (
+          !requisition ||
+          requisition.id !== persistedRequisitionIdRef.current
+        ) {
           return
         }
 
@@ -628,9 +654,22 @@ export function RequisitionForm({
       return
     }
 
-    applyRequisitionState(selectedRequisition)
-    clearRequisitionDraftSnapshot(requisitionId)
-  }, [requisitionId, selectedRequisition])
+    void fetchRequisitionById(requisitionId).then((requisition) => {
+      if (
+        !requisition ||
+        requisition.id !== persistedRequisitionIdRef.current
+      ) {
+        return
+      }
+
+      applyRequisitionState(requisition)
+      clearRequisitionDraftSnapshot(requisitionId)
+    })
+  }, [
+    requisitionId,
+    selectedRequisition?.updated_at,
+    fetchRequisitionById,
+  ])
 
   useEffect(() => {
     if (!requisitionId && assignedCostCenter) {
